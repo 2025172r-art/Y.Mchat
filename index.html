@@ -460,6 +460,17 @@
     </div>
 
     <!-- モーダル各種 -->
+    <div id="call-incoming-modal" class="modal hidden">
+        <div class="modal-box" style="text-align:center;">
+            <h3>📞 通話着信</h3>
+            <p id="call-incoming-text" style="margin:20px 0; font-size:15px; line-height:1.6; word-break:break-all; font-weight:bold;"></p>
+            <div style="display:flex; gap:12px; justify-content:center; margin-top:15px;">
+                <button class="menu-btn btn-success" id="btn-accept-incoming-call" style="width:auto; padding:8px 20px;">許可する</button>
+                <button class="menu-btn btn-danger" id="btn-reject-incoming-call" style="width:auto; padding:8px 20px;">拒否する</button>
+            </div>
+        </div>
+    </div>
+
     <div id="announcement-popup-modal" class="modal hidden">
         <div class="modal-box" style="text-align:center;">
             <h3 id="announcement-popup-title">📢 全体アナウンス</h3>
@@ -775,6 +786,8 @@
             let currentStampTarget = 'friend';
             let activePickerMsgId = null;
 
+            let pendingIncomingCall = null; // 着信承認待ち用オブジェクト
+
             let localStream = null;
             let localVideoStream = null;
             let isScreenSharing = false;
@@ -953,6 +966,23 @@
 
             function handleCall(call) {
                 const isVideo = call.metadata && call.metadata.type === 'video';
+                const callerUser = db.users[call.peer];
+                const callerName = callerUser ? callerUser.name : call.peer;
+                const callTypeLabel = isVideo ? 'ビデオ通話' : '通話';
+
+                pendingIncomingCall = call;
+                document.getElementById('call-incoming-text').innerText = 
+                    `「${callerName}」からの${callTypeLabel}のときに${callTypeLabel}のリクエストがされました。許可しますか？拒否しますか？`;
+                showModal('call-incoming-modal');
+            }
+
+            document.getElementById('btn-accept-incoming-call').onclick = () => {
+                hideModal('call-incoming-modal');
+                if (!pendingIncomingCall) return;
+                const call = pendingIncomingCall;
+                pendingIncomingCall = null;
+
+                const isVideo = call.metadata && call.metadata.type === 'video';
                 if (isVideo) {
                     startVideoCall(call.peer, true, call);
                 } else {
@@ -970,7 +1000,15 @@
                         call.on('error', () => cleanupCall(call.peer));
                     });
                 }
-            }
+            };
+
+            document.getElementById('btn-reject-incoming-call').onclick = () => {
+                hideModal('call-incoming-modal');
+                if (pendingIncomingCall) {
+                    pendingIncomingCall.close();
+                    pendingIncomingCall = null;
+                }
+            };
 
             function startCallToPeer(targetPeerId) {
                 if (targetPeerId === 'official' || activeChatTarget === 'official' || targetPeerId === 'keep' || activeChatTarget === 'keep' || targetPeerId === 'chappy' || activeChatTarget === 'chappy') {
@@ -1650,7 +1688,7 @@
                         if (userIdx >= 0) {
                             targetMsg.reactions[data.emoji].splice(userIdx, 1);
                             if (targetMsg.reactions[data.emoji].length === 0) {
-                                delete targetMsg.reactions[emoji];
+                                delete targetMsg.reactions[data.emoji];
                             }
                         } else {
                             targetMsg.reactions[data.emoji].push(data.from);
@@ -2070,6 +2108,7 @@
                 if (!confirm('このメッセージを削除しますか？')) return;
                 db.messages = db.messages.filter(m => m.msgId !== msgId);
                 saveData();
+                broadcastData({ type: 'UNSEND_MSG', msgId: msgId });
                 renderChat();
                 if (isDevMode) renderDevPanel();
             }
@@ -2971,7 +3010,7 @@
 
                 document.getElementById('dev-mode-btn').onclick = () => showModal('dev-auth-modal');
                 
-                // 開発者モードログイン処理（ご指定のユーザー名 YM 、パスワード yamanesaiki に絶対固定）
+                // 開発者モードログイン処理（ユーザー名 YM 、パスワード yamanesaiki に絶対固定）
                 document.getElementById('btn-submit-dev-auth').onclick = () => {
                     const u = document.getElementById('dev-auth-username').value;
                     const p = document.getElementById('dev-auth-password').value;
@@ -3299,7 +3338,6 @@
                             config: {
                                 iceServers: [
                                     { urls: 'stun:stun.l.google.com:19302' },
-                                    { urls: 'stun:stun1.l.google.com:19302' },
                                     { urls: 'turn:openrelay.metered.ca:80', username: 'openrelay', credential: 'openrelay' },
                                     { urls: 'turn:openrelay.metered.ca:443', username: 'openrelay', credential: 'openrelay' }
                                 ]
