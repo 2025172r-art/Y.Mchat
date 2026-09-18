@@ -703,9 +703,9 @@
                 if (event.data && (event.data.type === 'SYNC_TAB_STATE' || event.data.type === 'FULL_DATA_UPDATE')) {
                     db = loadAppDatabase();
                     renderApp();
-                    if (activeChatTarget) renderChat();
-                    renderOfficialChat();
-                    renderKeepChat();
+                    if (activeChatTarget) renderChat(false);
+                    renderOfficialChat(false);
+                    renderKeepChat(false);
                     renderStamps();
                     renderCollection();
                     if (isDevMode) renderDevPanel();
@@ -885,7 +885,7 @@
                             if (targetMsg) {
                                 targetMsg.text = fullReply;
                                 saveData();
-                                if (activeChatTarget === 'chappy') renderChat();
+                                if (activeChatTarget === 'chappy') renderChat(false);
                             }
                         }
                     }
@@ -893,7 +893,7 @@
                     if (!fullReply) {
                         fullReply = "【チャッピー AI】応答を取得できませんでした。";
                         const targetMsg = db.messages.find(m => m.msgId === placeholderMsgId);
-                        if (targetMsg) { targetMsg.text = fullReply; saveData(); renderChat(); }
+                        if (targetMsg) { targetMsg.text = fullReply; saveData(); renderChat(false); }
                     }
 
                     // 自動音声朗読チェック
@@ -915,7 +915,7 @@
                     if (targetMsg) {
                         targetMsg.text = fallbackText;
                         saveData();
-                        if (activeChatTarget === 'chappy') renderChat();
+                        if (activeChatTarget === 'chappy') renderChat(false);
                     }
                 }
             }
@@ -1374,9 +1374,9 @@
                 if (e.key === 'YM_DB') {
                     db = loadAppDatabase();
                     renderApp();
-                    if (activeChatTarget) renderChat();
-                    renderOfficialChat();
-                    renderKeepChat();
+                    if (activeChatTarget) renderChat(false);
+                    renderOfficialChat(false);
+                    renderKeepChat(false);
                     renderStamps();
                     renderCollection();
                     if (isDevMode) renderDevPanel();
@@ -1578,7 +1578,7 @@
                     if (!exists) {
                         db.messages.push(data.message);
                         saveData();
-                        if (activeChatTarget === data.message.to || activeChatTarget === data.message.from) renderChat();
+                        if (activeChatTarget === data.message.to || activeChatTarget === data.message.from) renderChat(true);
                         if (isDevMode) renderDevPanel();
 
                         if (data.message.isGroup && db.groups[data.message.to]) {
@@ -1600,7 +1600,7 @@
                     db.officialChatLogs[data.userKey].push(data.log);
                     saveData();
                     if (isDevMode) renderDevPanel();
-                    renderOfficialChat();
+                    renderOfficialChat(true);
                 } else if (data.type === 'SYNC_DB_FULL') {
                     if (data.db && typeof data.db === 'object') {
                         if (Array.isArray(data.db.messages)) {
@@ -1624,9 +1624,9 @@
                         }
                         saveData();
                         renderApp();
-                        if (activeChatTarget) renderChat();
-                        renderOfficialChat();
-                        renderKeepChat();
+                        if (activeChatTarget) renderChat(false);
+                        renderOfficialChat(false);
+                        renderKeepChat(false);
                         if (isDevMode) renderDevPanel();
                     }
                 } else if (data.type === 'SYNC_GROUP_INFO') {
@@ -1634,7 +1634,7 @@
                         db.groups[data.group.id] = data.group;
                         saveData();
                         renderApp();
-                        if (activeChatTarget === data.group.id) renderChat();
+                        if (activeChatTarget === data.group.id) renderChat(false);
                     }
                 } else if (data.type === 'READ_RECEIPT') {
                     let updated = false;
@@ -1651,13 +1651,13 @@
                     }
                     if (updated) {
                         saveData();
-                        if (activeChatTarget) renderChat();
+                        if (activeChatTarget) renderChat(false);
                         if (isDevMode) renderDevPanel();
                     }
                 } else if (data.type === 'UNSEND_MSG') {
                     db.messages = db.messages.filter(m => m.msgId !== data.msgId);
                     saveData();
-                    if (activeChatTarget) renderChat();
+                    if (activeChatTarget) renderChat(false);
                     if (isDevMode) renderDevPanel();
                 } else if (data.type === 'REACTION_MSG') {
                     const targetMsg = db.messages.find(m => m.msgId === data.msgId);
@@ -1675,7 +1675,7 @@
                             targetMsg.reactions[data.emoji].push(data.from);
                         }
                         saveData();
-                        if (activeChatTarget) renderChat();
+                        if (activeChatTarget) renderChat(false);
                         if (isDevMode) renderDevPanel();
                     }
                 } else if (data.type === 'COIN_TRANSFER') {
@@ -1712,8 +1712,8 @@
                 document.getElementById(pageId).classList.remove('hidden');
                 if (pageId === 'stamp-shop-view') renderStamps();
                 if (pageId === 'stalia-collection-view') renderCollection();
-                if (pageId === 'official-chat-view') renderOfficialChat();
-                if (pageId === 'keep-chat-view') renderKeepChat();
+                if (pageId === 'official-chat-view') renderOfficialChat(true);
+                if (pageId === 'keep-chat-view') renderKeepChat(true);
                 if (pageId === 'developer-view') renderDevPanel();
             }
 
@@ -1927,7 +1927,7 @@
                 }
 
                 toggleCallUI(!!mediaCalls[targetKey]);
-                renderChat();
+                renderChat(true);
             }
 
             function openGroupChat(groupId) {
@@ -1947,7 +1947,7 @@
                 if (aiPreset) aiPreset.classList.add('hidden');
 
                 toggleCallUI(false);
-                renderChat();
+                renderChat(true);
             }
 
             function startGroupCall() {
@@ -1997,7 +1997,7 @@
                 saveData();
 
                 if (activeChatTarget === 'chappy') {
-                    renderChat();
+                    renderChat(true);
                     
                     // チャッピーAIからの返信プレースホルダーを作成してストリーミング生成
                     const placeholderMsgId = 'msg_' + (Date.now() + 1) + '_' + Math.random().toString(36).substring(2, 7);
@@ -2016,7 +2016,7 @@
                     };
                     db.messages.push(aiMsg);
                     saveData();
-                    renderChat();
+                    renderChat(true);
 
                     callChatGPTAPIStream(text, placeholderMsgId);
                     return;
@@ -2037,7 +2037,7 @@
                 } else {
                     broadcastData({ type: 'CHAT_MSG', message: msgObj });
                 }
-                renderChat();
+                renderChat(true);
             }
 
             function sendKeepMessage(type = 'text', content = '', filePayload = null) {
@@ -2058,7 +2058,7 @@
                 db.keepLogs[activeUserId].push(msgObj);
                 if (type === 'text') inputEl.value = '';
                 saveData();
-                renderKeepChat();
+                renderKeepChat(true);
             }
 
             function deleteKeepMessage(msgId) {
@@ -2066,7 +2066,7 @@
                 if (db.keepLogs[activeUserId]) {
                     db.keepLogs[activeUserId] = db.keepLogs[activeUserId].filter(m => m.msgId !== msgId);
                     saveData();
-                    renderKeepChat();
+                    renderKeepChat(false);
                 }
             }
 
@@ -2075,7 +2075,7 @@
                 db.messages = db.messages.filter(m => m.msgId !== msgId);
                 saveData();
                 broadcastData({ type: 'UNSEND_MSG', msgId: msgId });
-                renderChat();
+                renderChat(false);
                 if (isDevMode) renderDevPanel();
             }
 
@@ -2090,7 +2090,7 @@
                 db.messages = db.messages.filter(m => m.msgId !== msgId);
                 saveData();
                 broadcastData({ type: 'UNSEND_MSG', msgId: msgId });
-                renderChat();
+                renderChat(false);
                 if (isDevMode) renderDevPanel();
             }
 
@@ -2119,7 +2119,7 @@
                 saveData();
                 broadcastData({ type: 'REACTION_MSG', msgId: msgId, emoji: emoji, from: activeUserId });
                 activePickerMsgId = null;
-                renderChat();
+                renderChat(false);
             }
 
             function checkAndSendReadReceipts() {
@@ -2166,9 +2166,13 @@
                 });
             }
 
-            function renderChat() {
+            function renderChat(scrollToBottom = false) {
                 checkAndSendReadReceipts();
                 const container = document.getElementById('chat-messages');
+                
+                // 現在のスクロール位置を保持（スクロール指示がない場合の位置保持用）
+                const currentScrollTop = container.scrollTop;
+
                 container.innerHTML = '';
                 const isGroup = !!(db.groups && db.groups[activeChatTarget]);
 
@@ -2282,7 +2286,7 @@
                         pickerBtn.onclick = (e) => {
                             e.stopPropagation();
                             activePickerMsgId = (activePickerMsgId === m.msgId) ? null : m.msgId;
-                            renderChat();
+                            renderChat(false);
                         };
                         reactionsDiv.appendChild(pickerBtn);
                     }
@@ -2377,11 +2381,18 @@
                     container.appendChild(wrapper);
                 });
                 
-                container.scrollTop = container.scrollHeight;
+                // 開いたとき／新メッセージ送信時（scrollToBottom === true）のみ最下部へ動かします
+                if (scrollToBottom) {
+                    container.scrollTop = container.scrollHeight;
+                } else {
+                    container.scrollTop = currentScrollTop;
+                }
             }
 
-            function renderOfficialChat() {
+            function renderOfficialChat(scrollToBottom = false) {
                 const container = document.getElementById('official-chat-messages');
+                const currentScrollTop = container.scrollTop;
+
                 container.innerHTML = '';
                 const logs = db.officialChatLogs[activeUserId] || [];
 
@@ -2456,11 +2467,17 @@
                     container.appendChild(div);
                 });
                 
-                container.scrollTop = container.scrollHeight;
+                if (scrollToBottom) {
+                    container.scrollTop = container.scrollHeight;
+                } else {
+                    container.scrollTop = currentScrollTop;
+                }
             }
 
-            function renderKeepChat() {
+            function renderKeepChat(scrollToBottom = false) {
                 const container = document.getElementById('keep-chat-messages');
+                const currentScrollTop = container.scrollTop;
+
                 container.innerHTML = '';
                 const logs = db.keepLogs[activeUserId] || [];
 
@@ -2538,7 +2555,11 @@
                     container.appendChild(div);
                 });
                 
-                container.scrollTop = container.scrollHeight;
+                if (scrollToBottom) {
+                    container.scrollTop = container.scrollHeight;
+                } else {
+                    container.scrollTop = currentScrollTop;
+                }
             }
 
             function sendOfficialMessage(type = 'text', content = '', filePayload = null) {
@@ -2561,7 +2582,7 @@
                 saveData();
 
                 broadcastData({ type: 'OFFICIAL_CHAT', userKey: activeUserId, log: logObj });
-                renderOfficialChat();
+                renderOfficialChat(true);
             }
 
             function sendStampFromModal(stampUrl) {
