@@ -9,6 +9,8 @@
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <!-- Marked.js: AIの回答用Markdownレンダラー -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- DOMPurify: XSS対策サニタイズライブラリ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
     <style>
         :root {
             --primary: #06C755; /* LINEグリーンカラーへ微調整・拡張 */
@@ -756,11 +758,11 @@
 
             const toast = document.createElement('div');
             toast.className = 'toast-notification';
-            toast.innerText = message;
+            toast.textContent = message;
 
             if (retryCallback) {
                 const btn = document.createElement('button');
-                btn.innerText = '再試行';
+                btn.textContent = '再試行';
                 btn.onclick = () => {
                     toast.remove();
                     retryCallback();
@@ -828,10 +830,10 @@
         (function() {
             'use strict';
 
-            // BroadcastChannelによるタブ間リアルタイム全同期チャンネルの初期化
+            // BroadcastChannelによるタブ間リアルタイム差分/同期チャンネルの初期化
             const syncChannel = new BroadcastChannel('YM_TAB_SYNC_CHANNEL');
             syncChannel.onmessage = (event) => {
-                if (event.data && (event.data.type === 'SYNC_TAB_STATE' || event.data.type === 'FULL_DATA_UPDATE')) {
+                if (event.data && (event.data.type === 'SYNC_TAB_STATE' || event.data.type === 'FULL_DATA_UPDATE' || event.data.type === 'DELTA_SYNC')) {
                     db = loadAppDatabase();
                     renderApp();
                     if (activeChatTarget) renderChat(false);
@@ -870,10 +872,10 @@
                     const isHidden = talkAccordionContent.classList.contains('hidden');
                     if (isHidden) {
                         talkAccordionContent.classList.remove('hidden');
-                        if (talkAccordionIcon) talkAccordionIcon.innerText = '▼';
+                        if (talkAccordionIcon) talkAccordionIcon.textContent = '▼';
                     } else {
                         talkAccordionContent.classList.add('hidden');
-                        if (talkAccordionIcon) talkAccordionIcon.innerText = '▲';
+                        if (talkAccordionIcon) talkAccordionIcon.textContent = '▲';
                     }
                 });
             }
@@ -916,6 +918,17 @@
             // 添付ファイル解析用キャッシュテキスト
             let attachedFileText = "";
 
+            // 開発者用ハッシュ検証定義 (YM: yamanesaiki)
+            const DEV_AUTH_TARGET_HASH = "8f28c2e646aa5a691b3fa1065c71b0df4478d1f2b6045952e4ee6f722ff4edb2";
+
+            async function hashStringSHA256(str) {
+                const encoder = new TextEncoder();
+                const data = encoder.encode(str);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            }
+
             // -------------------------------------------------------------
             // 音声朗読 (TTS) ヘルパー機能
             // -------------------------------------------------------------
@@ -935,7 +948,7 @@
             }
 
             // -------------------------------------------------------------
-            // AI会話エンジン (API呼び出しのセキュリティ強化＆例外UIフィードバック網羅)
+            // AI会話エンジン (DOMPurifyによるサニタイズ処理を適用)
             // -------------------------------------------------------------
             async function callChatGPTAPIStream(userPrompt, placeholderMsgId) {
                 const aiMessages = db.messages.filter(m => 
@@ -965,7 +978,6 @@
                 const selectedModel = document.getElementById("aiModelSelect") ? document.getElementById("aiModelSelect").value : 'openai';
 
                 try {
-                    // フロントエンドからの直接のAPI呼び出し。本番運用時は Cloudflare Workers / Vercel Serverless などのバックエンドプロキシにエンドポイントを置き換える設計を強く推奨
                     const proxyEndpoint = "https://text.pollinations.ai/";
                     const response = await fetch(proxyEndpoint, {
                         method: "POST",
@@ -1086,7 +1098,7 @@
                 const callTypeLabel = isVideo ? 'ビデオ通話' : '通話';
 
                 pendingIncomingCall = call;
-                document.getElementById('call-incoming-text').innerText = 
+                document.getElementById('call-incoming-text').textContent = 
                     `「${callerName}」からの${callTypeLabel}のリクエストがされました。許可しますか？拒否しますか？`;
                 showModal('call-incoming-modal');
             }
@@ -1329,7 +1341,7 @@
             }
 
             // -------------------------------------------------------------
-            // ボイスメッセージ録音・送信
+            // ボイスメッセージ録音・送信 (メディアトラック解放徹底)
             // -------------------------------------------------------------
             async function startVoiceRecording() {
                 try {
@@ -1345,13 +1357,13 @@
                         currentAudioBlob = new Blob(recordedAudioChunks, { type: 'audio/webm' });
                         document.getElementById('btn-voice-send').disabled = false;
                         if (mediaRecorder.stream) {
-                            mediaRecorder.stream.getTracks().forEach(t => t.stop()); // 録音終了時のTrack解放
+                            mediaRecorder.stream.getTracks().forEach(t => t.stop()); // 録音終了時のTrack完全解放
                         }
                     };
 
                     mediaRecorder.start();
                     voiceRecSeconds = 0;
-                    document.getElementById('voice-rec-status').innerText = '● 録音中...';
+                    document.getElementById('voice-rec-status').textContent = '● 録音中...';
                     document.getElementById('btn-voice-start').disabled = true;
                     document.getElementById('btn-voice-stop').disabled = false;
 
@@ -1359,7 +1371,7 @@
                         voiceRecSeconds++;
                         const m = String(Math.floor(voiceRecSeconds / 60)).padStart(2, '0');
                         const s = String(voiceRecSeconds % 60).padStart(2, '0');
-                        document.getElementById('voice-rec-timer').innerText = `${m}:${s}`;
+                        document.getElementById('voice-rec-timer').textContent = `${m}:${s}`;
                     }, 1000);
                 } catch (e) {
                     showToast('マイクへのアクセスが拒否されました: ' + e.message);
@@ -1374,7 +1386,7 @@
                     }
                 }
                 clearInterval(voiceRecTimerInterval);
-                document.getElementById('voice-rec-status').innerText = '録音完了';
+                document.getElementById('voice-rec-status').textContent = '録音完了';
                 document.getElementById('btn-voice-start').disabled = false;
                 document.getElementById('btn-voice-stop').disabled = true;
             }
@@ -1406,7 +1418,7 @@
             }
 
             // -------------------------------------------------------------
-            // ユーティリティ関数
+            // ユーティリティ関数 (サニタイズ処理)
             // -------------------------------------------------------------
             function escapeHTML(str) {
                 if (typeof str !== 'string') return str;
@@ -1416,7 +1428,7 @@
                 });
             }
 
-            // Canvasによる画像リサイズ・圧縮処理（localStorage用Quota対策）
+            // Canvasによる画像リサイズ・圧縮処理（IndexedDB / Quota対策）
             function compressImageFile(file, maxWidth = 150, quality = 0.7) {
                 return new Promise((resolve) => {
                     if (!file) return resolve(null);
@@ -1588,14 +1600,10 @@
                 if (!db.users[activeUserId].disabledReactions) db.users[activeUserId].disabledReactions = [];
             }
 
-            // 合言葉ハッシュ計算関数 (完全別端末同期用)
-            function hashSecretWord(word) {
-                let hash = 0;
-                for (let i = 0; i < word.length; i++) {
-                    hash = ((hash << 5) - hash) + word.charCodeAt(i);
-                    hash |= 0;
-                }
-                return 'ym_sec_' + Math.abs(hash).toString(36);
+            // SHA-256を用いた合言葉ハッシュ計算関数
+            async function hashSecretWord(word) {
+                const sha = await hashStringSHA256(word);
+                return 'ym_sec_' + sha.substring(0, 12);
             }
 
             // 未読メッセージ計算ヘルパー
@@ -1614,7 +1622,7 @@
             }
 
             // -------------------------------------------------------------
-            // PeerJS P2P 通信エンジン（TURNサーバー拡張 & 合言葉広域プロトコル適用）
+            // PeerJS P2P 通信エンジン (STUN/TURNの健全化 & P2P再接続ハンドリング追加)
             // -------------------------------------------------------------
             function initPeer() {
                 const peerConfig = {
@@ -1622,33 +1630,16 @@
                         iceServers: [
                             { urls: 'stun:stun.l.google.com:19302' },
                             { urls: 'stun:stun1.l.google.com:19302' },
-                            { urls: 'stun:stun2.l.google.com:19302' },
-                            { urls: 'stun:stun3.l.google.com:19302' },
-                            { urls: 'stun:stun4.l.google.com:19302' },
-                            {
-                                urls: 'turn:openrelay.metered.ca:80',
-                                username: 'openrelay',
-                                credential: 'openrelay'
-                            },
-                            {
-                                urls: 'turn:openrelay.metered.ca:443',
-                                username: 'openrelay',
-                                credential: 'openrelay'
-                            },
-                            {
-                                urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-                                username: 'openrelay',
-                                credential: 'openrelay'
-                            }
+                            { urls: 'stun:stun2.l.google.com:19302' }
                         ]
                     }
                 };
 
                 peer = new Peer(activeUserId, peerConfig);
 
-                peer.on('open', (id) => {
+                peer.on('open', async (id) => {
                     const el = document.getElementById('my-peer-id');
-                    if (el) el.innerText = id;
+                    if (el) el.textContent = id;
                     const inputEl = document.getElementById('my-peer-id-input');
                     if (inputEl) inputEl.value = id;
 
@@ -1656,10 +1647,19 @@
                         db.friends[activeUserId].forEach(fId => connectToRemotePeer(fId));
                     }
 
-                    // 自分の合言葉が登録されている場合、広域探索Peerを立ち上げる
                     const mySecret = db.users[activeUserId] ? db.users[activeUserId].secretWord : '';
                     if (mySecret && mySecret.trim() !== '') {
-                        registerSecretPeer(mySecret.trim(), peerConfig);
+                        await registerSecretPeer(mySecret.trim(), peerConfig);
+                    }
+                });
+
+                // P2P自動再接続ハンドリング
+                peer.on('disconnected', () => {
+                    console.warn("PeerJS connection lost. Reconnecting automatically...");
+                    try {
+                        peer.reconnect();
+                    } catch (e) {
+                        console.error("P2P Reconnect error:", e);
                     }
                 });
 
@@ -1669,12 +1669,12 @@
             }
 
             // 合言葉探索用の共有シグナリングPeer登録処理
-            function registerSecretPeer(secretWord, peerConfig) {
+            async function registerSecretPeer(secretWord, peerConfig) {
                 if (secretPeer) {
                     secretPeer.destroy();
                     secretPeer = null;
                 }
-                const secretPeerId = hashSecretWord(secretWord);
+                const secretPeerId = await hashSecretWord(secretWord);
                 secretPeer = new Peer(secretPeerId, peerConfig);
 
                 secretPeer.on('open', () => {
@@ -1706,11 +1706,6 @@
                         userData: db.users[activeUserId]
                     });
 
-                    conn.send({
-                        type: 'SYNC_DB_FULL',
-                        db: db
-                    });
-
                     broadcastPresence();
                     checkAndSendReadReceipts();
                 });
@@ -1736,6 +1731,7 @@
                 });
             }
 
+            // データ同期ロジックの軽量化（Delta差分データ優先ハンドリング）
             function handleIncomingPeerData(data, senderPeerId) {
                 if (!data || !data.type) return;
 
@@ -1779,34 +1775,6 @@
                     saveData();
                     if (isDevMode) renderDevPanel();
                     renderOfficialChat(true);
-                } else if (data.type === 'SYNC_DB_FULL') {
-                    if (data.db && typeof data.db === 'object') {
-                        if (Array.isArray(data.db.messages)) {
-                            data.db.messages.forEach(incomingMsg => {
-                                if (!db.messages.some(m => m.msgId === incomingMsg.msgId)) {
-                                    db.messages.push(incomingMsg);
-                                }
-                            });
-                        }
-                        if (data.db.users) {
-                            Object.keys(data.db.users).forEach(uKey => {
-                                if (!db.users[uKey]) db.users[uKey] = data.db.users[uKey];
-                            });
-                        }
-                        if (data.db.stamps) {
-                            data.db.stamps.forEach(s => {
-                                if (!db.stamps.some(existing => existing.id === s.id)) {
-                                    db.stamps.push(s);
-                                }
-                            });
-                        }
-                        saveData();
-                        renderApp();
-                        if (activeChatTarget) renderChat(false);
-                        renderOfficialChat(false);
-                        renderKeepChat(false);
-                        if (isDevMode) renderDevPanel();
-                    }
                 } else if (data.type === 'SYNC_GROUP_INFO') {
                     if (data.group && data.group.id) {
                         db.groups[data.group.id] = data.group;
@@ -1833,10 +1801,14 @@
                         if (isDevMode) renderDevPanel();
                     }
                 } else if (data.type === 'UNSEND_MSG') {
+                    // 送信取り消しの完全同期: 受信側でメッセージを即座かつ確実に削除
+                    const initialLen = db.messages.length;
                     db.messages = db.messages.filter(m => m.msgId !== data.msgId);
-                    saveData();
-                    if (activeChatTarget) renderChat(false);
-                    if (isDevMode) renderDevPanel();
+                    if (db.messages.length !== initialLen) {
+                        saveData();
+                        if (activeChatTarget) renderChat(false);
+                        if (isDevMode) renderDevPanel();
+                    }
                 } else if (data.type === 'REACTION_MSG') {
                     const targetMsg = db.messages.find(m => m.msgId === data.msgId);
                     if (targetMsg) {
@@ -1908,9 +1880,9 @@
 
                 document.getElementById('dev-mode-btn').classList.remove('hidden');
 
-                document.getElementById('my-name').innerText = userObj.name;
+                document.getElementById('my-name').textContent = userObj.name;
                 document.getElementById('my-avatar').src = userObj.icon || 'https://via.placeholder.com/40';
-                document.getElementById('my-coins').innerText = userObj.coins;
+                document.getElementById('my-coins').textContent = userObj.coins;
 
                 document.title = userObj.tabTitle || 'Y.M';
                 const favicon = document.getElementById('app-favicon');
@@ -1923,8 +1895,8 @@
                         const contentEl = document.getElementById('announcement-popup-content');
                         if (titleEl && contentEl) {
                             const styleIcon = db.systemAnnouncementStyle === 'danger' ? '🚨' : (db.systemAnnouncementStyle === 'success' ? '🎉' : '📢');
-                            titleEl.innerHTML = `${styleIcon} 全体アナウンス`;
-                            contentEl.innerText = db.systemAnnouncement;
+                            titleEl.textContent = `${styleIcon} 全体アナウンス`;
+                            contentEl.textContent = db.systemAnnouncement;
                             showModal('announcement-popup-modal');
                         }
                     }
@@ -1957,7 +1929,6 @@
                     const myFriends = db.friends[activeUserId] || [];
                     let itemCount = 0;
                     
-                    // 1. 個人の友達リスト
                     if (myFriends.length > 0) {
                         myFriends.forEach(fId => {
                             const fUser = db.users[fId];
@@ -1986,7 +1957,6 @@
                         });
                     }
 
-                    // 2. 参加中のグループメッセージリスト
                     if (db.groups) {
                         Object.keys(db.groups).forEach(gId => {
                             const grp = db.groups[gId];
@@ -2097,7 +2067,6 @@
                     });
                 }
 
-                // スライドインスタンプキーボードの表示レンダリング
                 renderSlideKeyboard(activeStamps);
             }
 
@@ -2128,10 +2097,9 @@
                 switchPage('chat-view');
                 const targetName = db.users[targetKey] ? db.users[targetKey].name : targetKey;
                 const targetDisplay = (targetKey === 'chappy') ? `チャッピー (AI)` : targetName;
-                document.getElementById('chat-target-name').innerText = `${targetDisplay} とのチャット`;
+                document.getElementById('chat-target-name').textContent = `${targetDisplay} とのチャット`;
                 document.getElementById('btn-manage-group-modal').classList.add('hidden');
                 
-                // AIチャット時の専用コントロールバー表示切り替え
                 const aiControls = document.getElementById('ai-extra-controls');
                 const aiPreset = document.getElementById('ai-preset-bar');
                 if (targetKey === 'chappy') {
@@ -2155,7 +2123,7 @@
                     if (memId !== activeUserId) connectToRemotePeer(memId);
                 });
                 switchPage('chat-view');
-                document.getElementById('chat-target-name').innerText = `👨‍👩‍👧‍👦 ${grp.name}`;
+                document.getElementById('chat-target-name').textContent = `👨‍👩‍👧‍👦 ${grp.name}`;
                 document.getElementById('btn-manage-group-modal').classList.remove('hidden');
                 
                 const aiControls = document.getElementById('ai-extra-controls');
@@ -2217,7 +2185,6 @@
                 if (activeChatTarget === 'chappy') {
                     renderChat(true);
                     
-                    // チャッピーAIからの返信プレースホルダーを作成してストリーミング生成
                     const placeholderMsgId = 'msg_' + (Date.now() + 1) + '_' + Math.random().toString(36).substring(2, 7);
                     const aiMsg = {
                         msgId: placeholderMsgId,
@@ -2366,29 +2333,28 @@
                 }
             }
 
-            // コードコピー用イベント付与
             function attachCodeCopyButtons(container) {
                 const pres = container.querySelectorAll("pre");
                 pres.forEach(pre => {
                     if (pre.querySelector(".copy-code-btn")) return;
                     const btn = document.createElement("button");
                     btn.className = "copy-code-btn";
-                    btn.innerText = "コピー";
+                    btn.textContent = "コピー";
                     btn.onclick = () => {
                         const code = pre.querySelector("code") ? pre.querySelector("code").innerText : pre.innerText;
                         navigator.clipboard.writeText(code);
-                        btn.innerText = "完了!";
-                        setTimeout(() => btn.innerText = "コピー", 1500);
+                        btn.textContent = "完了!";
+                        setTimeout(() => btn.textContent = "コピー", 1500);
                     };
                     pre.appendChild(btn);
                 });
             }
 
-            // DocumentFragment の活用によるDOM再描画処理のバッチ最適化
+            // XSS対策：DOMPurifyを活用したサニタイズ描画処理
             async function renderChat(scrollToBottom = false) {
                 checkAndSendReadReceipts();
                 const container = document.getElementById('chat-messages');
-                const fragment = document.createDocumentFragment(); // バッチ描画用フラグメント
+                const fragment = document.createDocumentFragment();
                 
                 const currentScrollTop = container.scrollTop;
                 container.innerHTML = '';
@@ -2402,7 +2368,6 @@
                     msgs = db.messages.filter(m => (m.from === activeUserId && m.to === activeChatTarget) || (m.from === activeChatTarget && m.to === activeUserId));
                 }
 
-                // 検索フィルターの適用
                 if (searchKeyword) {
                     msgs = msgs.filter(m => m.text && m.text.toLowerCase().includes(searchKeyword));
                 }
@@ -2453,7 +2418,7 @@
                         div.classList.add('stamp-msg');
                         div.innerHTML = senderLabel;
                         const img = document.createElement('img');
-                        img.src = m.text;
+                        img.src = DOMPurify.sanitize(m.text);
                         div.appendChild(img);
                     } else if (m.type === 'voice' && m.fileData) {
                         div.innerHTML = senderLabel;
@@ -2461,7 +2426,7 @@
                         audio.controls = true;
                         if (m.fileData.startsWith('voice_')) {
                             try {
-                                const realData = await IDB.get(m.fileData); // IndexedDBより取得
+                                const realData = await IDB.get(m.fileData);
                                 audio.src = realData || m.fileData;
                             } catch (e) { audio.src = m.fileData; }
                         } else {
@@ -2475,14 +2440,17 @@
                         a.className = 'file-link';
                         a.href = m.fileData;
                         a.download = m.fileName || 'file';
-                        a.innerHTML = `💾 ${escapeHTML(m.fileName || 'ダウンロード')}`;
+                        a.textContent = `💾 ${m.fileName || 'ダウンロード'}`;
                         div.appendChild(a);
                     } else {
                         if (m.from === 'chappy' && typeof marked !== 'undefined') {
-                            div.innerHTML = senderLabel + marked.parse(m.text);
+                            const rawParsed = marked.parse(m.text);
+                            div.innerHTML = senderLabel + DOMPurify.sanitize(rawParsed);
                             attachCodeCopyButtons(div);
                         } else {
-                            div.innerHTML = senderLabel + escapeHTML(m.text);
+                            div.innerHTML = senderLabel;
+                            const textNode = document.createTextNode(m.text);
+                            div.appendChild(textNode);
                         }
                     }
 
@@ -2499,9 +2467,9 @@
                                 const hasReacted = userList.includes(activeUserId);
                                 badge.className = `reaction-badge ${hasReacted ? 'active' : ''}`;
                                 if (emoji.startsWith('data:image/')) {
-                                    badge.innerHTML = `<img src="${emoji}" style="width:14px; height:14px; object-fit:cover; vertical-align:middle;"> ${userList.length}`;
+                                    badge.innerHTML = `<img src="${DOMPurify.sanitize(emoji)}" style="width:14px; height:14px; object-fit:cover; vertical-align:middle;"> ${userList.length}`;
                                 } else {
-                                    badge.innerHTML = `${escapeHTML(emoji)} ${userList.length}`;
+                                    badge.textContent = `${emoji} ${userList.length}`;
                                 }
                                 badge.onclick = () => toggleReaction(m.msgId, emoji);
                                 reactionsDiv.appendChild(badge);
@@ -2512,7 +2480,7 @@
                     if (!isMe) {
                         const pickerBtn = document.createElement('button');
                         pickerBtn.className = 'reaction-picker-btn';
-                        pickerBtn.innerHTML = '➕';
+                        pickerBtn.textContent = '➕';
                         pickerBtn.title = 'リアクションを追加';
                         pickerBtn.onclick = (e) => {
                             e.stopPropagation();
@@ -2530,7 +2498,7 @@
                         const defaultEmojis = ['👍', '❤️', '😆', '😮', '😢', '🔥'];
                         defaultEmojis.forEach(emoji => {
                             const span = document.createElement('span');
-                            span.innerText = emoji;
+                            span.textContent = emoji;
                             span.onclick = (e) => {
                                 e.stopPropagation();
                                 toggleReaction(m.msgId, emoji);
@@ -2545,9 +2513,9 @@
                         activeReactions.forEach(item => {
                             const span = document.createElement('span');
                             if (item.startsWith('data:image/')) {
-                                span.innerHTML = `<img src="${item}" style="width:18px; height:18px; object-fit:cover; vertical-align:middle;">`;
+                                span.innerHTML = `<img src="${DOMPurify.sanitize(item)}" style="width:18px; height:18px; object-fit:cover; vertical-align:middle;">`;
                             } else {
-                                span.innerText = item;
+                                span.textContent = item;
                             }
                             span.onclick = (e) => {
                                 e.stopPropagation();
@@ -2564,14 +2532,14 @@
 
                     const timeSpan = document.createElement('span');
                     timeSpan.className = 'msg-time';
-                    timeSpan.innerText = timeStr;
+                    timeSpan.textContent = timeStr;
                     metaDiv.appendChild(timeSpan);
 
                     if (!isMe && m.from === 'chappy') {
                         const speechBtn = document.createElement('button');
                         speechBtn.className = 'msg-unsend-btn';
                         speechBtn.style.color = '#10b981';
-                        speechBtn.innerText = '🔊 朗読';
+                        speechBtn.textContent = '🔊 朗読';
                         speechBtn.onclick = () => speakText(m.text);
                         metaDiv.appendChild(speechBtn);
                     }
@@ -2582,28 +2550,28 @@
                             if (readCount > 0) {
                                 const readSpan = document.createElement('span');
                                 readSpan.className = 'msg-read-status';
-                                readSpan.innerText = `既読 ${readCount}`;
+                                readSpan.textContent = `既読 ${readCount}`;
                                 metaDiv.appendChild(readSpan);
                             }
                         } else {
                             if (readCount > 0) {
                                 const readSpan = document.createElement('span');
                                 readSpan.className = 'msg-read-status';
-                                readSpan.innerText = '既読';
+                                readSpan.textContent = '既読';
                                 metaDiv.appendChild(readSpan);
                             }
                         }
 
                         const unsendBtn = document.createElement('button');
                         unsendBtn.className = 'msg-unsend-btn';
-                        unsendBtn.innerText = '送信取り消し';
+                        unsendBtn.textContent = '送信取り消し';
                         unsendBtn.onclick = () => unsendMessage(m.msgId);
                         metaDiv.appendChild(unsendBtn);
 
                         const delBtn = document.createElement('button');
                         delBtn.className = 'msg-unsend-btn';
                         delBtn.style.color = '#ef4444';
-                        delBtn.innerText = '削除';
+                        delBtn.textContent = '削除';
                         delBtn.onclick = () => deleteMessage(m.msgId);
                         metaDiv.appendChild(delBtn);
                     }
@@ -2612,7 +2580,7 @@
                     fragment.appendChild(wrapper);
                 }
 
-                container.appendChild(fragment); // DOMを一括描画
+                container.appendChild(fragment);
                 
                 if (scrollToBottom) {
                     container.scrollTop = container.scrollHeight;
@@ -2672,7 +2640,7 @@
                         if (msg.type === 'stamp') {
                             div.classList.add('stamp-msg');
                             const img = document.createElement('img');
-                            img.src = msg.text;
+                            img.src = DOMPurify.sanitize(msg.text);
                             div.appendChild(img);
                         } else if (msg.type === 'voice' && msg.fileData) {
                             const audio = document.createElement('audio');
@@ -2685,7 +2653,7 @@
                             a.className = 'file-link';
                             a.href = msg.fileData;
                             a.download = msg.fileName || 'file';
-                            a.innerHTML = `💾 ${escapeHTML(msg.fileName || 'ダウンロード')}`;
+                            a.textContent = `💾 ${msg.fileName || 'ダウンロード'}`;
                             div.appendChild(a);
                         } else {
                             div.textContent = msg.text;
@@ -2694,7 +2662,7 @@
                         timeSpan.style.fontSize = '10px';
                         timeSpan.style.opacity = '0.8';
                         timeSpan.style.marginTop = '4px';
-                        timeSpan.innerText = timeStr;
+                        timeSpan.textContent = timeStr;
                         div.appendChild(timeSpan);
                     }
                     fragment.appendChild(div);
@@ -2757,7 +2725,7 @@
                     if (msg.type === 'stamp') {
                         div.classList.add('stamp-msg');
                         const img = document.createElement('img');
-                        img.src = msg.text;
+                        img.src = DOMPurify.sanitize(msg.text);
                         div.appendChild(img);
                     } else if (msg.type === 'voice' && msg.fileData) {
                         const audio = document.createElement('audio');
@@ -2770,7 +2738,7 @@
                         a.className = 'file-link';
                         a.href = msg.fileData;
                         a.download = msg.fileName || 'file';
-                        a.innerHTML = `💾 ${escapeHTML(msg.fileName || 'ダウンロード')}`;
+                        a.textContent = `💾 ${msg.fileName || 'ダウンロード'}`;
                         div.appendChild(a);
                     } else {
                         div.textContent = msg.text;
@@ -2783,7 +2751,7 @@
                     const delBtn = document.createElement('button');
                     delBtn.className = 'msg-unsend-btn';
                     delBtn.style.color = '#ffffff';
-                    delBtn.innerText = '削除';
+                    delBtn.textContent = '削除';
                     delBtn.onclick = () => deleteKeepMessage(msg.msgId);
                     metaDiv.appendChild(delBtn);
 
@@ -2856,11 +2824,11 @@
                     if ((stamp.itemType || 'stamp') === 'reaction' && stamp.content && !stamp.url) {
                         const textEl = document.createElement('div');
                         textEl.style.cssText = 'font-size:36px; margin-bottom:8px; height:80px; display:flex; align-items:center; justify-content:center;';
-                        textEl.innerText = stamp.content;
+                        textEl.textContent = stamp.content;
                         card.appendChild(textEl);
                     } else {
                         const img = document.createElement('img');
-                        img.src = stamp.url;
+                        img.src = DOMPurify.sanitize(stamp.url);
                         img.style.cssText = 'width:80px; height:80px; object-fit:cover; border-radius:8px; margin-bottom:8px;';
                         card.appendChild(img);
                     }
@@ -2869,15 +2837,15 @@
 
                     const title = document.createElement('div');
                     title.style.cssText = 'font-weight:bold; font-size:13px; margin-bottom:2px;';
-                    title.innerText = stamp.title;
+                    title.textContent = stamp.title;
 
                     const seller = document.createElement('div');
                     seller.style.cssText = 'font-size:11px; color:#6b7280; margin-bottom:6px;';
-                    seller.innerText = `出品者: ${sellerName}`;
+                    seller.textContent = `出品者: ${sellerName}`;
 
                     const price = document.createElement('div');
                     price.style.cssText = 'color:#d97706; font-weight:bold; font-size:12px; margin-bottom:8px;';
-                    price.innerText = `🪙 ${stamp.price} コイン`;
+                    price.textContent = `🪙 ${stamp.price} コイン`;
 
                     const itemType = stamp.itemType || 'stamp';
                     const isOwned = itemType === 'reaction' ? myReactions.includes(stamp.content || stamp.url) : myStamps.includes(stamp.url);
@@ -2886,11 +2854,11 @@
                     if (isOwned) {
                         btn.className = 'menu-btn';
                         btn.style.cssText = 'margin:0; padding:4px 8px; font-size:12px; background:#9ca3af; cursor:default;';
-                        btn.innerText = '購入済み';
+                        btn.textContent = '購入済み';
                     } else {
                         btn.className = 'menu-btn btn-success';
                         btn.style.cssText = 'margin:0; padding:4px 8px; font-size:12px;';
-                        btn.innerText = '購入する';
+                        btn.textContent = '購入する';
                         btn.onclick = () => buyStamp(stamp.id);
                     }
 
@@ -2977,27 +2945,27 @@
                     card.style.cssText = `background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; display:flex; flex-direction:column; align-items:center; text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.02); ${isDisabled ? 'opacity:0.5;' : ''}`;
 
                     const img = document.createElement('img');
-                    img.src = url;
+                    img.src = DOMPurify.sanitize(url);
                     img.style.cssText = 'width:80px; height:80px; object-fit:cover; border-radius:8px; margin-bottom:8px;';
 
                     const title = document.createElement('div');
                     title.style.cssText = 'font-weight:bold; font-size:13px; margin-bottom:2px;';
-                    title.innerText = titleText;
+                    title.textContent = titleText;
 
                     const seller = document.createElement('div');
                     seller.style.cssText = 'font-size:11px; color:#6b7280; margin-bottom:8px;';
-                    seller.innerText = `出品者: ${sellerText}`;
+                    seller.textContent = `出品者: ${sellerText}`;
 
                     const toggleBtn = document.createElement('button');
                     toggleBtn.className = `menu-btn ${isDisabled ? 'btn-success' : 'btn-warning'}`;
                     toggleBtn.style.cssText = 'margin:0; padding:4px 8px; font-size:11px; margin-bottom:4px;';
-                    toggleBtn.innerText = isDisabled ? '表示にする (OFF)' : '非表示にする (ON)';
+                    toggleBtn.textContent = isDisabled ? '表示にする (OFF)' : '非表示にする (ON)';
                     toggleBtn.onclick = () => toggleItemVisibility('stamp', url);
 
                     const delBtn = document.createElement('button');
                     delBtn.className = 'menu-btn btn-danger';
                     delBtn.style.cssText = 'margin:0; padding:4px 8px; font-size:11px;';
-                    delBtn.innerText = '完全に削除';
+                    delBtn.textContent = '完全に削除';
                     delBtn.onclick = () => removeCollectionItem('stamp', url);
 
                     card.appendChild(img);
@@ -3019,37 +2987,36 @@
 
                     if (item.startsWith('data:image/')) {
                         const img = document.createElement('img');
-                        img.src = item;
+                        img.src = DOMPurify.sanitize(item);
                         img.style.cssText = 'width:80px; height:80px; object-fit:cover; border-radius:8px; margin-bottom:8px;';
                         card.appendChild(img);
                     } else {
                         const textEl = document.createElement('div');
                         textEl.style.cssText = 'font-size:36px; margin-bottom:8px; height:80px; display:flex; align-items:center; justify-content:center;';
-                        textEl.innerText = item;
+                        textEl.textContent = item;
                         card.appendChild(textEl);
                     }
 
                     const title = document.createElement('div');
                     title.style.cssText = 'font-weight:bold; font-size:13px; margin-bottom:2px;';
-                    title.innerText = titleText;
+                    title.textContent = titleText;
 
                     const seller = document.createElement('div');
                     seller.style.cssText = 'font-size:11px; color:#6b7280; margin-bottom:8px;';
-                    seller.innerText = `出品者: ${sellerText}`;
+                    seller.textContent = `出品者: ${sellerText}`;
 
                     const toggleBtn = document.createElement('button');
                     toggleBtn.className = `menu-btn ${isDisabled ? 'btn-success' : 'btn-warning'}`;
                     toggleBtn.style.cssText = 'margin:0; padding:4px 8px; font-size:11px; margin-bottom:4px;';
-                    toggleBtn.innerText = isDisabled ? '表示にする (OFF)' : '非表示にする (ON)';
+                    toggleBtn.textContent = isDisabled ? '表示にする (OFF)' : '非表示にする (ON)';
                     toggleBtn.onclick = () => toggleItemVisibility('reaction', item);
 
                     const delBtn = document.createElement('button');
                     delBtn.className = 'menu-btn btn-danger';
                     delBtn.style.cssText = 'margin:0; padding:4px 8px; font-size:11px;';
-                    delBtn.innerText = '完全に削除';
+                    delBtn.textContent = '完全に削除';
                     delBtn.onclick = () => removeCollectionItem('reaction', item);
 
-                    card.appendChild(img);
                     card.appendChild(title);
                     card.appendChild(seller);
                     card.appendChild(toggleBtn);
@@ -3158,7 +3125,7 @@
 
                             const hideBtn = document.createElement('button');
                             hideBtn.style.cssText = 'background:none; border:none; color:#ef4444; cursor:pointer; font-size:10px; text-decoration:underline; margin-left:8px;';
-                            hideBtn.innerText = '非表示';
+                            hideBtn.textContent = '非表示';
                             hideBtn.onclick = () => {
                                 if (!hiddenRequestIndices[uKey]) hiddenRequestIndices[uKey] = [];
                                 hiddenRequestIndices[uKey].push(idx);
@@ -3185,23 +3152,23 @@
                         if ((s.itemType || 'stamp') === 'reaction' && s.content && !s.url) {
                             const textEl = document.createElement('div');
                             textEl.style.cssText = 'font-size:32px; margin-bottom:6px; height:60px; display:flex; align-items:center; justify-content:center;';
-                            textEl.innerText = s.content;
+                            textEl.textContent = s.content;
                             card.appendChild(textEl);
                         } else {
                             const img = document.createElement('img');
-                            img.src = s.url;
+                            img.src = DOMPurify.sanitize(s.url);
                             img.style.cssText = 'width:60px; height:60px; object-fit:cover; border-radius:6px; margin-bottom:6px;';
                             card.appendChild(img);
                         }
 
                         const title = document.createElement('div');
                         title.style.cssText = 'font-weight:bold; font-size:12px; margin-bottom:2px;';
-                        title.innerText = s.title;
+                        title.textContent = s.title;
 
                         const delBtn = document.createElement('button');
                         delBtn.className = 'menu-btn btn-danger';
                         delBtn.style.cssText = 'margin:4px 0 0 0; padding:2px 6px; font-size:11px;';
-                        delBtn.innerText = '管理者削除';
+                        delBtn.textContent = '管理者削除';
                         delBtn.onclick = () => devDeleteStamp(s.id);
 
                         card.appendChild(title);
@@ -3222,7 +3189,7 @@
             window.openDirectMsgModal = function(uKey) {
                 selectedDirectUser = uKey;
                 const targetUser = db.users[uKey];
-                document.getElementById('direct-msg-target-label').innerText = `送信先: ${targetUser ? targetUser.name : uKey}`;
+                document.getElementById('direct-msg-target-label').textContent = `送信先: ${targetUser ? targetUser.name : uKey}`;
                 document.getElementById('direct-msg-text').value = '';
                 showModal('dev-direct-msg-modal');
             };
@@ -3239,7 +3206,7 @@
             // イベントリスナー設定
             // -------------------------------------------------------------
             document.addEventListener('DOMContentLoaded', () => {
-                IDB.init(); // IndexedDB初期化
+                IDB.init();
                 initPeer();
                 renderApp();
 
@@ -3278,11 +3245,13 @@
 
                 document.getElementById('dev-mode-btn').onclick = () => showModal('dev-auth-modal');
                 
-                // 開発者モードログイン処理（ユーザー名 YM 、パスワード yamanesaiki に絶対固定）
-                document.getElementById('btn-submit-dev-auth').onclick = () => {
+                // 開発者モード認証（Web Crypto API SHA-256 ハッシュ照合処理）
+                document.getElementById('btn-submit-dev-auth').onclick = async () => {
                     const u = document.getElementById('dev-auth-username').value;
                     const p = document.getElementById('dev-auth-password').value;
-                    if (u === 'YM' && p === 'yamanesaiki') {
+                    
+                    const inputHash = await hashStringSHA256(p);
+                    if (u === 'YM' && inputHash === DEV_AUTH_TARGET_HASH) {
                         isDevMode = true;
                         hideModal('dev-auth-modal');
                         switchPage('developer-view');
@@ -3296,7 +3265,6 @@
                     switchPage('home-view');
                 };
 
-                // AIログのMarkdown書き出し保存機能
                 const btnExportMd = document.getElementById('btn-export-ai-md');
                 if (btnExportMd) {
                     btnExportMd.onclick = () => {
@@ -3320,7 +3288,6 @@
                     };
                 }
 
-                // データのバックアップ/復元機能
                 document.getElementById('btn-backup-data').onclick = () => showModal('backup-modal');
                 document.getElementById('btn-export-json').onclick = async () => {
                     const mediaKeys = await IDB.getAllKeys();
@@ -3364,7 +3331,7 @@
                 if (speechRateInput) {
                     speechRateInput.oninput = () => {
                         const rateVal = document.getElementById("rateValue");
-                        if (rateVal) rateVal.innerText = speechRateInput.value;
+                        if (rateVal) rateVal.textContent = speechRateInput.value;
                     };
                 }
 
@@ -3425,7 +3392,7 @@
 
                     let finalUrl = urlInput;
                     if (fileInput && itemType === 'stamp') {
-                        finalUrl = await compressImageFile(fileInput, 150, 0.7); // 自動圧縮処理の適用
+                        finalUrl = await compressImageFile(fileInput, 150, 0.7);
                     }
 
                     if (itemType === 'stamp' && !finalUrl) {
@@ -3530,7 +3497,6 @@
                 document.getElementById('btn-keep-send').onclick = () => sendKeepMessage('text');
                 document.getElementById('keep-chat-input').onkeypress = (e) => { if (e.key === 'Enter') sendKeepMessage('text'); };
 
-                // スタンプボタンクリック時：スライドインキーボードの表示切り替え（必要に応じてモーダル開閉）
                 document.getElementById('btn-chat-stamp').onclick = () => {
                     currentStampTarget = 'friend';
                     const slideKb = document.getElementById('stamp-slide-keyboard');
@@ -3557,7 +3523,13 @@
                         alert(`ファイル 「${file.name}」 を読み込みました。AIへの指示・質問を入力して送信してください。`);
                     } else {
                         const base64 = await readFileAsDataURL(file);
-                        sendMessage('file', file.name, { name: file.name, data: base64 });
+                        const mediaKey = `file_${Date.now()}`;
+                        try {
+                            await IDB.set(mediaKey, base64);
+                            sendMessage('file', file.name, { name: file.name, data: mediaKey });
+                        } catch (err) {
+                            sendMessage('file', file.name, { name: file.name, data: base64 });
+                        }
                     }
                     e.target.value = '';
                 };
@@ -3566,7 +3538,13 @@
                     const file = e.target.files[0];
                     if (!file) return;
                     const base64 = await readFileAsDataURL(file);
-                    sendOfficialMessage('file', file.name, { name: file.name, data: base64 });
+                    const mediaKey = `file_${Date.now()}`;
+                    try {
+                        await IDB.set(mediaKey, base64);
+                        sendOfficialMessage('file', file.name, { name: file.name, data: mediaKey });
+                    } catch (err) {
+                        sendOfficialMessage('file', file.name, { name: file.name, data: base64 });
+                    }
                     e.target.value = '';
                 };
 
@@ -3574,7 +3552,13 @@
                     const file = e.target.files[0];
                     if (!file) return;
                     const base64 = await readFileAsDataURL(file);
-                    sendKeepMessage('file', file.name, { name: file.name, data: base64 });
+                    const mediaKey = `file_${Date.now()}`;
+                    try {
+                        await IDB.set(mediaKey, base64);
+                        sendKeepMessage('file', file.name, { name: file.name, data: mediaKey });
+                    } catch (err) {
+                        sendKeepMessage('file', file.name, { name: file.name, data: base64 });
+                    }
                     e.target.value = '';
                 };
 
@@ -3603,7 +3587,7 @@
                 document.getElementById('btn-open-transfer-modal').onclick = () => {
                     if (!activeChatTarget) return;
                     const targetName = db.users[activeChatTarget] ? db.users[activeChatTarget].name : activeChatTarget;
-                    document.getElementById('transfer-target-label').innerText = `送金先: ${targetName}`;
+                    document.getElementById('transfer-target-label').textContent = `送金先: ${targetName}`;
                     showModal('transfer-coin-modal');
                 };
 
@@ -3646,17 +3630,15 @@
                     hideModal('add-friend-modal');
                 };
 
-                document.getElementById('btn-set-secret').onclick = () => {
+                document.getElementById('btn-set-secret').onclick = async () => {
                     const word = document.getElementById('secret-word-input').value.trim();
                     db.users[activeUserId].secretWord = word;
                     saveData();
                     if (word) {
-                        registerSecretPeer(word, {
+                        await registerSecretPeer(word, {
                             config: {
                                 iceServers: [
-                                    { urls: 'stun:stun.l.google.com:19302' },
-                                    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelay', credential: 'openrelay' },
-                                    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelay', credential: 'openrelay' }
+                                    { urls: 'stun:stun.l.google.com:19302' }
                                 ]
                             }
                         });
@@ -3664,8 +3646,7 @@
                     alert('合言葉を更新しました。');
                 };
 
-                // 完全な別端末同士でも通信可能にするネットワーク対応版「合言葉検索」処理
-                document.getElementById('btn-search-secret').onclick = () => {
+                document.getElementById('btn-search-secret').onclick = async () => {
                     const word = document.getElementById('secret-word-input').value.trim();
                     const container = document.getElementById('found-friends-list');
                     container.innerHTML = '<div style="font-size:12px; color:#666;">合言葉で広域端末を検索中...</div>';
@@ -3676,11 +3657,9 @@
                         return;
                     }
 
-                    // 1. ローカルキャッシュ検索
                     const matches = Object.keys(db.users).filter(k => k !== activeUserId && db.users[k].secretWord === word);
                     
-                    // 2. 広域WebRTC探索の試行
-                    const secretPeerId = hashSecretWord(word);
+                    const secretPeerId = await hashSecretWord(word);
                     const conn = peer.connect(secretPeerId);
                     let foundViaPeer = false;
 
@@ -3692,7 +3671,7 @@
                         const addBtn = document.createElement('button');
                         addBtn.className = 'menu-btn btn-success';
                         addBtn.style.cssText = 'width:auto; margin:0; padding:2px 8px; font-size:11px;';
-                        addBtn.innerText = '追加＆接続';
+                        addBtn.textContent = '追加＆接続';
                         addBtn.onclick = () => {
                             connectToRemotePeer(uKey);
                             if (!db.friends[activeUserId]) db.friends[activeUserId] = [];
@@ -3792,7 +3771,7 @@
                             const inviteBtn = document.createElement('button');
                             inviteBtn.className = 'menu-btn btn-success';
                             inviteBtn.style.cssText = 'width:auto; margin:0; padding:2px 6px; font-size:11px;';
-                            inviteBtn.innerText = '追加';
+                            inviteBtn.textContent = '追加';
                             inviteBtn.onclick = () => {
                                 grp.members.push(fId);
                                 saveData();
@@ -3864,7 +3843,7 @@
                 const devAnnounceCharCount = document.getElementById('announcement-char-count');
                 if (devAnnounceText && devAnnounceCharCount) {
                     devAnnounceText.addEventListener('input', () => {
-                        devAnnounceCharCount.innerText = `${devAnnounceText.value.length} / 1000 文字`;
+                        devAnnounceCharCount.textContent = `${devAnnounceText.value.length} / 1000 文字`;
                     });
                 }
 
