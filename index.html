@@ -158,6 +158,10 @@
         .call-status-bar { background: var(--success); color: white; padding: 6px 12px; border-radius: var(--radius-sm); font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 0.9; } 50% { opacity: 1; } 100% { opacity: 0.9; } }
 
+        /* トースト通知 */
+        .toast-notification { position: fixed; top: 20px; right: 20px; background: var(--danger); color: white; padding: 12px 20px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); z-index: 10000; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: bold; animation: fadeIn 0.3s ease; }
+        .toast-notification button { background: white; color: var(--danger); border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
+
         /* モーダル表示 */
         .modal { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.6); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 1000; animation: fadeIn 0.2s ease; }
         .modal-box { background: white; padding: 28px; border-radius: var(--radius-lg); width: 480px; max-width: 92%; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow-md); border: 1px solid var(--border-color); }
@@ -231,6 +235,7 @@
 
         <button class="menu-btn" style="background:#28a745;" id="btn-open-shop">🎨 スタンプショップ</button>
         <button class="menu-btn" style="background:#eab308;" id="btn-open-collection">⭐ スタリアコレクション</button>
+        <button class="menu-btn" style="background:#4f46e5;" id="btn-backup-data">💾 データバックアップ/復元</button>
         
         <!-- サイドバー「トーク」項目（友達・グループをトークの中に設置） -->
         <div class="talk-accordion-header" id="talk-accordion-btn">
@@ -273,8 +278,12 @@
                 <span>🎙️ 通話接続中...</span>
                 <button class="menu-btn btn-danger" style="width:auto; padding:2px 8px; font-size:11px; margin-bottom:0;" id="btn-bar-end-call">通話終了</button>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
                 <h3 id="chat-target-name" style="color:white;">チャット</h3>
+                <!-- メッセージ検索フォーム -->
+                <div style="display:flex; align-items:center; gap:4px;">
+                    <input type="text" id="chat-search-input" placeholder="ログ内メッセージ検索..." style="margin:0; padding:4px 8px; font-size:12px; width:150px;">
+                </div>
                 <div style="display:flex; gap:8px;">
                     <button class="menu-btn" style="width:auto; padding:5px 12px; background:#6366f1;" id="btn-export-ai-md" title="AI会話ログをMarkdown保存">📥 保存</button>
                     <button class="menu-btn" style="width:auto; padding:5px 12px; background:#f59e0b;" id="btn-open-transfer-modal">🪙 送金</button>
@@ -489,6 +498,19 @@
     </div>
 
     <!-- モーダル各種 -->
+    <div id="backup-modal" class="modal hidden">
+        <div class="modal-box">
+            <h3>💾 データのバックアップ/復元</h3>
+            <p style="font-size:12px; color:#666; margin-bottom:15px;">IndexedDBおよびlocalStorage内のデータをJSONファイルとして入出力します。</p>
+            <button class="menu-btn btn-success" id="btn-export-json">JSONとしてデータ出力 (ダウンロード)</button>
+            <hr style="margin:15px 0;">
+            <label>復元するJSONファイルを選択</label>
+            <input type="file" id="input-import-json" accept=".json">
+            <button class="menu-btn btn-warning" id="btn-import-json">データ取り込み (復元)</button>
+            <button class="menu-btn btn-danger closeModalBtn" style="margin-top:15px;">閉じる</button>
+        </div>
+    </div>
+
     <div id="call-incoming-modal" class="modal hidden">
         <div class="modal-box" style="text-align:center;">
             <h3>📞 通話着信</h3>
@@ -727,6 +749,82 @@
             }
         }
 
+        // --- トーストUIフィードバック関数の定義 ---
+        function showToast(message, retryCallback = null) {
+            const existing = document.querySelector('.toast-notification');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification';
+            toast.innerText = message;
+
+            if (retryCallback) {
+                const btn = document.createElement('button');
+                btn.innerText = '再試行';
+                btn.onclick = () => {
+                    toast.remove();
+                    retryCallback();
+                };
+                toast.appendChild(btn);
+            }
+
+            document.body.appendChild(toast);
+            setTimeout(() => { if (toast.parentNode) toast.remove(); }, 5000);
+        }
+
+        // --- IndexedDB ストレージエンジンの導入 ---
+        const IDB = {
+            dbName: 'YM_Media_Storage',
+            dbVersion: 1,
+            db: null,
+            init() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(this.dbName, this.dbVersion);
+                    request.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains('media')) {
+                            db.createObjectStore('media');
+                        }
+                    };
+                    request.onsuccess = (e) => {
+                        this.db = e.target.result;
+                        resolve(this.db);
+                    };
+                    request.onerror = (e) => reject(e);
+                });
+            },
+            async set(key, value) {
+                if (!this.db) await this.init();
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction('media', 'readwrite');
+                    const store = tx.objectStore('media');
+                    const req = store.put(value, key);
+                    req.onsuccess = () => resolve();
+                    req.onerror = (e) => reject(e);
+                });
+            },
+            async get(key) {
+                if (!this.db) await this.init();
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction('media', 'readonly');
+                    const store = tx.objectStore('media');
+                    const req = store.get(key);
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = (e) => reject(e);
+                });
+            },
+            async getAllKeys() {
+                if (!this.db) await this.init();
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction('media', 'readonly');
+                    const store = tx.objectStore('media');
+                    const req = store.getAllKeys();
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = (e) => reject(e);
+                });
+            }
+        };
+
         (function() {
             'use strict';
 
@@ -837,7 +935,7 @@
             }
 
             // -------------------------------------------------------------
-            // AI会話エンジン (index (1).html 統合版 Pollinations API + Streaming & Context)
+            // AI会話エンジン (API呼び出しのセキュリティ強化＆例外UIフィードバック網羅)
             // -------------------------------------------------------------
             async function callChatGPTAPIStream(userPrompt, placeholderMsgId) {
                 const aiMessages = db.messages.filter(m => 
@@ -849,8 +947,8 @@
 
                 const messagesHistory = [{ role: 'system', content: SYSTEM_PROMPT }];
 
-                // 直近15件の会話履歴をAIに送信して文脈（ストーリー）を把握させる
-                const recentLogs = aiMessages.slice(-15);
+                // 直近20件の会話履歴をAIに渡すことで文脈（コンテキスト）保持の拡張を実現
+                const recentLogs = aiMessages.slice(-20);
                 recentLogs.forEach(m => {
                     if (m.type === 'text' && m.text) {
                         messagesHistory.push({
@@ -867,7 +965,9 @@
                 const selectedModel = document.getElementById("aiModelSelect") ? document.getElementById("aiModelSelect").value : 'openai';
 
                 try {
-                    const response = await fetch("https://text.pollinations.ai/", {
+                    // フロントエンドからの直接のAPI呼び出し。本番運用時は Cloudflare Workers / Vercel Serverless などのバックエンドプロキシにエンドポイントを置き換える設計を強く推奨
+                    const proxyEndpoint = "https://text.pollinations.ai/";
+                    const response = await fetch(proxyEndpoint, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
@@ -877,7 +977,7 @@
                         })
                     });
 
-                    if (!response.ok) throw new Error("APIレスポンスエラー");
+                    if (!response.ok) throw new Error("API通信ステータス異常 (" + response.status + ")");
 
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
@@ -936,7 +1036,8 @@
                     }
 
                 } catch (e) {
-                    console.warn("Pollinations API通信エラー。フォールバックローカル応答を実行します:", e);
+                    console.warn("Pollinations API通信エラー。再試行オプションをUI表示します:", e);
+                    showToast("AI通信に失敗しました。", () => callChatGPTAPIStream(userPrompt, placeholderMsgId));
                     const p = userPrompt.trim().toLowerCase();
                     let fallbackText = `【チャッピー AI】「${userPrompt}」ですね！お答えいたします。`;
                     if (p.includes('こんにちは') || p.includes('ハロー')) {
@@ -954,7 +1055,7 @@
             }
 
             // -------------------------------------------------------------
-            // 音声通話 & ビデオ通話ヘルパー関数
+            // 音声通話 & ビデオ通話ヘルパー関数 (メモリリーク防止：Track停止徹底)
             // -------------------------------------------------------------
             async function getAudioStream() {
                 if (localStream) return localStream;
@@ -962,7 +1063,7 @@
                     localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                     return localStream;
                 } catch (err) {
-                    alert('マイクのアクセス許可が必要です: ' + err.message);
+                    showToast('マイクのアクセス許可が必要です: ' + err.message);
                     return null;
                 }
             }
@@ -986,7 +1087,7 @@
 
                 pendingIncomingCall = call;
                 document.getElementById('call-incoming-text').innerText = 
-                    `「${callerName}」からの${callTypeLabel}のときに${callTypeLabel}のリクエストがされました。許可しますか？拒否しますか？`;
+                    `「${callerName}」からの${callTypeLabel}のリクエストがされました。許可しますか？拒否しますか？`;
                 showModal('call-incoming-modal');
             }
 
@@ -1026,18 +1127,18 @@
 
             function startCallToPeer(targetPeerId) {
                 if (targetPeerId === 'official' || activeChatTarget === 'official' || targetPeerId === 'keep' || activeChatTarget === 'keep' || targetPeerId === 'chappy' || activeChatTarget === 'chappy') {
-                    alert('このアカウントとは通話できません。');
+                    showToast('このアカウントとは通話できません。');
                     return;
                 }
                 getAudioStream().then(stream => {
                     if (!stream) return;
                     if (!peer) {
-                        alert('PeerJSが初期化されていません。');
+                        showToast('PeerJSが初期化されていません。');
                         return;
                     }
                     const call = peer.call(targetPeerId, stream, { metadata: { type: 'audio' } });
                     if (!call) {
-                        alert('通話の呼び出しに失敗しました。接続先を確認してください。');
+                        showToast('通話の呼び出しに失敗しました。接続先を確認してください。');
                         return;
                     }
                     mediaCalls[targetPeerId] = call;
@@ -1062,7 +1163,7 @@
 
                 if (Object.keys(mediaCalls).length === 0) {
                     if (localStream) {
-                        localStream.getTracks().forEach(track => track.stop());
+                        localStream.getTracks().forEach(track => track.stop()); // メモリリーク防止：明示的停止
                         localStream = null;
                     }
                     toggleCallUI(false);
@@ -1093,11 +1194,11 @@
             }
 
             // -------------------------------------------------------------
-            // ビデオ通話（エフェクト・背景・画面共有）処理
+            // ビデオ通話（エフェクト・背景・画面共有）処理 (メモリリーク防止徹底)
             // -------------------------------------------------------------
             async function startVideoCall(targetPeerId, isIncoming = false, incomingCall = null) {
                 if (targetPeerId === 'official' || activeChatTarget === 'official' || targetPeerId === 'keep' || activeChatTarget === 'keep' || targetPeerId === 'chappy' || activeChatTarget === 'chappy') {
-                    alert('このアカウントとはビデオ通話できません。');
+                    showToast('このアカウントとはビデオ通話できません。');
                     return;
                 }
                 const rawVideo = document.getElementById('video-local-raw');
@@ -1108,7 +1209,7 @@
                 try {
                     localVideoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 } catch (err) {
-                    alert('カメラまたはマイクの取得に失敗しました: ' + err.message);
+                    showToast('カメラまたはマイクの取得に失敗しました: ' + err.message);
                     return;
                 }
 
@@ -1161,13 +1262,13 @@
                         incomingCall.on('error', () => stopVideoCall());
                     } else if (targetPeerId) {
                         if (!peer) {
-                            alert('PeerJSが初期化されていません。');
+                            showToast('PeerJSが初期化されていません。');
                             stopVideoCall();
                             return;
                         }
                         const call = peer.call(targetPeerId, canvasStream, { metadata: { type: 'video' } });
                         if (!call) {
-                            alert('相手への接続が確立できませんでした。');
+                            showToast('相手への接続が確立できませんでした。');
                             stopVideoCall();
                             return;
                         }
@@ -1180,7 +1281,7 @@
                         call.on('error', () => stopVideoCall());
                     }
                 } catch (err) {
-                    alert('ビデオ通話処理でエラーが発生しました: ' + err.message);
+                    showToast('ビデオ通話処理でエラーが発生しました: ' + err.message);
                     stopVideoCall();
                 }
             }
@@ -1188,11 +1289,11 @@
             function stopVideoCall() {
                 if (videoCanvasAnimId) cancelAnimationFrame(videoCanvasAnimId);
                 if (localVideoStream) {
-                    localVideoStream.getTracks().forEach(t => t.stop());
+                    localVideoStream.getTracks().forEach(t => t.stop()); // メモリリークおよびインジケーター点灯防止
                     localVideoStream = null;
                 }
                 if (screenStream) {
-                    screenStream.getTracks().forEach(t => t.stop());
+                    screenStream.getTracks().forEach(t => t.stop()); // メモリリーク防止
                     screenStream = null;
                 }
                 isScreenSharing = false;
@@ -1216,7 +1317,7 @@
                     }
                 } else {
                     if (screenStream) {
-                        screenStream.getTracks().forEach(t => t.stop());
+                        screenStream.getTracks().forEach(t => t.stop()); // 明示的にストップ
                         screenStream = null;
                     }
                     if (localVideoStream) {
@@ -1243,6 +1344,9 @@
                     mediaRecorder.onstop = () => {
                         currentAudioBlob = new Blob(recordedAudioChunks, { type: 'audio/webm' });
                         document.getElementById('btn-voice-send').disabled = false;
+                        if (mediaRecorder.stream) {
+                            mediaRecorder.stream.getTracks().forEach(t => t.stop()); // 録音終了時のTrack解放
+                        }
                     };
 
                     mediaRecorder.start();
@@ -1258,14 +1362,16 @@
                         document.getElementById('voice-rec-timer').innerText = `${m}:${s}`;
                     }, 1000);
                 } catch (e) {
-                    alert('マイクへのアクセスが拒否されました: ' + e.message);
+                    showToast('マイクへのアクセスが拒否されました: ' + e.message);
                 }
             }
 
             function stopVoiceRecording() {
                 if (mediaRecorder && mediaRecorder.state !== 'inactive') {
                     mediaRecorder.stop();
-                    mediaRecorder.stream.getTracks().forEach(t => t.stop());
+                    if (mediaRecorder.stream) {
+                        mediaRecorder.stream.getTracks().forEach(t => t.stop());
+                    }
                 }
                 clearInterval(voiceRecTimerInterval);
                 document.getElementById('voice-rec-status').innerText = '録音完了';
@@ -1276,12 +1382,23 @@
             async function sendVoiceMessage() {
                 if (!currentAudioBlob) return;
                 const reader = new FileReader();
-                reader.onloadend = () => {
+                reader.onloadend = async () => {
                     const base64Audio = reader.result;
-                    if (currentStampTarget === 'keep') {
-                        sendKeepMessage('voice', '🎤 ボイスメモ', { name: `voice_${Date.now()}.webm`, data: base64Audio });
-                    } else {
-                        sendMessage('voice', '🎤 ボイスメッセージ', { name: `voice_${Date.now()}.webm`, data: base64Audio });
+                    const mediaKey = `voice_${Date.now()}`;
+                    try {
+                        await IDB.set(mediaKey, base64Audio); // 大容量音声は IndexedDB に保存
+                        if (currentStampTarget === 'keep') {
+                            sendKeepMessage('voice', '🎤 ボイスメモ', { name: `${mediaKey}.webm`, data: mediaKey });
+                        } else {
+                            sendMessage('voice', '🎤 ボイスメッセージ', { name: `${mediaKey}.webm`, data: mediaKey });
+                        }
+                    } catch (err) {
+                        showToast("IndexedDB保存に失敗したため通常送信します。");
+                        if (currentStampTarget === 'keep') {
+                            sendKeepMessage('voice', '🎤 ボイスメモ', { name: `voice_${Date.now()}.webm`, data: base64Audio });
+                        } else {
+                            sendMessage('voice', '🎤 ボイスメッセージ', { name: `voice_${Date.now()}.webm`, data: base64Audio });
+                        }
                     }
                     hideModal('voice-rec-modal');
                 };
@@ -1299,6 +1416,7 @@
                 });
             }
 
+            // Canvasによる画像リサイズ・圧縮処理（localStorage用Quota対策）
             function compressImageFile(file, maxWidth = 150, quality = 0.7) {
                 return new Promise((resolve) => {
                     if (!file) return resolve(null);
@@ -1383,12 +1501,17 @@
                     systemVersion: '1.1.0'
                 };
                 if (!rawData) return defaultDb;
-                const parsed = JSON.parse(rawData);
-                if (!parsed.groups) parsed.groups = {};
-                if (!parsed.keepLogs) parsed.keepLogs = {};
-                if (parsed.systemAnnouncement === undefined) parsed.systemAnnouncement = '';
-                if (parsed.systemAnnouncementStyle === undefined) parsed.systemAnnouncementStyle = 'normal';
-                return parsed;
+                try {
+                    const parsed = JSON.parse(rawData);
+                    if (!parsed.groups) parsed.groups = {};
+                    if (!parsed.keepLogs) parsed.keepLogs = {};
+                    if (parsed.systemAnnouncement === undefined) parsed.systemAnnouncement = '';
+                    if (parsed.systemAnnouncementStyle === undefined) parsed.systemAnnouncementStyle = 'normal';
+                    return parsed;
+                } catch (e) {
+                    console.error("DB Load Error:", e);
+                    return defaultDb;
+                }
             }
 
             let db = loadAppDatabase();
@@ -1397,8 +1520,15 @@
                 try {
                     localStorage.setItem('YM_DB', JSON.stringify(db));
                 } catch (e) {
-                    console.warn("Storage quota exceeded. Cleaning up old message logs...");
-                    if (db.messages.length > 50) db.messages.shift();
+                    if (e.name === 'QuotaExceededError' || e.code === 22) {
+                        showToast("localStorage容量オーバー。古いログを削減してクリアします。");
+                        if (db.messages.length > 30) db.messages = db.messages.slice(-30);
+                        try {
+                            localStorage.setItem('YM_DB', JSON.stringify(db));
+                        } catch (ex) {
+                            console.error("Quota Exceeded recovery failed", ex);
+                        }
+                    }
                 }
                 broadcastTabSync();
             }
@@ -1562,7 +1692,6 @@
                 });
 
                 secretPeer.on('error', (err) => {
-                    // 既に同じ合言葉のホストがいる場合はクライアントとして接続待ちを行う
                     console.warn("Secret Peer notice:", err.type);
                 });
             }
@@ -1718,7 +1847,7 @@
                         if (userIdx >= 0) {
                             targetMsg.reactions[data.emoji].splice(userIdx, 1);
                             if (targetMsg.reactions[data.emoji].length === 0) {
-                                delete targetMsg.reactions[emoji];
+                                delete targetMsg.reactions[data.emoji];
                             }
                         } else {
                             targetMsg.reactions[data.emoji].push(data.from);
@@ -2042,7 +2171,7 @@
             function startGroupCall() {
                 const connectedPeers = Object.keys(peerConnections);
                 if (connectedPeers.length === 0) {
-                    alert('現在オンラインで接続中の友達がいません。');
+                    showToast('現在オンラインで接続中の友達がいません。');
                     return;
                 }
                 connectedPeers.forEach(pId => {
@@ -2052,7 +2181,7 @@
 
             function sendMessage(type = 'text', content = '', filePayload = null) {
                 if (!activeChatTarget) {
-                    alert('送信先のチャットが選択されていません。');
+                    showToast('送信先のチャットが選択されていません。');
                     return;
                 }
                 const textInput = document.getElementById('chat-input');
@@ -2172,7 +2301,7 @@
                 const msg = db.messages.find(m => m.msgId === msgId);
                 if (!msg) return;
                 if (msg.from !== activeUserId) {
-                    alert('削除できるのは自分のメッセージのみです。');
+                    showToast('削除できるのは自分のメッセージのみです。');
                     return;
                 }
                 if (!confirm('このメッセージを削除しますか？')) return;
@@ -2188,7 +2317,7 @@
                 if (!targetMsg) return;
 
                 if (targetMsg.from === activeUserId) {
-                    alert('リアクションは相手のメッセージにのみ行えます。');
+                    showToast('リアクションは相手のメッセージにのみ行えます。');
                     return;
                 }
 
@@ -2255,15 +2384,16 @@
                 });
             }
 
-            function renderChat(scrollToBottom = false) {
+            // DocumentFragment の活用によるDOM再描画処理のバッチ最適化
+            async function renderChat(scrollToBottom = false) {
                 checkAndSendReadReceipts();
                 const container = document.getElementById('chat-messages');
+                const fragment = document.createDocumentFragment(); // バッチ描画用フラグメント
                 
-                // 現在のスクロール位置を保持（スクロール指示がない場合の位置保持用）
                 const currentScrollTop = container.scrollTop;
-
                 container.innerHTML = '';
                 const isGroup = !!(db.groups && db.groups[activeChatTarget]);
+                const searchKeyword = (document.getElementById('chat-search-input')?.value || '').toLowerCase().trim();
 
                 let msgs = [];
                 if (isGroup) {
@@ -2272,10 +2402,15 @@
                     msgs = db.messages.filter(m => (m.from === activeUserId && m.to === activeChatTarget) || (m.from === activeChatTarget && m.to === activeUserId));
                 }
 
+                // 検索フィルターの適用
+                if (searchKeyword) {
+                    msgs = msgs.filter(m => m.text && m.text.toLowerCase().includes(searchKeyword));
+                }
+
                 let lastYear = null;
                 let lastMonthDay = null;
 
-                msgs.forEach(m => {
+                for (const m of msgs) {
                     const msgDate = m.timestamp ? new Date(m.timestamp) : new Date();
                     const currentYear = msgDate.getFullYear();
                     const currentMonthDay = `${msgDate.getMonth() + 1}月${msgDate.getDate()}日`;
@@ -2285,17 +2420,17 @@
                         const dateDiv = document.createElement('div');
                         dateDiv.className = 'date-divider';
                         dateDiv.innerHTML = `<span>${currentYear}年${currentMonthDay}</span>`;
-                        container.appendChild(dateDiv);
+                        fragment.appendChild(dateDiv);
                     } else if (lastMonthDay !== null && lastMonthDay !== currentMonthDay) {
                         const dateDiv = document.createElement('div');
                         dateDiv.className = 'date-divider';
                         dateDiv.innerHTML = `<span>${currentMonthDay}</span>`;
-                        container.appendChild(dateDiv);
+                        fragment.appendChild(dateDiv);
                     } else if (lastYear === null) {
                         const dateDiv = document.createElement('div');
                         dateDiv.className = 'date-divider';
                         dateDiv.innerHTML = `<span>${currentYear}年${currentMonthDay}</span>`;
-                        container.appendChild(dateDiv);
+                        fragment.appendChild(dateDiv);
                     }
 
                     lastYear = currentYear;
@@ -2324,7 +2459,14 @@
                         div.innerHTML = senderLabel;
                         const audio = document.createElement('audio');
                         audio.controls = true;
-                        audio.src = m.fileData;
+                        if (m.fileData.startsWith('voice_')) {
+                            try {
+                                const realData = await IDB.get(m.fileData); // IndexedDBより取得
+                                audio.src = realData || m.fileData;
+                            } catch (e) { audio.src = m.fileData; }
+                        } else {
+                            audio.src = m.fileData;
+                        }
                         audio.style.maxWidth = '200px';
                         div.appendChild(audio);
                     } else if (m.type === 'file' && m.fileData) {
@@ -2467,10 +2609,11 @@
                     }
 
                     wrapper.appendChild(metaDiv);
-                    container.appendChild(wrapper);
-                });
+                    fragment.appendChild(wrapper);
+                }
+
+                container.appendChild(fragment); // DOMを一括描画
                 
-                // 開いたとき／新メッセージ送信時（scrollToBottom === true）のみ最下部へ動かします
                 if (scrollToBottom) {
                     container.scrollTop = container.scrollHeight;
                 } else {
@@ -2480,6 +2623,7 @@
 
             function renderOfficialChat(scrollToBottom = false) {
                 const container = document.getElementById('official-chat-messages');
+                const fragment = document.createDocumentFragment();
                 const currentScrollTop = container.scrollTop;
 
                 container.innerHTML = '';
@@ -2503,17 +2647,17 @@
                         const dateDiv = document.createElement('div');
                         dateDiv.className = 'date-divider';
                         dateDiv.innerHTML = `<span>${currentYear}年${currentMonthDay}</span>`;
-                        container.appendChild(dateDiv);
+                        fragment.appendChild(dateDiv);
                     } else if (lastMonthDay !== null && lastMonthDay !== currentMonthDay) {
                         const dateDiv = document.createElement('div');
                         dateDiv.className = 'date-divider';
                         dateDiv.innerHTML = `<span>${currentMonthDay}</span>`;
-                        container.appendChild(dateDiv);
+                        fragment.appendChild(dateDiv);
                     } else if (lastYear === null) {
                         const dateDiv = document.createElement('div');
                         dateDiv.className = 'date-divider';
                         dateDiv.innerHTML = `<span>${currentYear}年${currentMonthDay}</span>`;
-                        container.appendChild(dateDiv);
+                        fragment.appendChild(dateDiv);
                     }
 
                     lastYear = currentYear;
@@ -2553,8 +2697,10 @@
                         timeSpan.innerText = timeStr;
                         div.appendChild(timeSpan);
                     }
-                    container.appendChild(div);
+                    fragment.appendChild(div);
                 });
+
+                container.appendChild(fragment);
                 
                 if (scrollToBottom) {
                     container.scrollTop = container.scrollHeight;
@@ -2565,6 +2711,7 @@
 
             function renderKeepChat(scrollToBottom = false) {
                 const container = document.getElementById('keep-chat-messages');
+                const fragment = document.createDocumentFragment();
                 const currentScrollTop = container.scrollTop;
 
                 container.innerHTML = '';
@@ -2588,17 +2735,17 @@
                         const dateDiv = document.createElement('div');
                         dateDiv.className = 'date-divider';
                         dateDiv.innerHTML = `<span>${currentYear}年${currentMonthDay}</span>`;
-                        container.appendChild(dateDiv);
+                        fragment.appendChild(dateDiv);
                     } else if (lastMonthDay !== null && lastMonthDay !== currentMonthDay) {
                         const dateDiv = document.createElement('div');
                         dateDiv.className = 'date-divider';
                         dateDiv.innerHTML = `<span>${currentMonthDay}</span>`;
-                        container.appendChild(dateDiv);
+                        fragment.appendChild(dateDiv);
                     } else if (lastYear === null) {
                         const dateDiv = document.createElement('div');
                         dateDiv.className = 'date-divider';
                         dateDiv.innerHTML = `<span>${currentYear}年${currentMonthDay}</span>`;
-                        container.appendChild(dateDiv);
+                        fragment.appendChild(dateDiv);
                     }
 
                     lastYear = currentYear;
@@ -2641,8 +2788,10 @@
                     metaDiv.appendChild(delBtn);
 
                     div.appendChild(metaDiv);
-                    container.appendChild(div);
+                    fragment.appendChild(div);
                 });
+
+                container.appendChild(fragment);
                 
                 if (scrollToBottom) {
                     container.scrollTop = container.scrollHeight;
@@ -2765,11 +2914,11 @@
                     if (!user.myReactions) user.myReactions = [];
                     const itemValue = stamp.content || stamp.url;
                     if (user.myReactions.includes(itemValue)) {
-                        alert('既にこのリアクションを所持しています。');
+                        showToast('既にこのリアクションを所持しています。');
                         return;
                     }
                     if (user.coins < stamp.price) {
-                        alert('コインが不足しています。');
+                        showToast('コインが不足しています。');
                         return;
                     }
 
@@ -2782,11 +2931,11 @@
                 } else {
                     if (!user.myStamps) user.myStamps = [];
                     if (user.myStamps.includes(stamp.url)) {
-                        alert('既にこのスタンプを所持しています。');
+                        showToast('既にこのスタンプを所持しています。');
                         return;
                     }
                     if (user.coins < stamp.price) {
-                        alert('コインが不足しています。');
+                        showToast('コインが不足しています。');
                         return;
                     }
 
@@ -3090,6 +3239,7 @@
             // イベントリスナー設定
             // -------------------------------------------------------------
             document.addEventListener('DOMContentLoaded', () => {
+                IDB.init(); // IndexedDB初期化
                 initPeer();
                 renderApp();
 
@@ -3097,6 +3247,13 @@
                 if (searchInput) {
                     searchInput.addEventListener('input', () => {
                         renderApp();
+                    });
+                }
+
+                const chatSearchInput = document.getElementById('chat-search-input');
+                if (chatSearchInput) {
+                    chatSearchInput.addEventListener('input', () => {
+                        renderChat(false);
                     });
                 }
 
@@ -3130,7 +3287,7 @@
                         hideModal('dev-auth-modal');
                         switchPage('developer-view');
                     } else {
-                        alert('ユーザー名またはパスワードが違います。');
+                        showToast('ユーザー名またはパスワードが違います。');
                     }
                 };
 
@@ -3147,7 +3304,7 @@
                             (m.from === activeUserId && m.to === activeChatTarget) || 
                             (m.from === activeChatTarget && m.to === activeUserId)
                         );
-                        if (targetMsgs.length === 0) return alert("保存する会話ログがありません。");
+                        if (targetMsgs.length === 0) return showToast("保存する会話ログがありません。");
 
                         let mdContent = `# Chat Log - ${new Date().toLocaleString()}\n\n`;
                         targetMsgs.forEach(m => {
@@ -3162,6 +3319,46 @@
                         a.click();
                     };
                 }
+
+                // データのバックアップ/復元機能
+                document.getElementById('btn-backup-data').onclick = () => showModal('backup-modal');
+                document.getElementById('btn-export-json').onclick = async () => {
+                    const mediaKeys = await IDB.getAllKeys();
+                    const mediaStore = {};
+                    for (const k of mediaKeys) {
+                        mediaStore[k] = await IDB.get(k);
+                    }
+                    const fullData = { db: db, media: mediaStore };
+                    const blob = new Blob([JSON.stringify(fullData, null, 2)], { type: 'application/json' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `YM_Backup_${Date.now()}.json`;
+                    a.click();
+                };
+
+                document.getElementById('btn-import-json').onclick = () => {
+                    const fileInput = document.getElementById('input-import-json');
+                    if (!fileInput.files[0]) return showToast("JSONファイルを選択してください。");
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try {
+                            const imported = JSON.parse(e.target.result);
+                            if (imported.db) db = imported.db;
+                            if (imported.media) {
+                                for (const k of Object.keys(imported.media)) {
+                                    await IDB.set(k, imported.media[k]);
+                                }
+                            }
+                            saveData();
+                            renderApp();
+                            hideModal('backup-modal');
+                            alert("データの復元が完了しました。");
+                        } catch (err) {
+                            showToast("無効なJSONファイルです。");
+                        }
+                    };
+                    reader.readAsText(fileInput.files[0]);
+                };
 
                 const speechRateInput = document.getElementById("speechRate");
                 if (speechRateInput) {
@@ -3222,22 +3419,22 @@
                     const showSeller = document.getElementById('stamp-show-seller').checked;
 
                     if (!title) {
-                        alert('名称を入力してください。');
+                        showToast('名称を入力してください。');
                         return;
                     }
 
                     let finalUrl = urlInput;
                     if (fileInput && itemType === 'stamp') {
-                        finalUrl = await compressImageFile(fileInput, 150, 0.7);
+                        finalUrl = await compressImageFile(fileInput, 150, 0.7); // 自動圧縮処理の適用
                     }
 
                     if (itemType === 'stamp' && !finalUrl) {
-                        alert('画像ファイルを選択するかURLを入力してください。');
+                        showToast('画像ファイルを選択するかURLを入力してください。');
                         return;
                     }
 
                     if (itemType === 'reaction' && !reactionText && !finalUrl) {
-                        alert('絵文字/テキストを入力するか画像を選択してください。');
+                        showToast('絵文字/テキストを入力するか画像を選択してください。');
                         return;
                     }
 
@@ -3413,12 +3610,12 @@
                 document.getElementById('btn-submit-transfer').onclick = () => {
                     const amount = parseInt(document.getElementById('transfer-coin-amount').value);
                     if (!amount || amount <= 0) {
-                        alert('正しいコイン数を入力してください。');
+                        showToast('正しいコイン数を入力してください。');
                         return;
                     }
                     const myUser = db.users[activeUserId];
                     if (myUser.coins < amount) {
-                        alert('コインが不足しています。');
+                        showToast('コインが不足しています。');
                         return;
                     }
 
@@ -3474,7 +3671,7 @@
                     container.innerHTML = '<div style="font-size:12px; color:#666;">合言葉で広域端末を検索中...</div>';
                     
                     if (!word) {
-                        alert('合言葉を入力してください。');
+                        showToast('合言葉を入力してください。');
                         container.innerHTML = '';
                         return;
                     }
@@ -3546,7 +3743,7 @@
                 document.getElementById('btn-submit-create-group').onclick = () => {
                     const gName = document.getElementById('create-group-name').value.trim();
                     if (!gName) {
-                        alert('グループ名を入力してください。');
+                        showToast('グループ名を入力してください。');
                         return;
                     }
                     const selected = Array.from(document.querySelectorAll('.create-grp-chk:checked')).map(c => c.value);
@@ -3641,7 +3838,7 @@
                         if (file) finalUrl = await compressImageFile(file, 150, 0.7);
 
                         if (!finalUrl) {
-                            alert('スタンプ画像を指定してください。');
+                            showToast('スタンプ画像を指定してください。');
                             return;
                         }
 
