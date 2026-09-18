@@ -11,8 +11,8 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         :root {
-            --primary: #4f46e5;
-            --primary-hover: #4338ca;
+            --primary: #06C755; /* LINEグリーンカラーへ微調整・拡張 */
+            --primary-hover: #05b34c;
             --bg-main: #f3f4f6;
             --bg-card: #ffffff;
             --text-main: #1f2937;
@@ -64,12 +64,15 @@
         .friend-list { overflow-y: auto; flex: 1; padding-right: 4px; max-height: 280px; }
         .friend-list::-webkit-scrollbar { width: 4px; }
         .friend-list::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
-        .friend-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: var(--radius-md); margin-bottom: 6px; background: #fff; border: 1px solid var(--border-color); cursor: pointer; transition: all 0.2s; }
+        .friend-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: var(--radius-md); margin-bottom: 6px; background: #fff; border: 1px solid var(--border-color); cursor: pointer; transition: all 0.2s; position: relative; }
         .friend-item:hover { background: #f9fafb; border-color: var(--primary); transform: translateX(2px); }
         .official-account { background: #ecfdf5; border-color: #a7f3d0; }
         .official-account:hover { background: #d1fae5; border-color: var(--success); }
         .keep-account { background: #eff6ff; border-color: #bfdbfe; }
         .keep-account:hover { background: #dbeafe; border-color: #3b82f6; }
+
+        /* 未読件数バッジ */
+        .unread-badge { background: #ef4444; color: white; font-size: 11px; font-weight: bold; border-radius: 12px; padding: 2px 7px; line-height: 1; display: inline-block; margin-left: auto; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
 
         /* トークアコーディオン設計 */
         .talk-accordion-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--primary); color: white; border-radius: var(--radius-md); font-weight: bold; cursor: pointer; margin-bottom: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -89,18 +92,27 @@
         .main-content { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; background: var(--bg-main); }
         .card { background: var(--bg-card); padding: 24px; border-radius: var(--radius-lg); box-shadow: var(--shadow); border: 1px solid var(--border-color); }
 
-        /* チャットボックス */
-        .chat-box { flex: 1; display: flex; flex-direction: column; background-color: #f0fdf4; background-size: cover; background-position: center; border-radius: var(--radius-lg); padding: 20px; min-height: 450px; border: 1px solid var(--border-color); box-shadow: var(--shadow); }
+        /* チャットボックス - LINE風吹き出し調整 */
+        .chat-box { flex: 1; display: flex; flex-direction: column; background-color: #8cabd9; background-size: cover; background-position: center; border-radius: var(--radius-lg); padding: 20px; min-height: 450px; border: 1px solid var(--border-color); box-shadow: var(--shadow); position: relative; overflow: hidden; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
-        .msg { max-width: 75%; padding: 10px 14px; border-radius: 14px; word-break: break-all; font-size: 14px; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.05); position: relative; }
-        .msg-me { align-self: flex-end; background: var(--primary); color: white; border-bottom-right-radius: 2px; }
-        .msg-other { align-self: flex-start; background: #ffffff; color: var(--text-main); border-bottom-left-radius: 2px; border: 1px solid var(--border-color); }
-        .msg-dev { align-self: flex-start; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; border-bottom-left-radius: 2px; }
-        .msg-keep { align-self: flex-end; background: #3b82f6; color: white; border-bottom-right-radius: 2px; }
+        .msg { max-width: 75%; padding: 10px 14px; border-radius: 18px; word-break: break-all; font-size: 14px; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.05); position: relative; }
+        .msg-me { align-self: flex-end; background: #85e249; color: #1f2937; border-bottom-right-radius: 4px; }
+        .msg-other { align-self: flex-start; background: #ffffff; color: var(--text-main); border-bottom-left-radius: 4px; border: 1px solid var(--border-color); }
+        .msg-dev { align-self: flex-start; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; border-bottom-left-radius: 4px; }
+        .msg-keep { align-self: flex-end; background: #3b82f6; color: white; border-bottom-right-radius: 4px; }
         .stamp-msg { background: transparent !important; box-shadow: none !important; border: none !important; padding: 0 !important; }
         .stamp-msg img { width: 120px; height: 120px; object-fit: cover; border-radius: var(--radius-md); box-shadow: var(--shadow); }
         .file-link { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: rgba(255,255,255,0.2); border-radius: var(--radius-sm); color: inherit; text-decoration: none; font-weight: 600; border: 1px solid rgba(0,0,0,0.1); }
         .msg-other .file-link { background: #f3f4f6; }
+
+        /* スライドイン スタンプ・絵文字キーボード */
+        .stamp-slide-keyboard { background: #fff; border-top: 1px solid var(--border-color); padding: 12px; display: none; grid-template-columns: repeat(4, 1fr); gap: 10px; max-height: 180px; overflow-y: auto; transition: all 0.3s ease; }
+        .stamp-slide-keyboard.active { display: grid; }
+
+        /* リッチメニュー構造 */
+        .rich-menu-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; background: #e5e7eb; border-top: 2px solid var(--primary); border-radius: 0 0 var(--radius-lg) var(--radius-lg); overflow: hidden; margin-top: 8px; }
+        .rich-menu-item { background: #ffffff; padding: 12px 6px; text-align: center; cursor: pointer; transition: background 0.2s; font-size: 12px; font-weight: bold; color: var(--text-main); display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .rich-menu-item:hover { background: #f0fdf4; color: var(--primary); }
 
         /* AIマークダウン・コード装飾用追加CSS */
         .msg pre { background: rgba(0,0,0,0.08); padding: 10px; border-radius: 6px; overflow-x: auto; position: relative; margin: 6px 0; }
@@ -295,6 +307,10 @@
             </div>
 
             <div class="chat-messages" id="chat-messages"></div>
+            
+            <!-- スライドイン型 スタンプキーボード -->
+            <div class="stamp-slide-keyboard" id="stamp-slide-keyboard"></div>
+
             <div style="display:flex; gap:8px; margin-top:10px; align-items:center;">
                 <button class="menu-btn" style="width:auto; background:#ffc107; color:#000; font-size:18px; padding:6px 12px;" id="btn-chat-stamp">🎨</button>
                 <button class="menu-btn" style="width:auto; background:#10b981; font-size:18px; padding:6px 12px;" id="btn-chat-audio-call" title="1対1 音声通話を開始">🎙️</button>
@@ -304,6 +320,19 @@
                 <input type="file" id="chat-file-input" class="hidden">
                 <input type="text" id="chat-input" placeholder="メッセージを入力...">
                 <button class="menu-btn" style="width:auto;" id="btn-chat-send">送信</button>
+            </div>
+
+            <!-- リッチメニュー (大型ビジュアルアクションメニュー) -->
+            <div class="rich-menu-container" id="chat-rich-menu">
+                <div class="rich-menu-item" onclick="document.getElementById('btn-open-shop').click()">
+                    <span style="font-size:18px;">🎨</span> SHOP
+                </div>
+                <div class="rich-menu-item" onclick="document.getElementById('btn-open-transfer-modal').click()">
+                    <span style="font-size:18px;">🪙</span> 送金
+                </div>
+                <div class="rich-menu-item" onclick="document.getElementById('btn-chat-camera-call').click()">
+                    <span style="font-size:18px;">📹</span> ビデオ通話
+                </div>
             </div>
         </div>
 
@@ -1392,7 +1421,7 @@
                     name: 'チャッピー (AI)',
                     icon: 'https://via.placeholder.com/40/10b981/ffffff?text=AI',
                     coins: 9999,
-                    chatBg: '#f0fdf4',
+                    chatBg: '#8cabd9',
                     chatBgImg: '',
                     tabTitle: 'Y.M',
                     tabIcon: 'https://via.placeholder.com/192/007bff/ffffff?text=YM',
@@ -1411,7 +1440,7 @@
                     name: 'User-' + activeUserId.slice(-4),
                     icon: 'https://via.placeholder.com/40',
                     coins: 100,
-                    chatBg: '#f0fdf4',
+                    chatBg: '#8cabd9',
                     chatBgImg: '',
                     tabTitle: 'Y.M',
                     tabIcon: 'https://via.placeholder.com/192/007bff/ffffff?text=YM',
@@ -1437,6 +1466,21 @@
                     hash |= 0;
                 }
                 return 'ym_sec_' + Math.abs(hash).toString(36);
+            }
+
+            // 未読メッセージ計算ヘルパー
+            function getUnreadCount(targetId) {
+                const isGroup = !!(db.groups && db.groups[targetId]);
+                let unread = 0;
+                db.messages.forEach(m => {
+                    const isForThisChat = isGroup ? (m.to === targetId) : (m.from === targetId && m.to === activeUserId);
+                    if (isForThisChat && m.from !== activeUserId) {
+                        if (!m.readBy || !m.readBy.includes(activeUserId)) {
+                            unread++;
+                        }
+                    }
+                });
+                return unread;
             }
 
             // -------------------------------------------------------------
@@ -1582,6 +1626,7 @@
                     if (!exists) {
                         db.messages.push(data.message);
                         saveData();
+                        renderApp();
                         if (activeChatTarget === data.message.to || activeChatTarget === data.message.from) renderChat(true);
                         if (isDevMode) renderDevPanel();
 
@@ -1756,7 +1801,7 @@
                     }
                 }
 
-                const customBg = userObj.chatBg || '#f0fdf4';
+                const customBg = userObj.chatBg || '#8cabd9';
                 const customBgImg = userObj.chatBgImg || '';
 
                 document.querySelectorAll('.chat-box').forEach(el => {
@@ -1794,6 +1839,7 @@
                             itemCount++;
                             const fIcon = (fUser && fUser.icon) ? fUser.icon : 'https://via.placeholder.com/40';
                             const isOnline = onlineStatusMap[fId] || (peerConnections[fId] && peerConnections[fId].open);
+                            const unreadCount = getUnreadCount(fId);
 
                             const friendItem = document.createElement('div');
                             friendItem.className = 'friend-item';
@@ -1804,7 +1850,8 @@
                                         <strong>${escapeHTML(fName)}</strong>
                                         <div class="${isOnline ? 'status-online' : 'status-offline'}">${isOnline ? '● オンライン' : '○ オフライン'}</div>
                                     </div>
-                                </div>`;
+                                </div>
+                                ${unreadCount > 0 ? `<span class="unread-badge">${unreadCount}</span>` : ''}`;
                             friendItem.onclick = () => openChat(fId);
                             talkModeContainer.appendChild(friendItem);
                         });
@@ -1819,6 +1866,7 @@
                                     return;
                                 }
                                 itemCount++;
+                                const unreadCount = getUnreadCount(gId);
                                 const groupItem = document.createElement('div');
                                 groupItem.className = 'friend-item';
                                 groupItem.style.background = '#f5f3ff';
@@ -1830,7 +1878,8 @@
                                             <strong>${escapeHTML(grp.name)}</strong>
                                             <div style="font-size:10px; color:#6b7280;">メンバー ${grp.members.length}人</div>
                                         </div>
-                                    </div>`;
+                                    </div>
+                                    ${unreadCount > 0 ? `<span class="unread-badge">${unreadCount}</span>` : ''}`;
                                 groupItem.onclick = () => openGroupChat(gId);
                                 talkModeContainer.appendChild(groupItem);
                             }
@@ -1918,6 +1967,30 @@
                         myStampsArea.appendChild(img);
                     });
                 }
+
+                // スライドインスタンプキーボードの表示レンダリング
+                renderSlideKeyboard(activeStamps);
+            }
+
+            function renderSlideKeyboard(activeStamps) {
+                const kb = document.getElementById('stamp-slide-keyboard');
+                if (!kb) return;
+                kb.innerHTML = '';
+                if (activeStamps.length === 0) {
+                    kb.innerHTML = '<div style="grid-column: span 4; font-size: 11px; color:#888; text-align:center;">スタンプが登録されていません</div>';
+                    return;
+                }
+                activeStamps.forEach(url => {
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.style.cssText = 'width: 100%; height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid #ddd;';
+                    img.onclick = () => {
+                        if (currentStampTarget === 'official') sendOfficialMessage('stamp', url);
+                        else if (currentStampTarget === 'keep') sendKeepMessage('stamp', url);
+                        else sendMessage('stamp', url);
+                    };
+                    kb.appendChild(img);
+                });
             }
 
             function openChat(targetKey) {
@@ -1942,6 +2015,7 @@
 
                 toggleCallUI(!!mediaCalls[targetKey]);
                 renderChat(true);
+                renderApp();
             }
 
             function openGroupChat(groupId) {
@@ -1962,6 +2036,7 @@
 
                 toggleCallUI(false);
                 renderChat(true);
+                renderApp();
             }
 
             function startGroupCall() {
@@ -3258,7 +3333,16 @@
                 document.getElementById('btn-keep-send').onclick = () => sendKeepMessage('text');
                 document.getElementById('keep-chat-input').onkeypress = (e) => { if (e.key === 'Enter') sendKeepMessage('text'); };
 
-                document.getElementById('btn-chat-stamp').onclick = () => { currentStampTarget = 'friend'; showModal('select-stamp-modal'); };
+                // スタンプボタンクリック時：スライドインキーボードの表示切り替え（必要に応じてモーダル開閉）
+                document.getElementById('btn-chat-stamp').onclick = () => {
+                    currentStampTarget = 'friend';
+                    const slideKb = document.getElementById('stamp-slide-keyboard');
+                    if (slideKb) {
+                        slideKb.classList.toggle('active');
+                    } else {
+                        showModal('select-stamp-modal');
+                    }
+                };
                 document.getElementById('btn-official-stamp').onclick = () => { currentStampTarget = 'official'; showModal('select-stamp-modal'); };
                 document.getElementById('btn-keep-stamp').onclick = () => { currentStampTarget = 'keep'; showModal('select-stamp-modal'); };
 
