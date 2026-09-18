@@ -764,6 +764,7 @@
             const activeUserId = deviceId;
 
             let peer = null;
+            let secretPeer = null; // 合言葉（シークレットワード）広域探索用Peer
             const peerConnections = {};
             let isDevMode = false;
             let activeChatTarget = null;
@@ -1402,19 +1403,48 @@
                 if (!db.users[activeUserId].disabledReactions) db.users[activeUserId].disabledReactions = [];
             }
 
+            // 合言葉ハッシュ計算関数 (完全別端末同期用)
+            function hashSecretWord(word) {
+                let hash = 0;
+                for (let i = 0; i < word.length; i++) {
+                    hash = ((hash << 5) - hash) + word.charCodeAt(i);
+                    hash |= 0;
+                }
+                return 'ym_sec_' + Math.abs(hash).toString(36);
+            }
+
             // -------------------------------------------------------------
-            // PeerJS P2P 通信エンジン
+            // PeerJS P2P 通信エンジン（TURNサーバー拡張 & 合言葉広域プロトコル適用）
             // -------------------------------------------------------------
             function initPeer() {
-                peer = new Peer(activeUserId, {
+                const peerConfig = {
                     config: {
                         iceServers: [
                             { urls: 'stun:stun.l.google.com:19302' },
                             { urls: 'stun:stun1.l.google.com:19302' },
-                            { urls: 'stun:stun2.l.google.com:19302' }
+                            { urls: 'stun:stun2.l.google.com:19302' },
+                            { urls: 'stun:stun3.l.google.com:19302' },
+                            { urls: 'stun:stun4.l.google.com:19302' },
+                            {
+                                urls: 'turn:openrelay.metered.ca:80',
+                                username: 'openrelay',
+                                credential: 'openrelay'
+                            },
+                            {
+                                urls: 'turn:openrelay.metered.ca:443',
+                                username: 'openrelay',
+                                credential: 'openrelay'
+                            },
+                            {
+                                urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                                username: 'openrelay',
+                                credential: 'openrelay'
+                            }
                         ]
                     }
-                });
+                };
+
+                peer = new Peer(activeUserId, peerConfig);
 
                 peer.on('open', (id) => {
                     const el = document.getElementById('my-peer-id');
@@ -1425,11 +1455,46 @@
                     if (db.friends[activeUserId]) {
                         db.friends[activeUserId].forEach(fId => connectToRemotePeer(fId));
                     }
+
+                    // 自分の合言葉が登録されている場合、広域探索Peerを立ち上げる
+                    const mySecret = db.users[activeUserId] ? db.users[activeUserId].secretWord : '';
+                    if (mySecret && mySecret.trim() !== '') {
+                        registerSecretPeer(mySecret.trim(), peerConfig);
+                    }
                 });
 
                 peer.on('connection', (conn) => setupPeerConnection(conn));
                 peer.on('call', (call) => handleCall(call));
-                peer.on('error', (err) => console.warn("PeerJS Status:", err.type));
+                peer.on('error', (err) => console.warn("PeerJS Main Status:", err.type));
+            }
+
+            // 合言葉探索用の共有シグナリングPeer登録処理
+            function registerSecretPeer(secretWord, peerConfig) {
+                if (secretPeer) {
+                    secretPeer.destroy();
+                    secretPeer = null;
+                }
+                const secretPeerId = hashSecretWord(secretWord);
+                secretPeer = new Peer(secretPeerId, peerConfig);
+
+                secretPeer.on('open', () => {
+                    console.log("Secret discovery endpoint ready:", secretPeerId);
+                });
+
+                secretPeer.on('connection', (conn) => {
+                    conn.on('open', () => {
+                        conn.send({
+                            type: 'SECRET_DISCOVERY_RESPONSE',
+                            userKey: activeUserId,
+                            userData: db.users[activeUserId]
+                        });
+                    });
+                });
+
+                secretPeer.on('error', (err) => {
+                    // 既に同じ合言葉のホストがいる場合はクライアントとして接続待ちを行う
+                    console.warn("Secret Peer notice:", err.type);
+                });
             }
 
             function setupPeerConnection(conn) {
@@ -3169,45 +3234,82 @@
                     const word = document.getElementById('secret-word-input').value.trim();
                     db.users[activeUserId].secretWord = word;
                     saveData();
+                    if (word) {
+                        registerSecretPeer(word, {
+                            config: {
+                                iceServers: [
+                                    { urls: 'stun:stun.l.google.com:19302' },
+                                    { urls: 'stun:stun1.l.google.com:19302' },
+                                    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelay', credential: 'openrelay' },
+                                    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelay', credential: 'openrelay' }
+                                ]
+                            }
+                        });
+                    }
                     alert('合言葉を更新しました。');
                 };
 
+                // 完全な別端末同士でも通信可能にするネットワーク対応版「合言葉検索」処理
                 document.getElementById('btn-search-secret').onclick = () => {
                     const word = document.getElementById('secret-word-input').value.trim();
                     const container = document.getElementById('found-friends-list');
-                    container.innerHTML = '';
+                    container.innerHTML = '<div style="font-size:12px; color:#666;">合言葉で広域端末を検索中...</div>';
+                    
                     if (!word) {
                         alert('合言葉を入力してください。');
+                        container.innerHTML = '';
                         return;
                     }
 
+                    // 1. ローカルキャッシュ検索
                     const matches = Object.keys(db.users).filter(k => k !== activeUserId && db.users[k].secretWord === word);
-                    if (matches.length === 0) {
-                        container.innerHTML = '<div style="font-size:12px; color:#666;">一致する合言葉のユーザーは見つかりませんでした。</div>';
-                    } else {
-                        matches.forEach(mKey => {
-                            const u = db.users[mKey];
-                            const item = document.createElement('div');
-                            item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:6px; background:#fff; border:1px solid #ccc; border-radius:4px; margin-bottom:4px;';
-                            item.innerHTML = `<span><strong>${escapeHTML(u.name)}</strong></span>`;
-                            const addBtn = document.createElement('button');
-                            addBtn.className = 'menu-btn btn-success';
-                            addBtn.style.cssText = 'width:auto; margin:0; padding:2px 8px; font-size:11px;';
-                            addBtn.innerText = '追加＆接続';
-                            addBtn.onclick = () => {
-                                connectToRemotePeer(mKey);
-                                if (!db.friends[activeUserId]) db.friends[activeUserId] = [];
-                                if (!db.friends[activeUserId].includes(mKey)) {
-                                    db.friends[activeUserId].push(mKey);
-                                    saveData();
-                                    renderApp();
-                                }
-                                alert(`${u.name} さんを友達に追加しました。`);
-                            };
-                            item.appendChild(addBtn);
-                            container.appendChild(item);
-                        });
-                    }
+                    
+                    // 2. 広域WebRTC探索の試行
+                    const secretPeerId = hashSecretWord(word);
+                    const conn = peer.connect(secretPeerId);
+                    let foundViaPeer = false;
+
+                    const renderFoundUser = (uKey, uData) => {
+                        container.innerHTML = '';
+                        const item = document.createElement('div');
+                        item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:6px; background:#fff; border:1px solid #ccc; border-radius:4px; margin-bottom:4px;';
+                        item.innerHTML = `<span><strong>${escapeHTML(uData.name)}</strong></span>`;
+                        const addBtn = document.createElement('button');
+                        addBtn.className = 'menu-btn btn-success';
+                        addBtn.style.cssText = 'width:auto; margin:0; padding:2px 8px; font-size:11px;';
+                        addBtn.innerText = '追加＆接続';
+                        addBtn.onclick = () => {
+                            connectToRemotePeer(uKey);
+                            if (!db.friends[activeUserId]) db.friends[activeUserId] = [];
+                            if (!db.friends[activeUserId].includes(uKey)) {
+                                db.friends[activeUserId].push(uKey);
+                                saveData();
+                                renderApp();
+                            }
+                            alert(`${uData.name} さんを友達に追加しました。`);
+                        };
+                        item.appendChild(addBtn);
+                        container.appendChild(item);
+                    };
+
+                    conn.on('data', (data) => {
+                        if (data && data.type === 'SECRET_DISCOVERY_RESPONSE' && data.userKey !== activeUserId) {
+                            foundViaPeer = true;
+                            db.users[data.userKey] = data.userData;
+                            saveData();
+                            renderFoundUser(data.userKey, data.userData);
+                        }
+                    });
+
+                    setTimeout(() => {
+                        if (!foundViaPeer) {
+                            if (matches.length > 0) {
+                                matches.forEach(mKey => renderFoundUser(mKey, db.users[mKey]));
+                            } else {
+                                container.innerHTML = '<div style="font-size:12px; color:#666;">一致する合言葉のユーザーは見つかりませんでした。</div>';
+                            }
+                        }
+                    }, 1500);
                 };
 
                 document.getElementById('btn-open-create-group').onclick = () => {
