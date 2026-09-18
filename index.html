@@ -61,7 +61,7 @@
         .section-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 15px 0 6px 0; }
         
         /* 友達リスト */
-        .friend-list { overflow-y: auto; flex: 1; padding-right: 4px; }
+        .friend-list { overflow-y: auto; flex: 1; padding-right: 4px; max-height: 280px; }
         .friend-list::-webkit-scrollbar { width: 4px; }
         .friend-list::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
         .friend-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: var(--radius-md); margin-bottom: 6px; background: #fff; border: 1px solid var(--border-color); cursor: pointer; transition: all 0.2s; }
@@ -220,20 +220,16 @@
         <button class="menu-btn" style="background:#28a745;" id="btn-open-shop">🎨 スタンプショップ</button>
         <button class="menu-btn" style="background:#eab308;" id="btn-open-collection">⭐ スタリアコレクション</button>
         
-        <!-- サイドバー「トーク」項目（トーク専用モード切替対応） -->
+        <!-- サイドバー「トーク」項目（友達・グループをトークの中に設置） -->
         <div class="talk-accordion-header" id="talk-accordion-btn">
             <span>💬 トーク</span>
             <span id="talk-accordion-icon">▼</span>
         </div>
         <div class="talk-accordion-body" id="talk-accordion-content">
-            <div id="talk-mode-controls" class="hidden" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding:4px 0; border-bottom:1px dashed var(--border-color);">
-                <span style="font-weight:bold; font-size:13px; color:var(--primary);">トーク専用モード</span>
-                <button id="btn-close-talk-mode" style="background:none; border:none; font-size:16px; cursor:pointer; font-weight:bold; color:var(--danger);" title="元のレイアウトに戻る">✕</button>
-            </div>
-            <!-- トーク専用モード内に表示される友達・グループ一覧用コンテナ -->
+            <!-- トークの中に直接友達・グループ一覧コンテナを配置 -->
             <div id="talk-mode-friend-list" class="friend-list"></div>
             
-            <div id="sidebar-default-items">
+            <div id="sidebar-default-items" style="margin-top:10px;">
                 <button class="menu-btn" style="background:#17a2b8;" id="btn-open-add-friend">🔑 合言葉で友達追加</button>
                 <button class="menu-btn" style="background:#8b5cf6;" id="btn-open-create-group">👥 グループ作成</button>
                 <button class="menu-btn" style="background:#6f42c1;" id="btn-open-settings">⚙️ 設定 (表示/アイコン)</button>
@@ -733,36 +729,21 @@
                 }
             }
 
-            // トーク専用モード切り替えロジック
-            function setTalkOnlyMode(enable) {
-                const sidebarDefaultItems = document.getElementById('sidebar-default-items');
-                const talkModeControls = document.getElementById('talk-mode-controls');
-                const talkContent = document.getElementById('talk-accordion-content');
-                const talkIcon = document.getElementById('talk-accordion-icon');
-
-                if (enable) {
-                    if (sidebarDefaultItems) sidebarDefaultItems.classList.add('hidden');
-                    if (talkModeControls) talkModeControls.classList.remove('hidden');
-                    if (talkContent) talkContent.classList.remove('hidden');
-                    if (talkIcon) talkIcon.innerText = '▲';
-                } else {
-                    if (sidebarDefaultItems) sidebarDefaultItems.classList.remove('hidden');
-                    if (talkModeControls) talkModeControls.classList.add('hidden');
-                }
-            }
-
-            const btnCloseTalkMode = document.getElementById('btn-close-talk-mode');
-            if (btnCloseTalkMode) {
-                btnCloseTalkMode.onclick = (e) => {
-                    e.stopPropagation();
-                    setTalkOnlyMode(false);
-                };
-            }
-
+            // アコーディオン開閉制御
             const talkAccordionBtn = document.getElementById('talk-accordion-btn');
-            if (talkAccordionBtn) {
+            const talkAccordionContent = document.getElementById('talk-accordion-content');
+            const talkAccordionIcon = document.getElementById('talk-accordion-icon');
+
+            if (talkAccordionBtn && talkAccordionContent) {
                 talkAccordionBtn.addEventListener('click', () => {
-                    setTalkOnlyMode(true);
+                    const isHidden = talkAccordionContent.classList.contains('hidden');
+                    if (isHidden) {
+                        talkAccordionContent.classList.remove('hidden');
+                        if (talkAccordionIcon) talkAccordionIcon.innerText = '▼';
+                    } else {
+                        talkAccordionContent.classList.add('hidden');
+                        if (talkAccordionIcon) talkAccordionIcon.innerText = '▲';
+                    }
                 });
             }
 
@@ -1790,7 +1771,7 @@
                 document.getElementById('setting-chat-bg').value = customBg;
                 document.getElementById('setting-chat-bg-img').value = customBgImg;
 
-                // --- トーク専用モード（アコーディオン内）に友達＆グループを表示するレンダリング処理 ---
+                // --- トーク（アコーディオン内部）の友達・グループ表示処理 ---
                 const talkModeContainer = document.getElementById('talk-mode-friend-list');
                 if (talkModeContainer) {
                     talkModeContainer.innerHTML = '';
