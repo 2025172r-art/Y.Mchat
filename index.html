@@ -230,6 +230,9 @@
                 <span style="font-weight:bold; font-size:13px; color:var(--primary);">トーク専用モード</span>
                 <button id="btn-close-talk-mode" style="background:none; border:none; font-size:16px; cursor:pointer; font-weight:bold; color:var(--danger);" title="元のレイアウトに戻る">✕</button>
             </div>
+            <!-- トーク専用モード内に表示される友達・グループ一覧用コンテナ -->
+            <div id="talk-mode-friend-list" class="friend-list"></div>
+            
             <div id="sidebar-default-items">
                 <button class="menu-btn" style="background:#17a2b8;" id="btn-open-add-friend">🔑 合言葉で友達追加</button>
                 <button class="menu-btn" style="background:#8b5cf6;" id="btn-open-create-group">👥 グループ作成</button>
@@ -1748,6 +1751,63 @@
                 document.getElementById('setting-tab-icon').value = userObj.tabIcon || '';
                 document.getElementById('setting-chat-bg').value = customBg;
                 document.getElementById('setting-chat-bg-img').value = customBgImg;
+
+                // --- トーク専用モード（アコーディオン内）に友達＆グループを表示するレンダリング処理 ---
+                const talkModeContainer = document.getElementById('talk-mode-friend-list');
+                if (talkModeContainer) {
+                    talkModeContainer.innerHTML = '';
+                    const myFriends = db.friends[activeUserId] || [];
+                    
+                    // 1. 個人の友達リスト
+                    if (myFriends.length > 0) {
+                        myFriends.forEach(fId => {
+                            const fUser = db.users[fId];
+                            const fName = fUser ? fUser.name : fId;
+                            const fIcon = (fUser && fUser.icon) ? fUser.icon : 'https://via.placeholder.com/40';
+                            const isOnline = onlineStatusMap[fId] || (peerConnections[fId] && peerConnections[fId].open);
+
+                            const friendItem = document.createElement('div');
+                            friendItem.className = 'friend-item';
+                            friendItem.innerHTML = `
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <img src="${fIcon}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;">
+                                    <div>
+                                        <strong>${escapeHTML(fName)}</strong>
+                                        <div class="${isOnline ? 'status-online' : 'status-offline'}">${isOnline ? '● オンライン' : '○ オフライン'}</div>
+                                    </div>
+                                </div>`;
+                            friendItem.onclick = () => openChat(fId);
+                            talkModeContainer.appendChild(friendItem);
+                        });
+                    }
+
+                    // 2. 参加中のグループメッセージリスト
+                    if (db.groups) {
+                        Object.keys(db.groups).forEach(gId => {
+                            const grp = db.groups[gId];
+                            if (grp && grp.members && grp.members.includes(activeUserId)) {
+                                const groupItem = document.createElement('div');
+                                groupItem.className = 'friend-item';
+                                groupItem.style.background = '#f5f3ff';
+                                groupItem.style.borderColor = '#ddd6fe';
+                                groupItem.innerHTML = `
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <span style="font-size:20px;">👨‍👩‍👧‍👦</span>
+                                        <div>
+                                            <strong>${escapeHTML(grp.name)}</strong>
+                                            <div style="font-size:10px; color:#6b7280;">メンバー ${grp.members.length}人</div>
+                                        </div>
+                                    </div>`;
+                                groupItem.onclick = () => openGroupChat(gId);
+                                talkModeContainer.appendChild(groupItem);
+                            }
+                        });
+                    }
+
+                    if (myFriends.length === 0 && (!db.groups || Object.keys(db.groups).length === 0)) {
+                        talkModeContainer.innerHTML = '<div style="font-size:11px; color:#888; padding:6px; text-align:center;">まだ友達やグループが登録されていません。</div>';
+                    }
+                }
 
                 const sysContainer = document.getElementById('system-accounts-list');
                 sysContainer.innerHTML = '';
