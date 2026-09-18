@@ -39,7 +39,7 @@
         }
 
         /* サイドバー設計 */
-        .sidebar { width: 320px; background: var(--bg-card); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.02); }
+        .sidebar { width: 320px; background: var(--bg-card); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.02); overflow-y: auto; }
         .sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid var(--primary); }
         .sidebar-header h2 { font-size: 22px; font-weight: 800; background: linear-gradient(135deg, var(--primary), #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
@@ -226,6 +226,10 @@
             <span id="talk-accordion-icon">▼</span>
         </div>
         <div class="talk-accordion-body" id="talk-accordion-content">
+            <!-- ユーザー検索入力領域 -->
+            <div style="margin-bottom:8px;">
+                <input type="text" id="talk-user-search-input" placeholder="ユーザーを検索..." style="margin:0; padding:6px 10px; font-size:12px;">
+            </div>
             <!-- トークの中に直接友達・グループ一覧コンテナを配置 -->
             <div id="talk-mode-friend-list" class="friend-list"></div>
             
@@ -1669,7 +1673,7 @@
                         if (userIdx >= 0) {
                             targetMsg.reactions[data.emoji].splice(userIdx, 1);
                             if (targetMsg.reactions[data.emoji].length === 0) {
-                                delete targetMsg.reactions[data.emoji];
+                                delete targetMsg.reactions[emoji];
                             }
                         } else {
                             targetMsg.reactions[data.emoji].push(data.from);
@@ -1775,13 +1779,19 @@
                 const talkModeContainer = document.getElementById('talk-mode-friend-list');
                 if (talkModeContainer) {
                     talkModeContainer.innerHTML = '';
+                    const searchQuery = (document.getElementById('talk-user-search-input')?.value || '').toLowerCase().trim();
                     const myFriends = db.friends[activeUserId] || [];
+                    let itemCount = 0;
                     
                     // 1. 個人の友達リスト
                     if (myFriends.length > 0) {
                         myFriends.forEach(fId => {
                             const fUser = db.users[fId];
                             const fName = fUser ? fUser.name : fId;
+                            if (searchQuery && !fName.toLowerCase().includes(searchQuery) && !fId.toLowerCase().includes(searchQuery)) {
+                                return;
+                            }
+                            itemCount++;
                             const fIcon = (fUser && fUser.icon) ? fUser.icon : 'https://via.placeholder.com/40';
                             const isOnline = onlineStatusMap[fId] || (peerConnections[fId] && peerConnections[fId].open);
 
@@ -1805,6 +1815,10 @@
                         Object.keys(db.groups).forEach(gId => {
                             const grp = db.groups[gId];
                             if (grp && grp.members && grp.members.includes(activeUserId)) {
+                                if (searchQuery && !grp.name.toLowerCase().includes(searchQuery)) {
+                                    return;
+                                }
+                                itemCount++;
                                 const groupItem = document.createElement('div');
                                 groupItem.className = 'friend-item';
                                 groupItem.style.background = '#f5f3ff';
@@ -1823,8 +1837,8 @@
                         });
                     }
 
-                    if (myFriends.length === 0 && (!db.groups || Object.keys(db.groups).length === 0)) {
-                        talkModeContainer.innerHTML = '<div style="font-size:11px; color:#888; padding:6px; text-align:center;">まだ友達やグループが登録されていません。</div>';
+                    if (itemCount === 0) {
+                        talkModeContainer.innerHTML = searchQuery ? '<div style="font-size:11px; color:#888; padding:6px; text-align:center;">該当するユーザーが見つかりません。</div>' : '<div style="font-size:11px; color:#888; padding:6px; text-align:center;">まだ友達やグループが登録されていません。</div>';
                     }
                 }
 
@@ -2607,6 +2621,10 @@
                     return;
                 }
 
+                const user = db.users[activeUserId];
+                const myStamps = (user && user.myStamps) || [];
+                const myReactions = (user && user.myReactions) || [];
+
                 filtered.forEach(stamp => {
                     const card = document.createElement('div');
                     card.style.cssText = 'background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; display:flex; flex-direction:column; align-items:center; text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.02);';
@@ -2637,11 +2655,20 @@
                     price.style.cssText = 'color:#d97706; font-weight:bold; font-size:12px; margin-bottom:8px;';
                     price.innerText = `🪙 ${stamp.price} コイン`;
 
+                    const itemType = stamp.itemType || 'stamp';
+                    const isOwned = itemType === 'reaction' ? myReactions.includes(stamp.content || stamp.url) : myStamps.includes(stamp.url);
+
                     const btn = document.createElement('button');
-                    btn.className = 'menu-btn btn-success';
-                    btn.style.cssText = 'margin:0; padding:4px 8px; font-size:12px;';
-                    btn.innerText = '購入する';
-                    btn.onclick = () => buyStamp(stamp.id);
+                    if (isOwned) {
+                        btn.className = 'menu-btn';
+                        btn.style.cssText = 'margin:0; padding:4px 8px; font-size:12px; background:#9ca3af; cursor:default;';
+                        btn.innerText = '購入済み';
+                    } else {
+                        btn.className = 'menu-btn btn-success';
+                        btn.style.cssText = 'margin:0; padding:4px 8px; font-size:12px;';
+                        btn.innerText = '購入する';
+                        btn.onclick = () => buyStamp(stamp.id);
+                    }
 
                     card.appendChild(title);
                     card.appendChild(seller);
@@ -2990,6 +3017,13 @@
             document.addEventListener('DOMContentLoaded', () => {
                 initPeer();
                 renderApp();
+
+                const searchInput = document.getElementById('talk-user-search-input');
+                if (searchInput) {
+                    searchInput.addEventListener('input', () => {
+                        renderApp();
+                    });
+                }
 
                 setInterval(() => {
                     if (db.users[activeUserId]) {
