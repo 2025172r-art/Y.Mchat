@@ -38,6 +38,7 @@
             body { flex-direction: column; height: 100vh; overflow-y: auto; }
             .sidebar { width: 100% !important; height: auto !important; border-right: none !important; border-bottom: 1px solid var(--border-color); }
             .main-content { height: 100%; flex: 1; }
+            .chat-box { min-height: calc(100vh - 12px); padding: 10px; }
         }
 
         /* サイドバー設計 */
@@ -91,12 +92,12 @@
         .date-divider span { padding: 0 12px; background: rgba(255, 255, 255, 0.6); border-radius: 12px; }
 
         /* メインコンテンツエリア */
-        .main-content { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; background: var(--bg-main); }
+        .main-content { flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: var(--bg-main); }
         .card { background: var(--bg-card); padding: 24px; border-radius: var(--radius-lg); box-shadow: var(--shadow); border: 1px solid var(--border-color); }
 
         /* チャットボックス - LINE風吹き出し調整 */
-        .chat-box { flex: 1; display: flex; flex-direction: column; background-color: #8cabd9; background-size: cover; background-position: center; border-radius: var(--radius-lg); padding: 20px; min-height: 450px; border: 1px solid var(--border-color); box-shadow: var(--shadow); position: relative; overflow: hidden; }
-        .chat-messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+        .chat-box { flex: 1; display: flex; flex-direction: column; background-color: #8cabd9; background-size: cover; background-position: center; border-radius: var(--radius-lg); padding: 14px; min-height: calc(100vh - 24px); border: 1px solid var(--border-color); box-shadow: var(--shadow); position: relative; overflow: hidden; }
+        .chat-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 12px; }
         .msg { max-width: 75%; padding: 10px 14px; border-radius: 18px; word-break: break-all; font-size: 14px; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.05); position: relative; }
         .msg-me { align-self: flex-end; background: #85e249; color: #1f2937; border-bottom-right-radius: 4px; }
         .msg-other { align-self: flex-start; background: #ffffff; color: var(--text-main); border-bottom-left-radius: 4px; border: 1px solid var(--border-color); }
@@ -146,6 +147,21 @@
 
         /* 引用スレッドメッセージUI */
         .reply-quoted-box { background: rgba(0,0,0,0.06); border-left: 3px solid var(--primary); padding: 4px 8px; border-radius: 4px; font-size: 11px; margin-bottom: 4px; }
+
+        /* メッセージ三点メニュー */
+        .msg-action-bar { position: relative; display: flex; align-items: center; margin-top: 2px; min-height: 22px; }
+        .msg-wrapper.me .msg-action-bar { justify-content: flex-end; }
+        .msg-wrapper.other .msg-action-bar { justify-content: flex-start; }
+        .msg-more-btn { background: rgba(255,255,255,0.82); border: 1px solid rgba(0,0,0,0.12); color: #4b5563; border-radius: 999px; cursor: pointer; font-size: 16px; line-height: 16px; padding: 0 8px 3px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+        .msg-more-btn:hover { background: #fff; color: var(--primary); }
+        .msg-action-menu { position: absolute; top: 25px; z-index: 120; min-width: 138px; padding: 5px; background: #fff; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: 2px; }
+        .msg-wrapper.me .msg-action-menu { right: 0; }
+        .msg-wrapper.other .msg-action-menu { left: 0; }
+        .msg-action-menu button { background: transparent; border: none; border-radius: 5px; color: var(--text-main); cursor: pointer; font-size: 12px; padding: 7px 9px; text-align: left; white-space: nowrap; }
+        .msg-action-menu button:hover { background: #f0fdf4; color: var(--primary); }
+        .msg-action-menu button.danger:hover { background: #fef2f2; color: var(--danger); }
+        .pinned-list { display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; }
+        .pinned-list-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 9px 10px; background: #f9fafb; border: 1px solid var(--border-color); border-radius: 8px; font-size: 12px; }
 
         /* リアクションバッジ & パネル */
         .reactions-container { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
@@ -302,6 +318,8 @@
                     <input type="text" id="chat-search-input" placeholder="ログ内メッセージ検索..." style="margin:0; padding:4px 8px; font-size:12px; width:150px;">
                 </div>
                 <div style="display:flex; gap:8px;">
+                    <button class="menu-btn" style="width:auto; padding:5px 12px; background:#8b5cf6;" id="btn-open-new-chat">＋ 新規チャット</button>
+                    <button class="menu-btn" style="width:auto; padding:5px 12px; background:#475569;" id="btn-open-pinned-list">📌 ピン留め一覧</button>
                     <button class="menu-btn" style="width:auto; padding:5px 12px; background:#6366f1;" id="btn-export-ai-md" title="AI会話ログをMarkdown保存">📥 保存</button>
                     <button class="menu-btn" style="width:auto; padding:5px 12px; background:#f59e0b;" id="btn-open-transfer-modal">🪙 送金</button>
                     <button class="menu-btn" style="width:auto; padding:5px 12px; background:#0284c7;" id="btn-manage-group-modal">👥 管理</button>
@@ -768,6 +786,23 @@
         </div>
     </div>
 
+    <div id="pinned-list-modal" class="modal hidden">
+        <div class="modal-box">
+            <h3>📌 ピン留め一覧</h3>
+            <div id="pinned-list-container" class="pinned-list"></div>
+            <button class="menu-btn btn-danger closeModalBtn" style="margin-top:15px;">閉じる</button>
+        </div>
+    </div>
+
+    <div id="new-chat-modal" class="modal hidden">
+        <div class="modal-box">
+            <h3>＋ 新規チャット</h3>
+            <p style="font-size:12px; color:#666; margin-bottom:12px;">チャットを開始する相手を選択してください。</p>
+            <div id="new-chat-target-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+            <button class="menu-btn btn-danger closeModalBtn" style="margin-top:15px;">キャンセル</button>
+        </div>
+    </div>
+
     <script>
         // AIテンプレート適用グローバル関数
         function applyAiTemplate(text) {
@@ -982,8 +1017,8 @@
             // -------------------------------------------------------------
             // AI会話エンジン (DOMPurifyによるサニタイズ処理を適用)
             // -------------------------------------------------------------
-            async function callChatGPTAPIStream(userPrompt, placeholderMsgId) {
-                const aiMessages = db.messages.filter(m => 
+            async function callChatGPTAPIStream(userPrompt, placeholderMsgId, historyMessages = null) {
+                const aiMessages = historyMessages || db.messages.filter(m => 
                     (m.from === activeUserId && m.to === 'chappy') || 
                     (m.from === 'chappy' && m.to === activeUserId)
                 );
@@ -1078,7 +1113,7 @@
 
                 } catch (e) {
                     console.warn("Pollinations API通信エラー。再試行オプションをUI表示します:", e);
-                    showToast("AI通信に失敗しました。", () => callChatGPTAPIStream(userPrompt, placeholderMsgId));
+                    showToast("AI通信に失敗しました。", () => callChatGPTAPIStream(userPrompt, placeholderMsgId, historyMessages));
                     const p = userPrompt.trim().toLowerCase();
                     let fallbackText = `【チャッピー AI】「${userPrompt}」ですね！お答えいたします。`;
                     if (p.includes('こんにちは') || p.includes('ハロー')) {
@@ -1588,10 +1623,104 @@
                 const msg = db.messages.find(m => m.msgId === msgId);
                 if (!msg) return;
                 if (!db.pinnedMessages) db.pinnedMessages = {};
-                db.pinnedMessages[activeChatTarget] = msg.text || (msg.type === 'stamp' ? '[スタンプ]' : '[ファイル]');
+                const existing = db.pinnedMessages[activeChatTarget];
+                const pinnedList = Array.isArray(existing) ? existing : (existing ? [{
+                    msgId: 'legacy_' + activeChatTarget,
+                    text: existing,
+                    senderName: '',
+                    timestamp: Date.now()
+                }] : []);
+                if (!pinnedList.some(item => item.msgId === msgId)) {
+                    const senderName = db.users[msg.from] ? db.users[msg.from].name : (msg.from === 'chappy' ? 'チャッピー (AI)' : msg.from);
+                    pinnedList.push({
+                        msgId: msg.msgId,
+                        text: msg.text || (msg.type === 'stamp' ? '[スタンプ]' : '[ファイル]'),
+                        senderName: senderName,
+                        timestamp: msg.timestamp || Date.now()
+                    });
+                }
+                db.pinnedMessages[activeChatTarget] = pinnedList;
                 saveData();
                 renderChat(false);
             };
+
+            window.unpinMessage = function(msgId) {
+                if (!activeChatTarget || !db.pinnedMessages) return;
+                const existing = db.pinnedMessages[activeChatTarget];
+                if (Array.isArray(existing)) {
+                    db.pinnedMessages[activeChatTarget] = existing.filter(item => item.msgId !== msgId);
+                    if (db.pinnedMessages[activeChatTarget].length === 0) delete db.pinnedMessages[activeChatTarget];
+                } else {
+                    delete db.pinnedMessages[activeChatTarget];
+                }
+                saveData();
+                renderPinnedList();
+                renderChat(false);
+            };
+
+            window.regenerateAiMessage = async function(msgId) {
+                const targetIndex = db.messages.findIndex(m => m.msgId === msgId);
+                const targetMsg = targetIndex >= 0 ? db.messages[targetIndex] : null;
+                if (!targetMsg || targetMsg.from !== 'chappy') return;
+
+                const historyMessages = db.messages.slice(0, targetIndex).filter(m =>
+                    (m.from === activeUserId && m.to === 'chappy') ||
+                    (m.from === 'chappy' && m.to === activeUserId)
+                );
+                const userMessage = [...historyMessages].reverse().find(m =>
+                    m.from === activeUserId && m.type === 'text' && m.text
+                );
+                if (!userMessage) {
+                    showToast('再生成する元の質問が見つかりません。');
+                    return;
+                }
+
+                const replacement = {
+                    ...targetMsg,
+                    msgId: 'msg_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+                    text: '...',
+                    readBy: [activeUserId],
+                    timestamp: Date.now()
+                };
+                db.messages.splice(targetIndex, 1, replacement);
+                saveData();
+                renderChat(false);
+                await callChatGPTAPIStream(userMessage.text, replacement.msgId, historyMessages);
+            };
+
+            function renderPinnedList() {
+                const container = document.getElementById('pinned-list-container');
+                if (!container) return;
+                container.innerHTML = '';
+                const existing = activeChatTarget && db.pinnedMessages ? db.pinnedMessages[activeChatTarget] : null;
+                const pinnedList = Array.isArray(existing) ? existing : (existing ? [{
+                    msgId: 'legacy_' + activeChatTarget,
+                    text: existing,
+                    senderName: '',
+                    timestamp: Date.now()
+                }] : []);
+
+                if (pinnedList.length === 0) {
+                    container.innerHTML = '<div style="color:#666; text-align:center; padding:18px 8px;">このチャットにピン留めされたメッセージはありません。</div>';
+                    return;
+                }
+
+                [...pinnedList].reverse().forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = 'pinned-list-item';
+                    const body = document.createElement('div');
+                    body.style.flex = '1';
+                    body.innerHTML = `<strong>📌 ${escapeHTML(item.senderName || 'メッセージ')}</strong><br>${escapeHTML(item.text || '')}`;
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'msg-unsend-btn';
+                    removeBtn.style.color = '#ef4444';
+                    removeBtn.textContent = '解除';
+                    removeBtn.onclick = () => unpinMessage(item.msgId);
+                    row.appendChild(body);
+                    row.appendChild(removeBtn);
+                    container.appendChild(row);
+                });
+            }
 
             // メッセージリプライ開始
             window.startReply = function(msgId) {
@@ -1833,6 +1962,39 @@
 
             function showModal(id) { document.getElementById(id).classList.remove('hidden'); }
             function hideModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+            function openNewChatModal() {
+                const container = document.getElementById('new-chat-target-list');
+                if (!container) return;
+                container.innerHTML = '';
+
+                const targets = [{ id: 'chappy', name: '🤖 チャッピー (AI)' }];
+                const friendIds = db.friends[activeUserId] || [];
+                friendIds.forEach(friendId => {
+                    const friend = db.users[friendId];
+                    targets.push({
+                        id: friendId,
+                        name: `👤 ${friend ? friend.name : friendId}`
+                    });
+                });
+
+                if (targets.length === 1) {
+                    container.innerHTML = '<div style="color:#666; text-align:center; padding:10px;">チャットを開始できる友達がまだいません。先に友達を追加してください。</div>';
+                }
+
+                targets.forEach(target => {
+                    const button = document.createElement('button');
+                    button.className = 'menu-btn';
+                    button.style.cssText = 'margin:0; justify-content:flex-start; background:#f9fafb; color:var(--text-main); border:1px solid var(--border-color);';
+                    button.textContent = target.name;
+                    button.onclick = () => {
+                        hideModal('new-chat-modal');
+                        openChat(target.id);
+                    };
+                    container.appendChild(button);
+                });
+                showModal('new-chat-modal');
+            }
 
             function switchPage(pageId) {
                 document.querySelectorAll('.page-view').forEach(el => el.classList.add('hidden'));
@@ -2338,8 +2500,12 @@
                 // ピン留めアナウンスバー表示
                 const pinnedBar = document.getElementById('pinned-message-bar');
                 const pinnedText = document.getElementById('pinned-message-text');
-                if (pinnedBar && db.pinnedMessages && db.pinnedMessages[activeChatTarget]) {
-                    pinnedText.textContent = `📌 ${db.pinnedMessages[activeChatTarget]}`;
+                const pinnedValue = db.pinnedMessages && db.pinnedMessages[activeChatTarget];
+                const pinnedItems = Array.isArray(pinnedValue) ? pinnedValue : (pinnedValue ? [pinnedValue] : []);
+                if (pinnedBar && pinnedItems.length > 0) {
+                    const latestPinned = pinnedItems[pinnedItems.length - 1];
+                    const latestText = typeof latestPinned === 'string' ? latestPinned : latestPinned.text;
+                    pinnedText.textContent = `📌 ピン留め ${pinnedItems.length}件：${latestText}`;
                     pinnedBar.classList.remove('hidden');
                 } else if (pinnedBar) {
                     pinnedBar.classList.add('hidden');
@@ -2526,28 +2692,6 @@
                     timeSpan.textContent = timeStr;
                     metaDiv.appendChild(timeSpan);
 
-                    // 引用返信・ピン留めアクションボタン
-                    const replyBtn = document.createElement('button');
-                    replyBtn.className = 'msg-unsend-btn';
-                    replyBtn.textContent = '返信';
-                    replyBtn.onclick = () => startReply(m.msgId);
-                    metaDiv.appendChild(replyBtn);
-
-                    const pinBtn = document.createElement('button');
-                    pinBtn.className = 'msg-unsend-btn';
-                    pinBtn.textContent = 'ピン留め';
-                    pinBtn.onclick = () => pinMessage(m.msgId);
-                    metaDiv.appendChild(pinBtn);
-
-                    if (!isMe && m.from === 'chappy') {
-                        const speechBtn = document.createElement('button');
-                        speechBtn.className = 'msg-unsend-btn';
-                        speechBtn.style.color = '#10b981';
-                        speechBtn.textContent = '🔊 朗読';
-                        speechBtn.onclick = () => speakText(m.text);
-                        metaDiv.appendChild(speechBtn);
-                    }
-
                     if (isMe) {
                         const readCount = (m.readBy || []).length;
                         if (isGroup) {
@@ -2566,21 +2710,53 @@
                             }
                         }
 
-                        const unsendBtn = document.createElement('button');
-                        unsendBtn.className = 'msg-unsend-btn';
-                        unsendBtn.textContent = '送信取り消し';
-                        unsendBtn.onclick = () => unsendMessage(m.msgId);
-                        metaDiv.appendChild(unsendBtn);
-
-                        const delBtn = document.createElement('button');
-                        delBtn.className = 'msg-unsend-btn';
-                        delBtn.style.color = '#ef4444';
-                        delBtn.textContent = '削除';
-                        delBtn.onclick = () => deleteMessage(m.msgId);
-                        metaDiv.appendChild(delBtn);
                     }
 
                     wrapper.appendChild(metaDiv);
+
+                    const actionBar = document.createElement('div');
+                    actionBar.className = 'msg-action-bar';
+                    const moreBtn = document.createElement('button');
+                    moreBtn.className = 'msg-more-btn';
+                    moreBtn.type = 'button';
+                    moreBtn.textContent = '•••';
+                    moreBtn.title = 'メッセージ操作';
+
+                    const actionMenu = document.createElement('div');
+                    actionMenu.className = 'msg-action-menu hidden';
+                    moreBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        actionMenu.classList.toggle('hidden');
+                    };
+
+                    const addAction = (label, callback, danger = false) => {
+                        const action = document.createElement('button');
+                        action.type = 'button';
+                        action.textContent = label;
+                        if (danger) action.classList.add('danger');
+                        action.onclick = (e) => {
+                            e.stopPropagation();
+                            actionMenu.classList.add('hidden');
+                            callback();
+                        };
+                        actionMenu.appendChild(action);
+                    };
+
+                    addAction('↩ 返信', () => startReply(m.msgId));
+                    addAction('📌 ピン留め', () => pinMessage(m.msgId));
+
+                    if (!isMe && m.from === 'chappy') {
+                        addAction('🔊 朗読', () => speakText(m.text));
+                        addAction('↻ 再生成', () => regenerateAiMessage(m.msgId));
+                    }
+
+                    if (isMe) {
+                        addAction('🗑 削除', () => deleteMessage(m.msgId), true);
+                    }
+
+                    actionBar.appendChild(moreBtn);
+                    actionBar.appendChild(actionMenu);
+                    wrapper.appendChild(actionBar);
                     fragment.appendChild(wrapper);
                 }
 
@@ -3269,6 +3445,25 @@
                         }
                     };
                 }
+
+                const btnPinnedList = document.getElementById('btn-open-pinned-list');
+                if (btnPinnedList) {
+                    btnPinnedList.onclick = () => {
+                        renderPinnedList();
+                        showModal('pinned-list-modal');
+                    };
+                }
+                const pinnedMessageBar = document.getElementById('pinned-message-bar');
+                if (pinnedMessageBar) {
+                    pinnedMessageBar.onclick = (e) => {
+                        if (e.target.id !== 'btn-unpin-msg') {
+                            renderPinnedList();
+                            showModal('pinned-list-modal');
+                        }
+                    };
+                }
+                const btnNewChat = document.getElementById('btn-open-new-chat');
+                if (btnNewChat) btnNewChat.onclick = openNewChatModal;
 
                 // 返信キャンセルボタン
                 const btnCancelReply = document.getElementById('btn-cancel-reply');
