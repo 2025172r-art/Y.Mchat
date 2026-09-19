@@ -39,7 +39,14 @@
             .sidebar { width: 100% !important; height: auto !important; border-right: none !important; border-bottom: 1px solid var(--border-color); }
             .main-content { height: 100%; flex: 1; }
             .chat-box { min-height: calc(100vh - 12px); padding: 10px; }
+            body.mobile-chat-active { overflow: hidden; }
+            body.mobile-chat-active .sidebar { display: none !important; }
+            body.mobile-chat-active .main-content { display: flex !important; height: 100vh; min-height: 100vh; }
+            body.mobile-list-active .main-content { display: none !important; }
+            body.mobile-list-active .sidebar { display: flex !important; height: 100vh !important; overflow-y: auto; }
+            .mobile-only { display: inline-flex !important; }
         }
+        .mobile-only { display: none; }
 
         /* サイドバー設計 */
         .sidebar { width: 320px; background: var(--bg-card); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.02); overflow-y: auto; }
@@ -162,6 +169,11 @@
         .msg-action-menu button.danger:hover { background: #fef2f2; color: var(--danger); }
         .pinned-list { display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; }
         .pinned-list-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 9px 10px; background: #f9fafb; border: 1px solid var(--border-color); border-radius: 8px; font-size: 12px; }
+        .group-album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; max-height: 45vh; overflow-y: auto; }
+        .group-album-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color); cursor: pointer; }
+        .group-note-item { padding: 8px; border: 1px solid var(--border-color); border-radius: 7px; background: #f9fafb; font-size: 12px; white-space: pre-wrap; }
+        .pack-preview { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; min-height: 80px; }
+        .pack-preview img { width: 38px; height: 38px; object-fit: cover; border-radius: 5px; }
 
         /* リアクションバッジ & パネル */
         .reactions-container { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
@@ -315,14 +327,16 @@
                 <h3 id="chat-target-name" style="color:white;">チャット</h3>
                 <!-- メッセージ検索フォーム -->
                 <div style="display:flex; align-items:center; gap:4px;">
-                    <input type="text" id="chat-search-input" placeholder="ログ内メッセージ検索..." style="margin:0; padding:4px 8px; font-size:12px; width:150px;">
+                    <button class="menu-btn" style="width:auto; padding:5px 10px; background:#64748b;" id="btn-open-chat-search">🔍 検索</button>
                 </div>
                 <div style="display:flex; gap:8px;">
+                    <button class="menu-btn mobile-only" style="width:auto; padding:5px 10px; background:#334155;" id="btn-mobile-show-sidebar">☰ 一覧</button>
                     <button class="menu-btn" style="width:auto; padding:5px 12px; background:#8b5cf6;" id="btn-open-new-chat">＋ 新規チャット</button>
                     <button class="menu-btn" style="width:auto; padding:5px 12px; background:#475569;" id="btn-open-pinned-list">📌 ピン留め一覧</button>
                     <button class="menu-btn" style="width:auto; padding:5px 12px; background:#6366f1;" id="btn-export-ai-md" title="AI会話ログをMarkdown保存">📥 保存</button>
                     <button class="menu-btn" style="width:auto; padding:5px 12px; background:#f59e0b;" id="btn-open-transfer-modal">🪙 送金</button>
                     <button class="menu-btn" style="width:auto; padding:5px 12px; background:#0284c7;" id="btn-manage-group-modal">👥 管理</button>
+                    <button class="menu-btn" style="width:auto; padding:5px 12px; background:#0ea5e9;" id="btn-chat-camera-call" title="ビデオ通話を開始">📹 ビデオ</button>
                     <button class="menu-btn btn-success" style="width:auto; padding:5px 12px;" id="btn-start-call">📞 通話</button>
                     <button class="menu-btn btn-danger hidden" style="width:auto; padding:5px 12px;" id="btn-end-call">📵 切断</button>
                 </div>
@@ -363,8 +377,6 @@
 
             <div style="display:flex; gap:8px; margin-top:10px; align-items:center;">
                 <button class="menu-btn" style="width:auto; background:#ffc107; color:#000; font-size:18px; padding:6px 12px;" id="btn-chat-stamp">🎨</button>
-                <button class="menu-btn" style="width:auto; background:#10b981; font-size:18px; padding:6px 12px;" id="btn-chat-audio-call" title="1対1 音声通話を開始">🎙️</button>
-                <button class="menu-btn" style="width:auto; background:#17a2b8; font-size:18px; padding:6px 12px;" id="btn-chat-camera-call" title="ビデオ通話を開始">📹</button>
                 <button class="menu-btn" style="width:auto; background:#6c757d; font-size:18px; padding:6px 12px;" id="btn-chat-file" title="ファイルを選択してアップロード/解析">📁</button>
                 <button class="menu-btn" style="width:auto; background:#ef4444; font-size:18px; padding:6px 12px;" id="btn-chat-voice-msg" title="ボイスメッセージ録音">🎙️録音</button>
                 <input type="file" id="chat-file-input" class="hidden">
@@ -423,12 +435,16 @@
         <div id="stamp-shop-view" class="page-view card hidden">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h2>🎨 スタンプショップ</h2>
-                <button class="menu-btn" style="width:auto; background:#17a2b8;" id="btn-open-stamp-create">＋ アイテムを出品</button>
+                <div style="display:flex; gap:8px;">
+                    <button class="menu-btn" style="width:auto; background:#17a2b8;" id="btn-open-stamp-create">＋ アイテムを出品</button>
+                    <button class="menu-btn" style="width:auto; background:#8b5cf6;" id="btn-open-pack-create">📦 パック作成</button>
+                </div>
             </div>
 
             <div style="display:flex; gap:10px; margin-top:15px; border-bottom:1px solid var(--border-color); padding-bottom:10px;">
                 <button class="shop-tab-btn active" id="btn-shop-tab-stamp">🎨 スタンプ</button>
                 <button class="shop-tab-btn" id="btn-shop-tab-reaction">✨ リアクション</button>
+                <button class="shop-tab-btn" id="btn-shop-tab-pack">📦 パック</button>
             </div>
 
             <div id="stamp-market-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:15px; margin-top:15px;"></div>
@@ -600,7 +616,53 @@
             <div id="manage-group-friends-list" style="max-height:120px; overflow-y:auto; border:1px solid var(--border-color); padding:8px; border-radius:var(--radius-sm); margin-bottom:12px; background:#f9fafb;"></div>
             <label>現在の参加メンバー</label>
             <div id="manage-group-members-current" style="max-height:120px; overflow-y:auto; border:1px solid var(--border-color); padding:8px; border-radius:var(--radius-sm); margin-bottom:12px; background:#f9fafb; font-size:13px;"></div>
+            <div style="display:flex; gap:8px; margin-bottom:12px;">
+                <button class="menu-btn" style="margin:0; background:#0ea5e9;" id="btn-open-group-album">📷 アルバム</button>
+                <button class="menu-btn" style="margin:0; background:#8b5cf6;" id="btn-open-group-note">📝 ノート</button>
+            </div>
             <button class="menu-btn btn-danger closeModalBtn">閉じる</button>
+        </div>
+    </div>
+
+    <div id="chat-search-modal" class="modal hidden">
+        <div class="modal-box">
+            <h3>🔍 チャット内検索</h3>
+            <input type="text" id="chat-search-input" placeholder="ログ内メッセージ検索...">
+            <button class="menu-btn" style="background:#64748b;" id="btn-clear-chat-search">検索をクリア</button>
+            <button class="menu-btn btn-danger closeModalBtn" style="margin-top:5px;">閉じる</button>
+        </div>
+    </div>
+
+    <div id="group-album-modal" class="modal hidden">
+        <div class="modal-box">
+            <h3>📷 グループアルバム</h3>
+            <input type="file" id="group-album-file" accept="image/*" multiple>
+            <div id="group-album-grid" class="group-album-grid" style="margin-top:12px;"></div>
+            <button class="menu-btn btn-danger closeModalBtn" style="margin-top:15px;">閉じる</button>
+        </div>
+    </div>
+
+    <div id="group-note-modal" class="modal hidden">
+        <div class="modal-box">
+            <h3>📝 グループノート</h3>
+            <textarea id="group-note-input" rows="4" placeholder="グループで共有するメモを入力..."></textarea>
+            <button class="menu-btn btn-success" id="btn-save-group-note">ノートを追加</button>
+            <div id="group-note-list" style="display:flex; flex-direction:column; gap:8px; max-height:35vh; overflow-y:auto; margin-top:12px;"></div>
+            <button class="menu-btn btn-danger closeModalBtn" style="margin-top:15px;">閉じる</button>
+        </div>
+    </div>
+
+    <div id="stamp-pack-create-modal" class="modal hidden">
+        <div class="modal-box">
+            <h3>📦 自作スタンプパックを作成</h3>
+            <label>パック名</label>
+            <input type="text" id="stamp-pack-title" placeholder="例: 日常リアクションパック">
+            <label>販売金額 (コイン)</label>
+            <input type="number" id="stamp-pack-price" value="100" min="0">
+            <label>収録する所有スタンプ</label>
+            <div id="stamp-pack-items" style="max-height:180px; overflow-y:auto; border:1px solid var(--border-color); padding:8px; border-radius:6px;"></div>
+            <button class="menu-btn btn-success" id="btn-publish-stamp-pack">パックを出品する</button>
+            <button class="menu-btn btn-danger closeModalBtn" style="margin-top:5px;">キャンセル</button>
         </div>
     </div>
 
@@ -918,7 +980,6 @@
             }
 
             function triggerFullTabSync() {
-                saveData();
                 try {
                     syncChannel.postMessage({ type: 'FULL_DATA_UPDATE', timestamp: Date.now() });
                 } catch (e) {
@@ -983,6 +1044,9 @@
             let currentAudioBlob = null;
 
             let attachedFileText = "";
+            const aiGenerationControllers = {};
+            const aiRenderTimers = {};
+            const aiSaveTimers = {};
 
             // 開発者検証（平文を排除し動的ハッシュ照合を実施）
             const TARGET_DEV_USER = "YM";
@@ -1018,6 +1082,11 @@
             // AI会話エンジン (DOMPurifyによるサニタイズ処理を適用)
             // -------------------------------------------------------------
             async function callChatGPTAPIStream(userPrompt, placeholderMsgId, historyMessages = null) {
+                if (aiGenerationControllers[placeholderMsgId]) {
+                    try { aiGenerationControllers[placeholderMsgId].abort(); } catch (e) {}
+                }
+                const controller = new AbortController();
+                aiGenerationControllers[placeholderMsgId] = controller;
                 const aiMessages = historyMessages || db.messages.filter(m => 
                     (m.from === activeUserId && m.to === 'chappy') || 
                     (m.from === 'chappy' && m.to === activeUserId)
@@ -1027,12 +1096,12 @@
 
                 const messagesHistory = [{ role: 'system', content: SYSTEM_PROMPT }];
 
-                const recentLogs = aiMessages.slice(-20);
+                const recentLogs = aiMessages.slice(-12);
                 recentLogs.forEach(m => {
                     if (m.type === 'text' && m.text) {
                         messagesHistory.push({
                             role: m.from === 'chappy' ? 'assistant' : 'user',
-                            content: m.text
+                            content: m.text.slice(0, 8000)
                         });
                     }
                 });
@@ -1048,6 +1117,7 @@
                     const response = await fetch(proxyEndpoint, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
+                            signal: controller.signal,
                         body: JSON.stringify({
                             messages: messagesHistory,
                             model: selectedModel,
@@ -1094,8 +1164,18 @@
                             const targetMsg = db.messages.find(m => m.msgId === placeholderMsgId);
                             if (targetMsg) {
                                 targetMsg.text = fullReply;
-                                saveData();
-                                if (activeChatTarget === 'chappy') renderChat(false);
+                                if (!aiRenderTimers[placeholderMsgId]) {
+                                    aiRenderTimers[placeholderMsgId] = setTimeout(() => {
+                                        delete aiRenderTimers[placeholderMsgId];
+                                        if (activeChatTarget === 'chappy') renderChat(false);
+                                    }, 180);
+                                }
+                                if (!aiSaveTimers[placeholderMsgId]) {
+                                    aiSaveTimers[placeholderMsgId] = setTimeout(() => {
+                                        delete aiSaveTimers[placeholderMsgId];
+                                        saveData();
+                                    }, 700);
+                                }
                             }
                         }
                     }
@@ -1112,6 +1192,7 @@
                     }
 
                 } catch (e) {
+                    if (e && e.name === 'AbortError') return;
                     console.warn("Pollinations API通信エラー。再試行オプションをUI表示します:", e);
                     showToast("AI通信に失敗しました。", () => callChatGPTAPIStream(userPrompt, placeholderMsgId, historyMessages));
                     const p = userPrompt.trim().toLowerCase();
@@ -1127,6 +1208,18 @@
                         saveData();
                         if (activeChatTarget === 'chappy') renderChat(false);
                     }
+                } finally {
+                    delete aiGenerationControllers[placeholderMsgId];
+                    if (aiRenderTimers[placeholderMsgId]) {
+                        clearTimeout(aiRenderTimers[placeholderMsgId]);
+                        delete aiRenderTimers[placeholderMsgId];
+                    }
+                    if (aiSaveTimers[placeholderMsgId]) {
+                        clearTimeout(aiSaveTimers[placeholderMsgId]);
+                        delete aiSaveTimers[placeholderMsgId];
+                    }
+                    saveData();
+                    if (activeChatTarget === 'chappy') renderChat(false);
                 }
             }
 
@@ -1187,18 +1280,14 @@
                             toggleCallUI(true);
                         });
 
-                        call.on('close', () => cleanupCall(call.peer));
-                        call.on('error', () => cleanupCall(call.peer));
+                        call.on('close', () => stopAllCalls());
+                        call.on('error', () => stopAllCalls());
                     });
                 }
             };
 
             document.getElementById('btn-reject-incoming-call').onclick = () => {
-                hideModal('call-incoming-modal');
-                if (pendingIncomingCall) {
-                    pendingIncomingCall.close();
-                    pendingIncomingCall = null;
-                }
+                stopAllCalls();
             };
 
             function startCallToPeer(targetPeerId) {
@@ -1224,33 +1313,33 @@
                         toggleCallUI(true);
                     });
 
-                    call.on('close', () => cleanupCall(targetPeerId));
-                    call.on('error', () => cleanupCall(targetPeerId));
+                    call.on('close', () => stopAllCalls());
+                    call.on('error', () => stopAllCalls());
                 });
             }
 
-            // トラックの停止処理を確実に実行する統合クリーンアップ関数
-            function cleanupCall(peerId) {
-                if (mediaCalls[peerId]) {
-                    mediaCalls[peerId].close();
-                    delete mediaCalls[peerId];
-                }
-                const audio = document.getElementById('audio-' + peerId);
-                if (audio) audio.remove();
-
-                if (Object.keys(mediaCalls).length === 0) {
-                    if (localStream) {
-                        localStream.getTracks().forEach(track => track.stop());
-                        localStream = null;
-                    }
-                    toggleCallUI(false);
-                }
-            }
-
             function stopAllCalls() {
-                Object.keys(mediaCalls).forEach(pId => cleanupCall(pId));
+                if (pendingIncomingCall) {
+                    try { pendingIncomingCall.close(); } catch (e) {}
+                    pendingIncomingCall = null;
+                    hideModal('call-incoming-modal');
+                }
+                const activeCalls = Object.values(mediaCalls);
+                Object.keys(mediaCalls).forEach(pId => delete mediaCalls[pId]);
+                activeCalls.forEach(call => {
+                    try { call.close(); } catch (e) {}
+                });
+                document.querySelectorAll('#audio-container audio').forEach(audio => audio.remove());
+                if (localStream) {
+                    localStream.getTracks().forEach(track => track.stop());
+                    localStream = null;
+                }
                 stopVideoCall();
+                toggleCallUI(false);
             }
+
+            // 既存の接続イベントからも単一の終了フローを利用する互換ラッパー
+            function cleanupCall() { stopAllCalls(); }
 
             function toggleCallUI(inCall) {
                 const btnStart = document.getElementById('btn-start-call');
@@ -1335,18 +1424,18 @@
                         incomingCall.on('stream', remoteStream => {
                             remoteVideo.srcObject = remoteStream;
                         });
-                        incomingCall.on('close', () => stopVideoCall());
-                        incomingCall.on('error', () => stopVideoCall());
+                        incomingCall.on('close', () => stopAllCalls());
+                        incomingCall.on('error', () => stopAllCalls());
                     } else if (targetPeerId) {
                         if (!peer) {
                             showToast('PeerJSが初期化されていません。');
-                            stopVideoCall();
+                            stopAllCalls();
                             return;
                         }
                         const call = peer.call(targetPeerId, canvasStream, { metadata: { type: 'video' } });
                         if (!call) {
                             showToast('相手への接続が確立できませんでした。');
-                            stopVideoCall();
+                            stopAllCalls();
                             return;
                         }
                         mediaCalls[targetPeerId] = call;
@@ -1354,12 +1443,12 @@
                         call.on('stream', remoteStream => {
                             remoteVideo.srcObject = remoteStream;
                         });
-                        call.on('close', () => stopVideoCall());
-                        call.on('error', () => stopVideoCall());
+                        call.on('close', () => stopAllCalls());
+                        call.on('error', () => stopAllCalls());
                     }
                 } catch (err) {
                     showToast('ビデオ通話処理でエラーが発生しました: ' + err.message);
-                    stopVideoCall();
+                    stopAllCalls();
                 }
             }
 
@@ -1458,28 +1547,28 @@
 
             async function sendVoiceMessage() {
                 if (!currentAudioBlob) return;
-                const reader = new FileReader();
-                reader.onloadend = async () => {
-                    const base64Audio = reader.result;
-                    const mediaKey = `voice_${Date.now()}`;
-                    try {
-                        await IDB.set(mediaKey, base64Audio);
-                        if (currentStampTarget === 'keep') {
-                            sendKeepMessage('voice', '🎤 ボイスメモ', { name: `${mediaKey}.webm`, data: mediaKey });
-                        } else {
-                            sendMessage('voice', '🎤 ボイスメッセージ', { name: `${mediaKey}.webm`, data: mediaKey });
-                        }
-                    } catch (err) {
-                        showToast("IndexedDB保存に失敗したため通常送信します。");
-                        if (currentStampTarget === 'keep') {
-                            sendKeepMessage('voice', '🎤 ボイスメモ', { name: `voice_${Date.now()}.webm`, data: base64Audio });
-                        } else {
-                            sendMessage('voice', '🎤 ボイスメッセージ', { name: `voice_${Date.now()}.webm`, data: base64Audio });
-                        }
+                const mediaKey = `voice_${Date.now()}`;
+                try {
+                    await IDB.set(mediaKey, currentAudioBlob);
+                    if (currentStampTarget === 'keep') {
+                        sendKeepMessage('voice', '🎤 ボイスメモ', { name: `${mediaKey}.webm`, data: mediaKey });
+                    } else {
+                        sendMessage('voice', '🎤 ボイスメッセージ', { name: `${mediaKey}.webm`, data: mediaKey });
                     }
-                    hideModal('voice-rec-modal');
-                };
-                reader.readAsDataURL(currentAudioBlob);
+                } catch (err) {
+                    showToast("IndexedDB保存に失敗したため通常送信します。");
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        if (currentStampTarget === 'keep') {
+                            sendKeepMessage('voice', '🎤 ボイスメモ', { name: `voice_${Date.now()}.webm`, data: reader.result });
+                        } else {
+                            sendMessage('voice', '🎤 ボイスメッセージ', { name: `voice_${Date.now()}.webm`, data: reader.result });
+                        }
+                    };
+                    reader.readAsDataURL(currentAudioBlob);
+                }
+                currentAudioBlob = null;
+                hideModal('voice-rec-modal');
             }
 
             // -------------------------------------------------------------
@@ -1542,6 +1631,17 @@
                 });
             }
 
+            async function resolveStoredMedia(data) {
+                if (!data || typeof data !== 'string' || (!data.startsWith('voice_') && !data.startsWith('file_') && !data.startsWith('album_'))) return data;
+                try {
+                    const stored = await IDB.get(data);
+                    if (stored instanceof Blob) return URL.createObjectURL(stored);
+                    return stored || data;
+                } catch (e) {
+                    return data;
+                }
+            }
+
             document.addEventListener('contextmenu', e => e.preventDefault());
             document.addEventListener('keydown', e => {
                 if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) || (e.ctrlKey && e.key === 'U')) {
@@ -1573,6 +1673,8 @@
                     officialChatLogs: {},
                     keepLogs: {},
                     pinnedMessages: {},
+                    pendingMessages: {},
+                    lastReadTimestamps: {},
                     systemAnnouncement: '',
                     systemAnnouncementStyle: 'normal',
                     systemVersion: '1.2.0'
@@ -1585,6 +1687,7 @@
                     if (rawData) {
                         const parsed = JSON.parse(rawData);
                         await IDB.set('app_db', parsed, 'appData');
+                        localStorage.removeItem('YM_DB');
                         return parsed;
                     }
                     return defaultDb;
@@ -1743,11 +1846,13 @@
             // 未読メッセージ計算ヘルパー
             function getUnreadCount(targetId) {
                 const isGroup = !!(db.groups && db.groups[targetId]);
+                const roomReads = (db.lastReadTimestamps && db.lastReadTimestamps[targetId]) || {};
+                const lastReadTimestamp = roomReads[activeUserId] || 0;
                 let unread = 0;
                 db.messages.forEach(m => {
                     const isForThisChat = isGroup ? (m.to === targetId) : (m.from === targetId && m.to === activeUserId);
                     if (isForThisChat && m.from !== activeUserId) {
-                        if (!m.readBy || !m.readBy.includes(activeUserId)) {
+                        if (lastReadTimestamp > 0 ? (m.timestamp || 0) > lastReadTimestamp : (!m.readBy || !m.readBy.includes(activeUserId))) {
                             unread++;
                         }
                     }
@@ -1829,12 +1934,20 @@
                     broadcastPresence();
                     checkAndSendReadReceipts();
 
-                    // オンライン復帰時のメッセージキュー送信
-                    if (offlineMessageQueue[conn.peer] && offlineMessageQueue[conn.peer].length > 0) {
-                        offlineMessageQueue[conn.peer].forEach(msg => {
+                    // オンライン復帰時のメッセージキュー送信（IndexedDBにも保存）
+                    const queuedMessages = [
+                        ...((db.pendingMessages && db.pendingMessages[conn.peer]) || []),
+                        ...(offlineMessageQueue[conn.peer] || [])
+                    ].filter((msg, index, list) => list.findIndex(item => item.msgId === msg.msgId) === index);
+                    if (queuedMessages.length > 0) {
+                        queuedMessages.forEach(msg => {
                             conn.send({ type: 'CHAT_MSG', message: msg });
                         });
                         delete offlineMessageQueue[conn.peer];
+                        if (db.pendingMessages) {
+                            delete db.pendingMessages[conn.peer];
+                            saveData();
+                        }
                     }
                 });
 
@@ -1897,6 +2010,14 @@
                     }
                 } else if (data.type === 'READ_RECEIPT') {
                     let updated = false;
+                    if (data.roomId && data.reader && data.lastReadTimestamp) {
+                        if (!db.lastReadTimestamps) db.lastReadTimestamps = {};
+                        if (!db.lastReadTimestamps[data.roomId]) db.lastReadTimestamps[data.roomId] = {};
+                        if ((db.lastReadTimestamps[data.roomId][data.reader] || 0) < data.lastReadTimestamp) {
+                            db.lastReadTimestamps[data.roomId][data.reader] = data.lastReadTimestamp;
+                            updated = true;
+                        }
+                    }
                     if (Array.isArray(data.msgIds)) {
                         db.messages.forEach(m => {
                             if (data.msgIds.includes(m.msgId)) {
@@ -1999,6 +2120,10 @@
             function switchPage(pageId) {
                 document.querySelectorAll('.page-view').forEach(el => el.classList.add('hidden'));
                 document.getElementById(pageId).classList.remove('hidden');
+                if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
+                    document.body.classList.toggle('mobile-chat-active', pageId === 'chat-view');
+                    document.body.classList.toggle('mobile-list-active', pageId !== 'chat-view');
+                }
                 if (pageId === 'stamp-shop-view') renderStamps();
                 if (pageId === 'stalia-collection-view') renderCollection();
                 if (pageId === 'official-chat-view') renderOfficialChat(true);
@@ -2191,14 +2316,16 @@
                     });
                 }
 
-                renderSlideKeyboard(activeStamps);
+                    renderSlideKeyboard(activeStamps);
             }
 
             function renderSlideKeyboard(activeStamps) {
                 const kb = document.getElementById('stamp-slide-keyboard');
                 if (!kb) return;
                 kb.innerHTML = '';
-                if (activeStamps.length === 0) {
+                const user = db.users[activeUserId];
+                const ownedPackIds = (user && user.myPacks) || [];
+                if (activeStamps.length === 0 && ownedPackIds.length === 0) {
                     kb.innerHTML = '<div style="grid-column: span 4; font-size: 11px; color:#888; text-align:center;">スタンプが登録されていません</div>';
                     return;
                 }
@@ -2212,6 +2339,23 @@
                         else sendMessage('stamp', url);
                     };
                     kb.appendChild(img);
+                });
+
+                ownedPackIds.forEach(packId => {
+                    const pack = db.stamps.find(item => item.id === packId && item.itemType === 'pack');
+                    if (!pack) return;
+                    const packBtn = document.createElement('button');
+                    packBtn.className = 'menu-btn';
+                    packBtn.style.cssText = 'grid-column:span 2; margin:0; padding:5px; font-size:11px; background:#8b5cf6;';
+                    packBtn.textContent = `📦 ${pack.title} を送信`;
+                    packBtn.onclick = () => {
+                        (pack.items || []).forEach(url => {
+                            if (currentStampTarget === 'official') sendOfficialMessage('stamp', url);
+                            else if (currentStampTarget === 'keep') sendKeepMessage('stamp', url);
+                            else sendMessage('stamp', url);
+                        });
+                    };
+                    kb.appendChild(packBtn);
                 });
             }
 
@@ -2346,6 +2490,9 @@
                                 } else {
                                     if (!offlineMessageQueue[memId]) offlineMessageQueue[memId] = [];
                                     offlineMessageQueue[memId].push(msgObj);
+                                    if (!db.pendingMessages) db.pendingMessages = {};
+                                    if (!db.pendingMessages[memId]) db.pendingMessages[memId] = [];
+                                    db.pendingMessages[memId].push(msgObj);
                                 }
                             }
                         });
@@ -2356,6 +2503,9 @@
                     } else {
                         if (!offlineMessageQueue[activeChatTarget]) offlineMessageQueue[activeChatTarget] = [];
                         offlineMessageQueue[activeChatTarget].push(msgObj);
+                        if (!db.pendingMessages) db.pendingMessages = {};
+                        if (!db.pendingMessages[activeChatTarget]) db.pendingMessages[activeChatTarget] = [];
+                        db.pendingMessages[activeChatTarget].push(msgObj);
                     }
                 }
                 renderChat(true);
@@ -2447,10 +2597,12 @@
                 if (!activeChatTarget) return;
                 const isGroup = !!(db.groups && db.groups[activeChatTarget]);
                 const unreadMsgIds = [];
+                let latestReadTimestamp = 0;
 
                 db.messages.forEach(m => {
                     const isForThisChat = isGroup ? (m.to === activeChatTarget) : (m.from === activeChatTarget && m.to === activeUserId);
                     if (isForThisChat && m.from !== activeUserId) {
+                        latestReadTimestamp = Math.max(latestReadTimestamp, m.timestamp || 0);
                         if (!m.readBy) m.readBy = [];
                         if (!m.readBy.includes(activeUserId)) {
                             m.readBy.push(activeUserId);
@@ -2459,12 +2611,20 @@
                     }
                 });
 
-                if (unreadMsgIds.length > 0) {
+                if (latestReadTimestamp > 0) {
+                    if (!db.lastReadTimestamps) db.lastReadTimestamps = {};
+                    if (!db.lastReadTimestamps[activeChatTarget]) db.lastReadTimestamps[activeChatTarget] = {};
+                    db.lastReadTimestamps[activeChatTarget][activeUserId] = latestReadTimestamp;
+                }
+
+                if (unreadMsgIds.length > 0 || latestReadTimestamp > 0) {
                     saveData();
                     broadcastData({
                         type: 'READ_RECEIPT',
                         msgIds: unreadMsgIds,
-                        reader: activeUserId
+                        reader: activeUserId,
+                        roomId: activeChatTarget,
+                        lastReadTimestamp: latestReadTimestamp
                     });
                 }
             }
@@ -2557,6 +2717,22 @@
 
                     const div = document.createElement('div');
                     div.className = `msg ${isMe ? 'msg-me' : 'msg-other'}`;
+                    if (!isMe) {
+                        let longPressTimer = null;
+                        div.addEventListener('pointerdown', (e) => {
+                            if (e.target.closest('button, a, audio, img')) return;
+                            longPressTimer = setTimeout(() => {
+                                activePickerMsgId = m.msgId;
+                                renderChat(false);
+                            }, 550);
+                        });
+                        ['pointerup', 'pointerleave', 'pointercancel'].forEach(eventName => {
+                            div.addEventListener(eventName, () => {
+                                if (longPressTimer) clearTimeout(longPressTimer);
+                                longPressTimer = null;
+                            });
+                        });
+                    }
                     
                     let senderLabel = '';
                     if (isGroup && !isMe) {
@@ -2581,21 +2757,14 @@
                         div.innerHTML = senderLabel + replyHtml;
                         const audio = document.createElement('audio');
                         audio.controls = true;
-                        if (m.fileData.startsWith('voice_')) {
-                            try {
-                                const realData = await IDB.get(m.fileData);
-                                audio.src = realData || m.fileData;
-                            } catch (e) { audio.src = m.fileData; }
-                        } else {
-                            audio.src = m.fileData;
-                        }
+                        audio.src = await resolveStoredMedia(m.fileData);
                         audio.style.maxWidth = '200px';
                         div.appendChild(audio);
                     } else if (m.type === 'file' && m.fileData) {
                         div.innerHTML = senderLabel + replyHtml;
                         const a = document.createElement('a');
                         a.className = 'file-link';
-                        a.href = m.fileData;
+                        a.href = await resolveStoredMedia(m.fileData);
                         a.download = m.fileName || 'file';
                         a.textContent = `💾 ${m.fileName || 'ダウンロード'}`;
                         div.appendChild(a);
@@ -2826,13 +2995,13 @@
                         } else if (msg.type === 'voice' && msg.fileData) {
                             const audio = document.createElement('audio');
                             audio.controls = true;
-                            audio.src = msg.fileData;
+                            resolveStoredMedia(msg.fileData).then(src => { audio.src = src; });
                             audio.style.maxWidth = '200px';
                             div.appendChild(audio);
                         } else if (msg.type === 'file' && msg.fileData) {
                             const a = document.createElement('a');
                             a.className = 'file-link';
-                            a.href = msg.fileData;
+                            resolveStoredMedia(msg.fileData).then(src => { a.href = src; });
                             a.download = msg.fileName || 'file';
                             a.textContent = `💾 ${msg.fileName || 'ダウンロード'}`;
                             div.appendChild(a);
@@ -2912,13 +3081,13 @@
                     } else if (msg.type === 'voice' && msg.fileData) {
                         const audio = document.createElement('audio');
                         audio.controls = true;
-                        audio.src = msg.fileData;
+                        resolveStoredMedia(msg.fileData).then(src => { audio.src = src; });
                         audio.style.maxWidth = '200px';
                         div.appendChild(audio);
                     } else if (msg.type === 'file' && msg.fileData) {
                         const a = document.createElement('a');
                         a.className = 'file-link';
-                        a.href = msg.fileData;
+                        resolveStoredMedia(msg.fileData).then(src => { a.href = src; });
                         a.download = msg.fileName || 'file';
                         a.textContent = `💾 ${msg.fileName || 'ダウンロード'}`;
                         div.appendChild(a);
@@ -2984,6 +3153,24 @@
                 hideModal('select-stamp-modal');
             }
 
+            function renderStampPackPicker() {
+                const container = document.getElementById('stamp-pack-items');
+                if (!container) return;
+                container.innerHTML = '';
+                const user = db.users[activeUserId];
+                const stamps = (user && user.myStamps) || [];
+                if (stamps.length === 0) {
+                    container.innerHTML = '<div style="color:#666; font-size:12px; padding:8px;">先にスタンプを1つ以上所持してください。</div>';
+                    return;
+                }
+                stamps.forEach((url, index) => {
+                    const row = document.createElement('label');
+                    row.style.cssText = 'display:flex; align-items:center; gap:8px; padding:5px; cursor:pointer;';
+                    row.innerHTML = `<input type="checkbox" class="stamp-pack-check" value="${escapeHTML(url)}"><img src="${DOMPurify.sanitize(url)}" style="width:42px; height:42px; object-fit:cover; border-radius:5px;"> スタンプ ${index + 1}`;
+                    container.appendChild(row);
+                });
+            }
+
             function renderStamps() {
                 const grid = document.getElementById('stamp-market-grid');
                 grid.innerHTML = '';
@@ -2991,7 +3178,8 @@
                 const filtered = db.stamps.filter(s => (s.itemType || 'stamp') === currentShopTab);
 
                 if (filtered.length === 0) {
-                    grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color:#666; padding:30px;">現在販売中の${currentShopTab === 'stamp' ? 'スタンプ' : 'リアクション'}はありません。「＋ アイテムを出品」から出品しましょう！</div>`;
+                    const label = currentShopTab === 'stamp' ? 'スタンプ' : (currentShopTab === 'reaction' ? 'リアクション' : 'スタンプパック');
+                    grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color:#666; padding:30px;">現在販売中の${label}はありません。</div>`;
                     return;
                 }
 
@@ -3003,7 +3191,16 @@
                     const card = document.createElement('div');
                     card.style.cssText = 'background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; display:flex; flex-direction:column; align-items:center; text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.02);';
                     
-                    if ((stamp.itemType || 'stamp') === 'reaction' && stamp.content && !stamp.url) {
+                    if ((stamp.itemType || 'stamp') === 'pack') {
+                        const preview = document.createElement('div');
+                        preview.className = 'pack-preview';
+                        (stamp.items || []).slice(0, 6).forEach(url => {
+                            const img = document.createElement('img');
+                            img.src = DOMPurify.sanitize(url);
+                            preview.appendChild(img);
+                        });
+                        card.appendChild(preview);
+                    } else if ((stamp.itemType || 'stamp') === 'reaction' && stamp.content && !stamp.url) {
                         const textEl = document.createElement('div');
                         textEl.style.cssText = 'font-size:36px; margin-bottom:8px; height:80px; display:flex; align-items:center; justify-content:center;';
                         textEl.textContent = stamp.content;
@@ -3030,7 +3227,8 @@
                     price.textContent = `🪙 ${stamp.price} コイン`;
 
                     const itemType = stamp.itemType || 'stamp';
-                    const isOwned = itemType === 'reaction' ? myReactions.includes(stamp.content || stamp.url) : myStamps.includes(stamp.url);
+                    const myPacks = (user && user.myPacks) || [];
+                    const isOwned = itemType === 'reaction' ? myReactions.includes(stamp.content || stamp.url) : (itemType === 'pack' ? myPacks.includes(stamp.id) : myStamps.includes(stamp.url));
 
                     const btn = document.createElement('button');
                     if (isOwned) {
@@ -3078,6 +3276,21 @@
                     if (stamp.sellerKey && db.users[stamp.sellerKey]) {
                         db.users[stamp.sellerKey].coins = (db.users[stamp.sellerKey].coins || 0) + stamp.price;
                     }
+                } else if (itemType === 'pack') {
+                    if (!user.myPacks) user.myPacks = [];
+                    if (user.myPacks.includes(stamp.id)) {
+                        showToast('既にこのスタンプパックを所持しています。');
+                        return;
+                    }
+                    if (user.coins < stamp.price) {
+                        showToast('コインが不足しています。');
+                        return;
+                    }
+                    user.coins -= stamp.price;
+                    user.myPacks.push(stamp.id);
+                    if (stamp.sellerKey && db.users[stamp.sellerKey]) {
+                        db.users[stamp.sellerKey].coins = (db.users[stamp.sellerKey].coins || 0) + stamp.price;
+                    }
                 } else {
                     if (!user.myStamps) user.myStamps = [];
                     if (user.myStamps.includes(stamp.url)) {
@@ -3109,10 +3322,11 @@
                 const user = db.users[activeUserId];
                 const myStamps = user.myStamps || [];
                 const myReactions = user.myReactions || [];
+                const myPacks = user.myPacks || [];
                 const disabledStamps = user.disabledStamps || [];
                 const disabledReactions = user.disabledReactions || [];
 
-                if (myStamps.length === 0 && myReactions.length === 0) {
+                if (myStamps.length === 0 && myReactions.length === 0 && myPacks.length === 0) {
                     grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color:#666; padding:30px;">所持しているスタンプ・リアクションはありません。</div>';
                     return;
                 }
@@ -3204,6 +3418,32 @@
                     card.appendChild(seller);
                     card.appendChild(toggleBtn);
                     card.appendChild(delBtn);
+                    grid.appendChild(card);
+                });
+
+                myPacks.forEach(packId => {
+                    const pack = db.stamps.find(s => s.id === packId && s.itemType === 'pack');
+                    if (!pack) return;
+                    const card = document.createElement('div');
+                    card.style.cssText = 'background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; display:flex; flex-direction:column; align-items:center; text-align:center;';
+                    const preview = document.createElement('div');
+                    preview.className = 'pack-preview';
+                    (pack.items || []).forEach(url => {
+                        const img = document.createElement('img');
+                        img.src = DOMPurify.sanitize(url);
+                        preview.appendChild(img);
+                    });
+                    const title = document.createElement('div');
+                    title.style.cssText = 'font-weight:bold; font-size:13px; margin:8px 0;';
+                    title.textContent = `📦 ${pack.title}`;
+                    const sendBtn = document.createElement('button');
+                    sendBtn.className = 'menu-btn';
+                    sendBtn.style.cssText = 'margin:0; padding:4px 8px; font-size:11px; background:#8b5cf6;';
+                    sendBtn.textContent = 'パックを送る';
+                    sendBtn.onclick = () => (pack.items || []).forEach(url => sendMessage('stamp', url));
+                    card.appendChild(preview);
+                    card.appendChild(title);
+                    card.appendChild(sendBtn);
                     grid.appendChild(card);
                 });
             }
@@ -3391,6 +3631,9 @@
             document.addEventListener('DOMContentLoaded', async () => {
                 await IDB.init();
                 db = await loadAppDatabase();
+                if (!db.pendingMessages) db.pendingMessages = {};
+                if (!db.lastReadTimestamps) db.lastReadTimestamps = {};
+                if (!db.stampPacks) db.stampPacks = {};
 
                 if (!db.users['chappy']) {
                     db.users['chappy'] = {
@@ -3464,6 +3707,28 @@
                 }
                 const btnNewChat = document.getElementById('btn-open-new-chat');
                 if (btnNewChat) btnNewChat.onclick = openNewChatModal;
+                const btnMobileShowSidebar = document.getElementById('btn-mobile-show-sidebar');
+                if (btnMobileShowSidebar) {
+                    btnMobileShowSidebar.onclick = () => {
+                        document.body.classList.remove('mobile-chat-active');
+                        document.body.classList.add('mobile-list-active');
+                    };
+                }
+                const btnOpenChatSearch = document.getElementById('btn-open-chat-search');
+                if (btnOpenChatSearch) {
+                    btnOpenChatSearch.onclick = () => {
+                        showModal('chat-search-modal');
+                        setTimeout(() => document.getElementById('chat-search-input')?.focus(), 0);
+                    };
+                }
+                const btnClearChatSearch = document.getElementById('btn-clear-chat-search');
+                if (btnClearChatSearch) {
+                    btnClearChatSearch.onclick = () => {
+                        const input = document.getElementById('chat-search-input');
+                        if (input) input.value = '';
+                        renderChat(false);
+                    };
+                }
 
                 // 返信キャンセルボタン
                 const btnCancelReply = document.getElementById('btn-cancel-reply');
@@ -3617,13 +3882,21 @@
                     currentShopTab = 'stamp';
                     document.getElementById('btn-shop-tab-stamp').classList.add('active');
                     document.getElementById('btn-shop-tab-reaction').classList.remove('active');
+                    document.getElementById('btn-shop-tab-pack').classList.remove('active');
                     renderStamps();
                 };
-
                 document.getElementById('btn-shop-tab-reaction').onclick = () => {
                     currentShopTab = 'reaction';
                     document.getElementById('btn-shop-tab-reaction').classList.add('active');
                     document.getElementById('btn-shop-tab-stamp').classList.remove('active');
+                    document.getElementById('btn-shop-tab-pack').classList.remove('active');
+                    renderStamps();
+                };
+                document.getElementById('btn-shop-tab-pack').onclick = () => {
+                    currentShopTab = 'pack';
+                    document.getElementById('btn-shop-tab-pack').classList.add('active');
+                    document.getElementById('btn-shop-tab-stamp').classList.remove('active');
+                    document.getElementById('btn-shop-tab-reaction').classList.remove('active');
                     renderStamps();
                 };
 
@@ -3639,6 +3912,37 @@
                 };
 
                 document.getElementById('btn-open-stamp-create').onclick = () => showModal('stamp-create-modal');
+                document.getElementById('btn-open-pack-create').onclick = () => {
+                    renderStampPackPicker();
+                    showModal('stamp-pack-create-modal');
+                };
+
+                document.getElementById('btn-publish-stamp-pack').onclick = () => {
+                    const title = document.getElementById('stamp-pack-title').value.trim();
+                    const price = parseInt(document.getElementById('stamp-pack-price').value) || 0;
+                    const items = Array.from(document.querySelectorAll('.stamp-pack-check:checked')).map(input => input.value);
+                    if (!title || items.length === 0) {
+                        showToast('パック名と収録スタンプを指定してください。');
+                        return;
+                    }
+                    db.stamps.push({
+                        id: 'pack_' + Date.now(),
+                        itemType: 'pack',
+                        title: title,
+                        items: items,
+                        url: '',
+                        content: '',
+                        price: price,
+                        sellerKey: activeUserId,
+                        sellerName: db.users[activeUserId].name,
+                        showSeller: true
+                    });
+                    saveData();
+                    triggerFullTabSync();
+                    hideModal('stamp-pack-create-modal');
+                    renderStamps();
+                    alert('スタンプパックを出品しました！');
+                };
 
                 document.getElementById('btn-publish-stamp').onclick = async () => {
                     const itemType = document.getElementById('stamp-item-type').value;
@@ -3786,12 +4090,12 @@
                         attachedFileText = `\n\n【添付ファイルデータ: ${file.name}】\n${textContent}`;
                         alert(`ファイル 「${file.name}」 を読み込みました。AIへの指示・質問を入力して送信してください。`);
                     } else {
-                        const base64 = await readFileAsDataURL(file);
                         const mediaKey = `file_${Date.now()}`;
                         try {
-                            await IDB.set(mediaKey, base64);
+                            await IDB.set(mediaKey, file);
                             sendMessage('file', file.name, { name: file.name, data: mediaKey });
                         } catch (err) {
+                            const base64 = await readFileAsDataURL(file);
                             sendMessage('file', file.name, { name: file.name, data: base64 });
                         }
                     }
@@ -3801,12 +4105,12 @@
                 document.getElementById('official-file-input').onchange = async (e) => {
                     const file = e.target.files[0];
                     if (!file) return;
-                    const base64 = await readFileAsDataURL(file);
                     const mediaKey = `file_${Date.now()}`;
                     try {
-                        await IDB.set(mediaKey, base64);
+                        await IDB.set(mediaKey, file);
                         sendOfficialMessage('file', file.name, { name: file.name, data: mediaKey });
                     } catch (err) {
+                        const base64 = await readFileAsDataURL(file);
                         sendOfficialMessage('file', file.name, { name: file.name, data: base64 });
                     }
                     e.target.value = '';
@@ -3815,12 +4119,12 @@
                 document.getElementById('keep-file-input').onchange = async (e) => {
                     const file = e.target.files[0];
                     if (!file) return;
-                    const base64 = await readFileAsDataURL(file);
                     const mediaKey = `file_${Date.now()}`;
                     try {
-                        await IDB.set(mediaKey, base64);
+                        await IDB.set(mediaKey, file);
                         sendKeepMessage('file', file.name, { name: file.name, data: mediaKey });
                     } catch (err) {
+                        const base64 = await readFileAsDataURL(file);
                         sendKeepMessage('file', file.name, { name: file.name, data: base64 });
                     }
                     e.target.value = '';
@@ -3839,13 +4143,12 @@
                 document.getElementById('btn-voice-stop').onclick = stopVoiceRecording;
                 document.getElementById('btn-voice-send').onclick = sendVoiceMessage;
 
-                document.getElementById('btn-chat-audio-call').onclick = () => startCallToPeer(activeChatTarget);
                 document.getElementById('btn-start-call').onclick = () => startCallToPeer(activeChatTarget);
                 document.getElementById('btn-end-call').onclick = stopAllCalls;
                 document.getElementById('btn-bar-end-call').onclick = stopAllCalls;
 
                 document.getElementById('btn-chat-camera-call').onclick = () => startVideoCall(activeChatTarget);
-                document.getElementById('btn-end-video-call').onclick = stopVideoCall;
+                document.getElementById('btn-end-video-call').onclick = stopAllCalls;
                 document.getElementById('btn-toggle-screen-share').onclick = toggleScreenShare;
 
                 document.getElementById('btn-open-transfer-modal').onclick = () => {
@@ -4010,13 +4313,33 @@
                 document.getElementById('btn-manage-group-modal').onclick = () => {
                     const grp = db.groups[activeChatTarget];
                     if (!grp) return;
+                    if (!grp.album) grp.album = [];
+                    if (!grp.notes) grp.notes = [];
                     document.getElementById('manage-group-id').value = grp.id;
 
                     const curList = document.getElementById('manage-group-members-current');
                     curList.innerHTML = '';
                     grp.members.forEach(mId => {
                         const mName = db.users[mId] ? db.users[mId].name : mId;
-                        curList.innerHTML += `<div>• ${escapeHTML(mName)}</div>`;
+                        const row = document.createElement('div');
+                        row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;';
+                        row.innerHTML = `<span>• ${escapeHTML(mName)}</span>`;
+                        const action = document.createElement('button');
+                        action.className = 'menu-btn btn-danger';
+                        action.style.cssText = 'width:auto; margin:0; padding:2px 6px; font-size:10px;';
+                        action.textContent = mId === activeUserId ? '退会' : '削除';
+                        action.onclick = () => {
+                            if (mId === activeUserId && !confirm('このグループから退会しますか？')) return;
+                            if (mId !== activeUserId && !confirm(`${mName}さんをグループから削除しますか？`)) return;
+                            grp.members = grp.members.filter(id => id !== mId);
+                            saveData();
+                            broadcastData({ type: 'SYNC_GROUP_INFO', group: grp });
+                            hideModal('manage-group-modal');
+                            if (mId === activeUserId) switchPage('home-view');
+                            else document.getElementById('btn-manage-group-modal').click();
+                        };
+                        row.appendChild(action);
+                        curList.appendChild(row);
                     });
 
                     const fList = document.getElementById('manage-group-friends-list');
@@ -4048,6 +4371,94 @@
                     }
 
                     showModal('manage-group-modal');
+                };
+
+                function renderGroupAlbum() {
+                    const grp = db.groups[activeChatTarget];
+                    const grid = document.getElementById('group-album-grid');
+                    if (!grp || !grid) return;
+                    grid.innerHTML = '';
+                    (grp.album || []).forEach((item, index) => {
+                        const wrap = document.createElement('div');
+                        wrap.style.position = 'relative';
+                        const img = document.createElement('img');
+                        resolveStoredMedia(item.key || item).then(src => { img.src = src; });
+                        img.title = item.name || 'アルバム画像';
+                        img.onclick = () => window.open(img.src, '_blank', 'noopener');
+                        wrap.appendChild(img);
+                        if (item.owner === activeUserId || grp.members[0] === activeUserId) {
+                            const del = document.createElement('button');
+                            del.className = 'menu-btn btn-danger';
+                            del.style.cssText = 'position:absolute; top:2px; right:2px; width:auto; margin:0; padding:1px 4px; font-size:10px;';
+                            del.textContent = '×';
+                            del.onclick = () => {
+                                grp.album.splice(index, 1);
+                                saveData();
+                                broadcastData({ type: 'SYNC_GROUP_INFO', group: grp });
+                                renderGroupAlbum();
+                            };
+                            wrap.appendChild(del);
+                        }
+                        grid.appendChild(wrap);
+                    });
+                    if (!grp.album || grp.album.length === 0) {
+                        grid.innerHTML = '<div style="grid-column:1/-1; color:#666; font-size:12px; text-align:center; padding:20px;">まだ写真がありません。</div>';
+                    }
+                }
+
+                function renderGroupNotes() {
+                    const grp = db.groups[activeChatTarget];
+                    const list = document.getElementById('group-note-list');
+                    if (!grp || !list) return;
+                    list.innerHTML = '';
+                    (grp.notes || []).slice().reverse().forEach(note => {
+                        const item = document.createElement('div');
+                        item.className = 'group-note-item';
+                        item.textContent = `${db.users[note.owner]?.name || 'メンバー'} · ${new Date(note.timestamp).toLocaleString()}\n${note.text}`;
+                        list.appendChild(item);
+                    });
+                }
+
+                document.getElementById('btn-open-group-album').onclick = () => {
+                    if (!db.groups[activeChatTarget]) return;
+                    renderGroupAlbum();
+                    showModal('group-album-modal');
+                };
+                document.getElementById('group-album-file').onchange = async (e) => {
+                    const grp = db.groups[activeChatTarget];
+                    const files = Array.from(e.target.files || []);
+                    if (!grp || files.length === 0) return;
+                    if (!grp.album) grp.album = [];
+                    for (const file of files.slice(0, 20)) {
+                        const key = `album_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+                        try {
+                            await IDB.set(key, file);
+                            grp.album.push({ key, name: file.name, owner: activeUserId, timestamp: Date.now() });
+                        } catch (err) {
+                            showToast('画像を保存できませんでした。');
+                        }
+                    }
+                    e.target.value = '';
+                    saveData();
+                    broadcastData({ type: 'SYNC_GROUP_INFO', group: grp });
+                    renderGroupAlbum();
+                };
+                document.getElementById('btn-open-group-note').onclick = () => {
+                    if (!db.groups[activeChatTarget]) return;
+                    renderGroupNotes();
+                    showModal('group-note-modal');
+                };
+                document.getElementById('btn-save-group-note').onclick = () => {
+                    const grp = db.groups[activeChatTarget];
+                    const input = document.getElementById('group-note-input');
+                    const text = input.value.trim();
+                    if (!grp || !text) return;
+                    if (!grp.notes) grp.notes = [];
+                    grp.notes.push({ text, owner: activeUserId, timestamp: Date.now() });
+                    input.value = '';
+                    saveData();
+                    broadcastData({ type: 'SYNC_GROUP_INFO', group: grp });
+                    renderGroupNotes();
                 };
 
                 document.getElementById('distribute-type').onchange = (e) => {
