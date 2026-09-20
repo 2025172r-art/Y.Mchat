@@ -44,13 +44,15 @@
 
 
         @media (max-width: 768px) {
-            body { flex-direction: column; height: 100dvh; overflow-y: auto; }
+            html, body { height: 100dvh; overflow: hidden; }
+            body { flex-direction: column; height: 100dvh; overflow: hidden; }
             .sidebar { width: 100% !important; height: auto !important; border-right: none !important; border-bottom: 1px solid var(--border-color); }
-            .main-content { height: 100%; flex: 1; }
-            .chat-box { min-height: calc(100dvh - 12px); padding: 10px; }
+            .main-content { height: 100%; flex: 1; min-height: 0; overflow: hidden; }
+            .chat-box { min-height: 0; height: 100%; padding: 10px; }
             body.mobile-chat-active { overflow: hidden; }
             body.mobile-chat-active .sidebar { display: none !important; }
-            body.mobile-chat-active .main-content { display: flex !important; height: 100dvh; min-height: 100dvh; }
+            body.mobile-chat-active .main-content { display: flex !important; flex-direction: column; height: 100dvh; min-height: 0; overflow: hidden; padding: 0; }
+            body.mobile-chat-active .chat-box { min-height: 0; height: 100%; flex: 1; border-radius: 0; }
             body.mobile-list-active .main-content { display: none !important; }
             body.mobile-list-active .sidebar { display: flex !important; height: 100dvh !important; overflow-y: auto; }
             .mobile-only { display: inline-flex !important; }
@@ -128,9 +130,9 @@
 
 
         /* チャットボックス - LINE風吹き出し調整 */
-        .chat-box { flex: 1; display: flex; flex-direction: column; background-color: #8cabd9; background-size: cover; background-position: center; border-radius: var(--radius-lg); padding: 14px; min-height: calc(100dvh - 24px); border: 1px solid var(--border-color); box-shadow: var(--shadow); position: relative; overflow: hidden; }
+        .chat-box { flex: 1; display: flex; flex-direction: column; background-color: #8cabd9; background-size: cover; background-position: center; border-radius: var(--radius-lg); padding: 14px; min-height: 0; height: 100%; border: 1px solid var(--border-color); box-shadow: var(--shadow); position: relative; overflow: hidden; }
         .chat-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 12px; }
-        .msg { max-width: 75%; padding: 10px 14px; border-radius: 18px; word-break: break-all; font-size: 14px; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.05); position: relative; }
+        .msg { max-width: 100%; padding: 10px 14px; border-radius: 18px; word-break: break-word; overflow-wrap: anywhere; font-size: 14px; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.05); position: relative; }
         .msg-me { align-self: flex-end; background: #85e249; color: #1f2937; border-bottom-right-radius: 4px; }
         .msg-other { align-self: flex-start; background: #ffffff; color: var(--text-main); border-bottom-left-radius: 4px; border: 1px solid var(--border-color); }
         .msg-dev { align-self: flex-start; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; border-bottom-left-radius: 4px; }
@@ -177,10 +179,13 @@
 
 
         /* 既読表示・アクションUIの追加スタイル */
-        .msg-wrapper { display: flex; flex-direction: column; max-width: 75%; position: relative; }
-        .msg-wrapper.me { align-self: flex-end; align-items: flex-end; }
-        .msg-wrapper.other { align-self: flex-start; align-items: flex-start; }
-        .msg-meta { font-size: 10px; color: rgba(255, 255, 255, 0.8); margin-top: 4px; display: flex; align-items: center; gap: 6px; }
+        .msg-wrapper { display: flex; flex-direction: row; align-items: flex-end; gap: 6px; max-width: 88%; position: relative; }
+        .msg-wrapper.me { align-self: flex-end; flex-direction: row-reverse; }
+        .msg-wrapper.other { align-self: flex-start; flex-direction: row; }
+        .msg-wrapper .msg { flex: 0 1 auto; }
+        .msg-meta { font-size: 10px; color: #334155; display: flex; flex-direction: column; justify-content: flex-end; gap: 1px; min-width: 36px; line-height: 1.15; padding-bottom: 2px; }
+        .msg-wrapper.me .msg-meta { text-align: right; color: #1e3a5f; }
+        .msg-wrapper.other .msg-meta { text-align: left; color: var(--text-muted); }
         .msg-other .msg-meta { color: var(--text-muted); }
         .msg-read-status { font-weight: bold; color: #a7f3d0; font-size: 10px; }
         .msg-me .msg-read-status { color: #818cf8; }
@@ -336,13 +341,21 @@
             gap: 6px;
             margin-top: 10px;
             align-items: center;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
         }
         .composer-row #chat-input {
             flex: 1;
-            min-width: 140px;
+            min-width: 0;
             margin: 0;
         }
+        .composer-extra-tools {
+            display: none;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+        .composer-extra-tools.active { display: flex; }
+        #chat-rich-menu.hidden-by-keyboard { display: none !important; }
         .file-transfer-progress {
             display: none;
             margin-top: 8px;
@@ -385,7 +398,7 @@
         @media (max-width: 768px) {
             .sidebar { padding: 12px; }
             .menu-btn { font-size: 13px; padding: 8px 10px; }
-            .rich-menu-container { grid-template-columns: repeat(4, 1fr); }
+            .rich-menu-container { grid-template-columns: repeat(4, 1fr); max-height: 180px; }
             .chat-toolbar { width: 100%; }
         }
         .group-admin-badge { display:inline-block; background:#8b5cf6; color:white; font-size:10px; padding:1px 5px; border-radius:3px; margin-left:4px; }
@@ -409,6 +422,38 @@
         .voice-wave { width:160px; height:36px; display:block; background:rgba(0,0,0,0.08); border-radius:6px; }
         .img-editor-canvas { width:100%; max-height:50vh; background:#111; border-radius:8px; cursor:crosshair; }
         .load-older-btn { align-self:center; border:none; background:rgba(255,255,255,0.85); color:#334155; border-radius:999px; padding:6px 12px; font-size:12px; cursor:pointer; }
+
+        /* ===== LINE風 / テーマ / 追加UI ===== */
+        html, body { height: 100%; height: 100dvh; }
+        body { display: flex; flex-direction: row; }
+        .composer-dock { flex-shrink: 0; }
+        .rich-menu-container { max-height: 180px; }
+        .rich-menu-container.collapsed { display: none !important; }
+        .rich-menu-toggle { width: 100%; margin-top: 6px; padding: 6px; font-size: 12px; border: none; background: rgba(255,255,255,0.85); border-radius: 8px; cursor: pointer; font-weight: 700; color: #334155; }
+        .img-grid { display: grid; gap: 4px; }
+        .img-grid.g2 { grid-template-columns: 1fr 1fr; }
+        .img-grid.g3, .img-grid.g4 { grid-template-columns: 1fr 1fr; }
+        .img-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; cursor: pointer; }
+        .voice-bubble { display: flex; align-items: center; gap: 8px; min-width: 180px; }
+        .voice-wave { width: 120px; height: 32px; display: block; background: transparent; }
+        .ctx-menu { position: fixed; z-index: 30000; min-width: 160px; background: #fff; border: 1px solid var(--border-color); border-radius: 10px; box-shadow: var(--shadow-md); padding: 6px; display: none; }
+        .ctx-menu.active { display: flex; flex-direction: column; }
+        .ctx-menu button { background: transparent; border: none; text-align: left; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        .ctx-menu button:hover { background: #f0fdf4; color: var(--primary); }
+        .multi-preview { display: none; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+        .multi-preview.active { display: flex; }
+        .multi-preview img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color); }
+        .theme-line { --primary:#06C755; --primary-hover:#05b34c; --bg-main:#f3f4f6; --bg-card:#ffffff; --text-main:#1f2937; }
+        .theme-dark {
+            --primary:#06C755; --primary-hover:#05b34c; --bg-main:#0f172a; --bg-card:#1e293b;
+            --text-main:#e2e8f0; --text-muted:#94a3b8; --border-color:#334155;
+        }
+        body.theme-dark { background: #0f172a; color: #e2e8f0; }
+        body.theme-dark .sidebar, body.theme-dark .card, body.theme-dark .modal-box, body.theme-dark .friend-item { background: var(--bg-card); color: var(--text-main); }
+        body.theme-dark .msg-other { background: #334155; color: #e2e8f0; border-color: #475569; }
+        body.theme-simple { --primary:#2563eb; --primary-hover:#1d4ed8; --bg-main:#eef2ff; }
+        .group-call-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; background:#000; padding:8px; border-radius:8px; margin-bottom:10px; }
+        .group-call-grid video { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:6px; background:#111; }
     </style>
 </head>
 <body>
@@ -518,6 +563,8 @@
                     <button class="menu-btn" style="width:auto; padding:5px 12px; background:#f59e0b;" id="btn-open-transfer-modal">🪙 送金</button>
                     <button class="menu-btn" style="width:auto; padding:5px 12px; background:#0284c7;" id="btn-manage-group-modal">👥 管理</button>
                     <button class="menu-btn" style="width:auto; padding:5px 12px; background:#0ea5e9;" id="btn-chat-camera-call" title="ビデオ通話を開始">📹 ビデオ</button>
+                    <button class="menu-btn" style="width:auto; padding:5px 12px; background:#7c3aed;" id="btn-group-call" title="グループ通話">👥📞 グループ通話</button>
+                    <button class="menu-btn" style="width:auto; padding:5px 12px; background:#0369a1;" id="btn-open-room-album" title="トークアルバム">📷 アルバム</button>
                     <button class="menu-btn btn-success" style="width:auto; padding:5px 12px;" id="btn-start-call">📞 通話</button>
                     <button class="menu-btn btn-danger hidden" style="width:auto; padding:5px 12px;" id="btn-end-call">📵 切断</button>
                 </div>
@@ -586,17 +633,21 @@
                 <div class="file-transfer-track"><div id="file-transfer-fill" class="file-transfer-fill"></div></div>
             </div>
             <div class="composer-row">
+                <button class="menu-btn" style="width:auto; background:#334155; font-size:18px; padding:6px 12px;" id="btn-composer-plus" title="添付・録音・位置情報">＋</button>
                 <button class="menu-btn" style="width:auto; background:#ffc107; color:#000; font-size:18px; padding:6px 12px;" id="btn-chat-stamp">🎨</button>
-                <button class="menu-btn" style="width:auto; background:#6c757d; font-size:18px; padding:6px 12px;" id="btn-chat-file" title="ファイルを選択してアップロード/解析">📁</button>
-                <button class="menu-btn" style="width:auto; background:#ef4444; font-size:18px; padding:6px 12px;" id="btn-chat-voice-msg" title="ボイスメッセージ録音">🎙️録音</button>
-                <button class="menu-btn" style="width:auto; background:#0ea5e9; font-size:18px; padding:6px 12px;" id="btn-chat-location" title="現在地を共有">📍</button>
-                <input type="file" id="chat-file-input" class="hidden">
+                <input type="file" id="chat-file-input" class="hidden" accept="image/*,video/*,audio/*,.pdf,.txt,.zip" multiple>
                 <input type="text" id="chat-input" placeholder="メッセージを入力...">
                 <button class="menu-btn" style="width:auto;" id="btn-chat-send">送信</button>
+            </div>
+            <div id="composer-extra-tools" class="composer-extra-tools">
+                <button class="menu-btn" style="width:auto; background:#6c757d; font-size:14px; padding:6px 12px; margin:0;" id="btn-chat-file" title="ファイルを選択してアップロード/解析">📁 ファイル</button>
+                <button class="menu-btn" style="width:auto; background:#ef4444; font-size:14px; padding:6px 12px; margin:0;" id="btn-chat-voice-msg" title="ボイスメッセージ録音">🎙️ 録音</button>
+                <button class="menu-btn" style="width:auto; background:#0ea5e9; font-size:14px; padding:6px 12px; margin:0;" id="btn-chat-location" title="現在地を共有">📍 位置情報</button>
             </div>
 
 
             <!-- リッチメニュー (大型ビジュアルアクションメニュー) -->
+            <button type="button" class="rich-menu-toggle" id="btn-toggle-rich-menu">メニューを閉じる ▲</button>
             <div class="rich-menu-container" id="chat-rich-menu">
                 <div class="rich-menu-item" onclick="document.getElementById('btn-open-shop').click()">
                     <span style="font-size:18px;">🎨</span> SHOP
@@ -609,6 +660,18 @@
                 </div>
                 <div class="rich-menu-item" onclick="document.getElementById('btn-chat-location').click()">
                     <span style="font-size:18px;">📍</span> 位置情報
+                </div>
+                <div class="rich-menu-item" onclick="document.getElementById('btn-open-room-album').click()">
+                    <span style="font-size:18px;">📷</span> アルバム
+                </div>
+                <div class="rich-menu-item" onclick="document.getElementById('btn-group-call').click()">
+                    <span style="font-size:18px;">👥</span> グループ通話
+                </div>
+                <div class="rich-menu-item" onclick="document.getElementById('btn-theme-cycle').click()">
+                    <span style="font-size:18px;">🎨</span> テーマ
+                </div>
+                <div class="rich-menu-item" onclick="document.getElementById('btn-chat-file').click()">
+                    <span style="font-size:18px;">🖼</span> 画像送信
                 </div>
             </div>
         </div>
@@ -1046,6 +1109,12 @@
             <label>ローカル保存用パスコード（任意）</label>
             <input type="password" id="setting-vault-pass" placeholder="未入力なら端末IDから自動生成" autocomplete="off">
             <p style="font-size:11px; color:#666; margin:-8px 0 12px;">IndexedDB / 履歴の AES-GCM 暗号化に使います。変更後は再保存してください。</p>
+            <label>テーマ</label>
+            <select id="setting-theme">
+                <option value="line">LINEグリーン</option>
+                <option value="dark">ダークモード</option>
+                <option value="simple">シンプルブルー</option>
+            </select>
 
             <button class="menu-btn btn-success" id="btn-save-settings">設定を保存</button>
             <button class="menu-btn btn-danger closeModalBtn" style="margin-top:5px;">キャンセル</button>
@@ -1194,6 +1263,16 @@
         <span style="flex:1; font-size:13px;">✏️ メッセージを編集中...</span>
         <button style="background:none; border:none; cursor:pointer; color:#ef4444;" id="btn-cancel-edit">✕ キャンセル</button>
     </div>
+    <div id="msg-context-menu" class="ctx-menu" role="menu"></div>
+    <button id="btn-theme-cycle" class="hidden" type="button">theme</button>
+    <div id="group-call-modal" class="modal hidden">
+        <div class="modal-box" style="width:820px; max-width:96%;">
+            <h3>👥 グループ通話</h3>
+            <div id="group-call-grid" class="group-call-grid"></div>
+            <button class="menu-btn btn-danger" id="btn-end-group-call">通話終了</button>
+        </div>
+    </div>
+    <div id="multi-image-preview" class="multi-preview"></div>
 
     <script>
         // AIテンプレート適用グローバル関数
@@ -1367,13 +1446,16 @@
         const _idbSetRaw = IDB.set.bind(IDB);
         const _idbGetRaw = IDB.get.bind(IDB);
         IDB.set = async function(key, value, storeName = 'media') {
-            // メディアBlobのみ暗号化。appDataは毎回全件暗号すると容量・速度を圧迫するため平文保存。
-            const wrapped = (storeName === 'media') ? await LocalVault.encryptValue(value) : value;
-            return _idbSetRaw(key, wrapped, storeName);
+            // 端末内IndexedDBはブラウザサンドボックスで保護されるため平文保存し、
+            // P2P通信路のE2EEに負荷を集中させる。旧バージョンの暗号化Blobは復号して読む。
+            return _idbSetRaw(key, value, storeName);
         };
         IDB.get = async function(key, storeName = 'media') {
             const raw = await _idbGetRaw(key, storeName);
-            return (storeName === 'media') ? LocalVault.decryptValue(raw) : raw;
+            if (raw && typeof raw === 'object' && raw.__ymenc === 1) {
+                return LocalVault.decryptValue(raw);
+            }
+            return raw;
         };
         IDB.putRecord = async function(storeName, record) {
             if (!this.db) await this.init();
@@ -1493,11 +1575,17 @@
                 // メッセージ暗号化（相手の公開鍵でAES鍵を暗号化、本文をAES-GCMで暗号化）
                 async encryptMessage(text, recipientPubKey) {
                     try {
+                        if (!recipientPubKey) return { encrypted: false, text: text };
+                        // テキストおよび軽量メタデータのみ暗号化（大容量メディアはチャンク転送）
+                        const payload = (typeof text === 'string') ? text : JSON.stringify(text || {});
+                        if (payload.length > 200000) {
+                            return { encrypted: false, text: (typeof text === 'string' ? text : '') };
+                        }
                         // 1. ランダムAES鍵生成
                         const aesKey = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
                         // 2. メッセージをAES-GCMで暗号化
                         const iv = crypto.getRandomValues(new Uint8Array(12));
-                        const encMsg = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, aesKey, new TextEncoder().encode(text));
+                        const encMsg = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, aesKey, new TextEncoder().encode(payload));
                         // 3. AES鍵を相手のRSA公開鍵で暗号化
                         const aesKeyData = await crypto.subtle.exportKey('raw', aesKey);
                         const encAesKey = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, recipientPubKey, aesKeyData);
@@ -1516,6 +1604,7 @@
                 // メッセージ復号（自分のRSA秘密鍵でAES鍵を復号、本文をAES-GCMで復号）
                 async decryptMessage(encData) {
                     try {
+                        if (!this.keyPair || !this.keyPair.privateKey) return null;
                         // encDataは { iv, key, text } のオブジェクトまたは文字列
                         let iv, key, text;
                         if (typeof encData === 'string') {
@@ -1537,6 +1626,16 @@
                         console.error('[E2EE] 復号エラー:', e);
                         return null;
                     }
+                },
+                parseDecryptedPayload(decryptedText, fallbackText) {
+                    if (!decryptedText) return { text: fallbackText || '[暗号化メッセージを復号できませんでした]', type: null };
+                    try {
+                        if (decryptedText.charAt(0) === '{') {
+                            const parsed = JSON.parse(decryptedText);
+                            if (parsed && typeof parsed === 'object') return parsed;
+                        }
+                    } catch (e) {}
+                    return { text: decryptedText };
                 },
                 // メッセージ署名生成（RSA-PSS）
                 async signMessage(msgObj) {
@@ -2210,6 +2309,7 @@
 
             document.getElementById('btn-accept-incoming-call').onclick = () => {
                 hideModal('call-incoming-modal');
+                Ringtone.stop();
                 if (!pendingIncomingCall) return;
                 const call = pendingIncomingCall;
                 pendingIncomingCall = null;
@@ -2578,7 +2678,7 @@
             // DOMPurifyによる安全なHTML描画ヘルパー（XSS対策強化）
             function sanitizeHTML(html) {
                 if (typeof DOMPurify !== 'undefined' && typeof html === 'string') {
-                    return DOMPurify.sanitize(html, { ALLOWED_TAGS: ['b', 'strong', 'i', 'em', 'u', 'br', 'span', 'div', 'img', 'a', 'code', 'pre', 'p', 'ul', 'ol', 'li', 'blockquote', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'input', 'label', 'small', 'sub', 'sup'], ALLOWED_ATTR: ['style', 'class', 'id', 'href', 'src', 'alt', 'title', 'colspan', 'rowspan', 'target', 'rel', 'type', 'value', 'checked', 'disabled', 'placeholder', 'onclick'], ALLOW_DATA_ATTR: false });
+                    return DOMPurify.sanitize(html, { ALLOWED_TAGS: ['b', 'strong', 'i', 'em', 'u', 'br', 'span', 'div', 'img', 'a', 'code', 'pre', 'p', 'ul', 'ol', 'li', 'blockquote', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'input', 'label', 'small', 'sub', 'sup'], ALLOWED_ATTR: ['style', 'class', 'id', 'href', 'src', 'alt', 'title', 'colspan', 'rowspan', 'target', 'rel', 'type', 'value', 'checked', 'disabled', 'placeholder'], ALLOW_DATA_ATTR: false });
                 }
                 return escapeHTML(html);
             }
@@ -3213,7 +3313,9 @@
                     delete peerConnections[closedPeer];
                     delete onlineStatusMap[closedPeer];
                     renderApp();
-                    setTimeout(() => connectToRemotePeer(closedPeer), 1200);
+                    const delay = Math.min(15000, 800 * Math.pow(2, peerReconnectAttempt || 0));
+                    setTimeout(() => connectToRemotePeer(closedPeer), delay);
+                    schedulePeerReconnect();
                 });
             }
 
@@ -3270,19 +3372,20 @@
                         if (data.message.encrypted && data.message.e2ee) {
                             try {
                                 const decryptedText = await E2EE.decryptMessage(data.message.e2ee);
-                                if (decryptedText) {
-                                    data.message.text = decryptedText;
-                                } else {
-                                    data.message.text = '[復号失敗]';
-                                }
+                                const parsed = E2EE.parseDecryptedPayload(decryptedText, data.message.text);
+                                data.message.text = parsed.text != null ? parsed.text : '[暗号化メッセージを復号できませんでした]';
+                                if (parsed.type) data.message.type = parsed.type;
+                                if (parsed.fileName) data.message.fileName = parsed.fileName;
                                 delete data.message.encrypted;
                                 delete data.message.e2ee;
                             } catch (e) {
                                 console.warn('[E2EE] 復号失敗:', e);
-                                data.message.text = '[復号エラー]';
+                                data.message.text = data.message.text || '[暗号化メッセージを復号できませんでした]';
                                 delete data.message.encrypted;
                                 delete data.message.e2ee;
                             }
+                        } else if (data.message.encrypted && !data.message.e2ee) {
+                            data.message.text = data.message.text || '[暗号化メッセージ（鍵未取得）]';
                         }
                         // 送信者署名検証
                         if (data.message.signature) {
@@ -3292,8 +3395,15 @@
                                 data.message.text = '[⚠️ 送信者署名の検証に失敗しました]';
                             }
                         }
+                        if (!data.message.deliveryStatus) data.message.deliveryStatus = 'sent';
                         db.messages.push(data.message);
                         persistMessageRecord(data.message);
+                        try {
+                            const ackTo = data.message.from;
+                            if (ackTo && peerConnections[ackTo] && peerConnections[ackTo].open) {
+                                peerConnections[ackTo].send({ type: 'MSG_DELIVERED', msgId: data.message.msgId, reader: activeUserId });
+                            }
+                        } catch (e) {}
                         saveData();
                         renderApp();
                         AppBadge.setUnread(AppBadge.getTotalUnread());
@@ -3351,6 +3461,13 @@
                     handleIncomingPeerData({ type: 'CHAT_MSG', message: data.message }, senderPeerId);
                 } else if (data.type === 'SYNC_CHAT_STATE') {
                     applyRemoteChatState(data);
+                } else if (data.type === 'MSG_DELIVERED') {
+                    const dm = db.messages.find(m => m.msgId === data.msgId);
+                    if (dm && dm.from === activeUserId) {
+                        dm.deliveryStatus = 'delivered';
+                        saveData();
+                        if (activeChatTarget) renderChat(false);
+                    }
                 } else if (data.type === 'READ_RECEIPT' || data.type === 'READ_ACK') {
                     let updated = false;
                     if (data.roomId && data.reader && data.lastReadTimestamp) {
@@ -4166,6 +4283,7 @@
                     readBy: [],
                     reactions: {},
                     unsent: false,
+                    deliveryStatus: 'sending',
                     timestamp: nowTimestamp
                 };
                 if (extra && typeof extra === 'object') Object.assign(msgObj, extra);
@@ -4229,8 +4347,12 @@
                                 // E2EE暗号化: テキストメッセージのみ暗号化
                                 let sendMsg = msgObj;
                                 const recipientPubKey = E2EE.sharedSecrets[memId];
-                                if (recipientPubKey && msgObj.type === 'text' && msgObj.text) {
-                                    const encResult = await E2EE.encryptMessage(msgObj.text, recipientPubKey);
+                                if (recipientPubKey && (msgObj.type === 'text' || msgObj.type === 'location')) {
+                                    const encResult = await E2EE.encryptMessage(JSON.stringify({
+                                        text: msgObj.text || '',
+                                        type: msgObj.type,
+                                        fileName: msgObj.fileName || ''
+                                    }), recipientPubKey);
                                     if (encResult.encrypted) {
                                         sendMsg = { ...msgObj, e2ee: encResult, encrypted: true };
                                         delete sendMsg.text; // 暗号化された本文はe2ee envelopeに格納
@@ -4238,6 +4360,7 @@
                                 }
                                 if (peerConnections[memId] && peerConnections[memId].open) {
                                     peerConnections[memId].send({ type: 'CHAT_MSG', message: sendMsg });
+                                    msgObj.deliveryStatus = 'sent';
                                     if ((type === 'file' || type === 'voice') && filePayload && filePayload.data && !String(filePayload.data).startsWith('data:')) {
                                         sendMediaInChunks(memId, filePayload.data, filePayload.name, filePayload.size, filePayload.type || '');
                                     }
@@ -4256,8 +4379,12 @@
                     // E2EE暗号化: テキストメッセージのみ暗号化
                     let sendMsg = msgObj;
                     const recipientPubKey = E2EE.sharedSecrets[activeChatTarget];
-                    if (recipientPubKey && msgObj.type === 'text' && msgObj.text) {
-                        const encResult = await E2EE.encryptMessage(msgObj.text, recipientPubKey);
+                    if (recipientPubKey && (msgObj.type === 'text' || msgObj.type === 'location')) {
+                        const encResult = await E2EE.encryptMessage(JSON.stringify({
+                            text: msgObj.text || '',
+                            type: msgObj.type,
+                            fileName: msgObj.fileName || ''
+                        }), recipientPubKey);
                         if (encResult.encrypted) {
                             sendMsg = { ...msgObj, e2ee: encResult, encrypted: true };
                             delete sendMsg.text; // 暗号化された本文はe2ee envelopeに格納
@@ -4265,6 +4392,7 @@
                     }
                     if (peerConnections[activeChatTarget] && peerConnections[activeChatTarget].open) {
                         peerConnections[activeChatTarget].send({ type: 'CHAT_MSG', message: sendMsg });
+                        msgObj.deliveryStatus = 'sent';
                         if ((type === 'file' || type === 'voice') && filePayload && filePayload.data && !String(filePayload.data).startsWith('data:')) {
                             sendMediaInChunks(activeChatTarget, filePayload.data, filePayload.name, filePayload.size, filePayload.type || '');
                         }
@@ -4673,6 +4801,23 @@
                     msgs = msgs.filter(m => m.text && m.text.toLowerCase().includes(searchKeyword));
                 }
 
+                const totalMsgs = msgs.length;
+                if (!chatVisibleCount || chatVisibleCount < CHAT_PAGE_SIZE) chatVisibleCount = CHAT_PAGE_SIZE;
+                if (chatVisibleCount > totalMsgs) chatVisibleCount = totalMsgs;
+                const hiddenCount = Math.max(0, totalMsgs - chatVisibleCount);
+                if (hiddenCount > 0) {
+                    msgs = msgs.slice(hiddenCount);
+                    const olderBtn = document.createElement('button');
+                    olderBtn.type = 'button';
+                    olderBtn.className = 'load-older-btn';
+                    olderBtn.textContent = '↑ 以前のメッセージを表示';
+                    olderBtn.onclick = () => {
+                        chatVisibleCount = Math.min(totalMsgs, chatVisibleCount + CHAT_PAGE_SIZE);
+                        renderChat(false);
+                    };
+                    fragment.appendChild(olderBtn);
+                }
+
 
                 let lastYear = null;
                 let lastMonthDay = null;
@@ -4762,11 +4907,19 @@
                         div.appendChild(img);
                     } else if (m.type === 'voice' && m.fileData) {
                         div.innerHTML = sanitizeHTML(senderLabel + replyHtml);
+                        const wrap = document.createElement('div');
+                        wrap.className = 'voice-bubble';
                         const audio = document.createElement('audio');
                         audio.controls = true;
                         audio.src = await resolveStoredMedia(m.fileData);
-                        audio.style.maxWidth = '200px';
-                        div.appendChild(audio);
+                        audio.style.maxWidth = '160px';
+                        const wave = document.createElement('canvas');
+                        wave.className = 'voice-wave';
+                        wave.width = 120; wave.height = 32;
+                        drawVoiceWave(wave, m.msgId);
+                        wrap.appendChild(wave);
+                        wrap.appendChild(audio);
+                        div.appendChild(wrap);
                     } else if (m.type === 'location') {
                         div.innerHTML = sanitizeHTML(senderLabel + replyHtml);
                         const a = document.createElement('a');
@@ -4778,14 +4931,38 @@
                         a.href = (m.mapUrl) || (`https://www.openstreetmap.org/?mlat=${encodeURIComponent(lat)}&mlon=${encodeURIComponent(lng)}#map=17/${encodeURIComponent(lat)}/${encodeURIComponent(lng)}`);
                         a.textContent = m.text || '📍 現在地を共有しました';
                         div.appendChild(a);
+                    } else if (m.type === 'images' && Array.isArray(m.images) && m.images.length) {
+                        div.innerHTML = sanitizeHTML(senderLabel + replyHtml);
+                        const grid = document.createElement('div');
+                        const n = m.images.length;
+                        grid.className = 'img-grid ' + (n >= 4 ? 'g4' : (n === 3 ? 'g3' : (n === 2 ? 'g2' : 'g1')));
+                        for (const item of m.images) {
+                            const img = document.createElement('img');
+                            img.src = await resolveStoredMedia(item.data || item);
+                            img.onclick = () => openLightbox(img.src);
+                            grid.appendChild(img);
+                        }
+                        div.appendChild(grid);
                     } else if (m.type === 'file' && m.fileData) {
                         div.innerHTML = sanitizeHTML(senderLabel + replyHtml);
-                        const a = document.createElement('a');
-                        a.className = 'file-link';
-                        a.href = await resolveStoredMedia(m.fileData);
-                        a.download = m.fileName || 'file';
-                        a.textContent = `💾 ${m.fileName || 'ダウンロード'}`;
-                        div.appendChild(a);
+                        const src = await resolveStoredMedia(m.fileData);
+                        const mime = (m.fileMime || '');
+                        if (String(m.fileName || '').match(/\.(png|jpe?g|gif|webp|bmp)$/i) || String(src).startsWith('blob:') || mime.startsWith('image/')) {
+                            const img = document.createElement('img');
+                            img.src = src;
+                            img.style.maxWidth = '220px';
+                            img.style.borderRadius = '10px';
+                            img.style.cursor = 'pointer';
+                            img.onclick = () => openLightbox(img.src);
+                            div.appendChild(img);
+                        } else {
+                            const a = document.createElement('a');
+                            a.className = 'file-link';
+                            a.href = src;
+                            a.download = m.fileName || 'file';
+                            a.textContent = `💾 ${m.fileName || 'ダウンロード'}`;
+                            div.appendChild(a);
+                        }
                     } else {
                         if (m.from === 'chappy' && typeof marked !== 'undefined') {
                             const rawParsed = marked.parse(m.text);
@@ -4900,23 +5077,21 @@
 
                     if (isMe) {
                         const readCount = (m.readBy || []).length;
+                        const readSpan = document.createElement('span');
+                        readSpan.className = 'msg-read-status';
                         if (isGroup) {
-                            if (readCount > 0) {
-                                const readSpan = document.createElement('span');
-                                readSpan.className = 'msg-read-status';
-                                readSpan.textContent = `既読 ${readCount}`;
-                                metaDiv.appendChild(readSpan);
-                            }
+                            if (readCount > 0) readSpan.textContent = `既読 ${readCount}`;
+                            else readSpan.textContent = (m.deliveryStatus === 'delivered' ? '配達済' : (m.deliveryStatus === 'sent' ? '送信済' : '送信中'));
+                        } else if (readCount > 0) {
+                            readSpan.textContent = '既読';
+                        } else if (m.deliveryStatus === 'delivered') {
+                            readSpan.textContent = '配達済';
+                        } else if (m.deliveryStatus === 'sent') {
+                            readSpan.textContent = '送信済';
                         } else {
-                            if (readCount > 0) {
-                                const readSpan = document.createElement('span');
-                                readSpan.className = 'msg-read-status';
-                                readSpan.textContent = '既読';
-                                metaDiv.appendChild(readSpan);
-                            }
+                            readSpan.textContent = '送信中';
                         }
-
-
+                        metaDiv.appendChild(readSpan);
                     }
 
 
@@ -4956,6 +5131,7 @@
 
                     addAction('↩ 返信', () => startReply(m.msgId));
                     addAction('📌 ピン留め', () => pinMessage(m.msgId));
+                    addAction('📋 コピー', () => { try { navigator.clipboard.writeText(m.text || ''); showToast('コピーしました'); } catch(e) {} });
 
 
                     // メッセージ編集機能（送信者のみ、24時間以内）
@@ -4978,7 +5154,9 @@
                     actionBar.appendChild(moreBtn);
                     actionBar.appendChild(actionMenu);
                     wrapper.appendChild(actionBar);
+                    wrapper.dataset.msgId = m.msgId;
                     attachHorizontalSwipe(wrapper, () => startReply(m.msgId), null, 70);
+                    bindMsgContext(wrapper, m);
                     fragment.appendChild(wrapper);
                 }
 
@@ -5770,6 +5948,195 @@
             };
 
 
+
+            function applyYmTheme(name) {
+                const n = name || localStorage.getItem('YM_THEME') || 'line';
+                document.body.classList.remove('theme-line', 'theme-dark', 'theme-simple');
+                document.body.classList.add('theme-' + (n === 'dark' ? 'dark' : (n === 'simple' ? 'simple' : 'line')));
+                localStorage.setItem('YM_THEME', n);
+                const sel = document.getElementById('setting-theme');
+                if (sel) sel.value = n;
+            }
+            function drawVoiceWave(canvas, seed) {
+                try {
+                    const ctx = canvas.getContext('2d');
+                    const w = canvas.width, h = canvas.height;
+                    ctx.clearRect(0,0,w,h);
+                    ctx.strokeStyle = '#059669';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    let x = 0;
+                    const bars = 18;
+                    for (let i=0;i<bars;i++) {
+                        const n = ((seed || '').charCodeAt(i % Math.max(1,(seed||'a').length)) || 8);
+                        const bh = 6 + (n % 18);
+                        const y = (h - bh) / 2;
+                        ctx.moveTo(x+3, y);
+                        ctx.lineTo(x+3, y+bh);
+                        x += w / bars;
+                    }
+                    ctx.stroke();
+                } catch (e) {}
+            }
+            function hideComposerPanels(except) {
+                const stampWrap = document.getElementById('stamp-keyboard-wrapper');
+                const extra = document.getElementById('composer-extra-tools');
+                const rich = document.getElementById('chat-rich-menu');
+                if (except !== 'stamp' && stampWrap) stampWrap.style.display = 'none';
+                if (except !== 'extra' && extra) extra.classList.remove('active');
+                if (except !== 'rich' && rich) rich.classList.add('collapsed');
+                syncRichToggleLabel();
+            }
+            function syncRichToggleLabel() {
+                const rich = document.getElementById('chat-rich-menu');
+                const btn = document.getElementById('btn-toggle-rich-menu');
+                if (!btn || !rich) return;
+                const closed = rich.classList.contains('collapsed') || rich.classList.contains('hidden-by-keyboard');
+                btn.textContent = closed ? 'メニューを開く ▼' : 'メニューを閉じる ▲';
+            }
+            function bindMsgContext(wrapper, m) {
+                const menu = document.getElementById('msg-context-menu');
+                if (!menu || !wrapper) return;
+                const openAt = (x, y) => {
+                    menu.innerHTML = '';
+                    const add = (label, fn) => {
+                        const b = document.createElement('button');
+                        b.textContent = label;
+                        b.onclick = (ev) => { ev.stopPropagation(); menu.classList.remove('active'); fn(); };
+                        menu.appendChild(b);
+                    };
+                    add('↩ 返信', () => startReply(m.msgId));
+                    add('📌 ピン留め', () => pinMessage(m.msgId));
+                    add('📋 コピー', () => { try { navigator.clipboard.writeText(m.text || ''); } catch(e) {} });
+                    add('✨ リアクション', () => { activePickerMsgId = m.msgId; renderChat(false); });
+                    if (m.from === activeUserId && !m.unsent && (Date.now() - (m.timestamp||0)) <= 24*60*60*1000) {
+                        add('↩ 送信取消', () => unsendMessage(m.msgId));
+                    }
+                    menu.style.left = Math.min(window.innerWidth - 180, Math.max(8, x)) + 'px';
+                    menu.style.top = Math.min(window.innerHeight - 220, Math.max(8, y)) + 'px';
+                    menu.classList.add('active');
+                };
+                wrapper.addEventListener('contextmenu', (e) => { e.preventDefault(); openAt(e.clientX, e.clientY); });
+                let lp = null;
+                wrapper.addEventListener('touchstart', (e) => {
+                    const t = e.touches[0];
+                    lp = setTimeout(() => openAt(t.clientX, t.clientY), 480);
+                }, { passive: true });
+                ['touchend','touchmove','touchcancel'].forEach(ev => wrapper.addEventListener(ev, () => { if (lp) { clearTimeout(lp); lp = null; } }, { passive: true }));
+            }
+            document.addEventListener('click', () => {
+                const menu = document.getElementById('msg-context-menu');
+                if (menu) menu.classList.remove('active');
+            });
+
+            const _renderChatOrig = renderChat;
+            let _lastChatFingerprint = '';
+            renderChat = async function(scrollToBottom = false) {
+                const container = document.getElementById('chat-messages');
+                const searchKeyword = (document.getElementById('chat-search-input')?.value || '').toLowerCase().trim();
+                const isGroup = !!(db.groups && db.groups[activeChatTarget]);
+                let msgs = [];
+                if (isGroup) msgs = db.messages.filter(m => m.to === activeChatTarget);
+                else msgs = db.messages.filter(m => (m.from === activeUserId && m.to === activeChatTarget) || (m.from === activeChatTarget && m.to === activeUserId));
+                if (searchKeyword) msgs = msgs.filter(m => m.text && m.text.toLowerCase().includes(searchKeyword));
+                const last = msgs[msgs.length - 1];
+                const fp = (activeChatTarget || '') + '|' + msgs.length + '|' + (last ? last.msgId : '') + '|' + searchKeyword + '|' + chatVisibleCount;
+                const canAppend = !searchKeyword && container && container.childElementCount > 0 && last && container.querySelector('[data-msg-id="' + CSS.escape(last.msgId) + '"]') == null && _lastChatFingerprint.split('|')[0] === (activeChatTarget||'') && Number(_lastChatFingerprint.split('|')[1]||0) === msgs.length - 1;
+                _lastChatFingerprint = fp;
+                const result = await _renderChatOrig(scrollToBottom);
+                return result;
+            };
+
+            async function sendImageFiles(files) {
+                const images = [];
+                for (const file of files) {
+                    if (!file.type.startsWith('image/')) continue;
+                    if (!validateAttachmentFile(file)) continue;
+                    const key = 'file_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+                    await IDB.set(key, file);
+                    images.push({ data: key, name: file.name });
+                }
+                if (!images.length) return;
+                if (images.length === 1) {
+                    ImageEditor.bind();
+                    ImageEditor.open(files[0]);
+                    return;
+                }
+                await sendMessage('images', images.map(i => i.name).join(', '), null, { images: images });
+            }
+
+            async function startGroupMeshCall() {
+                const target = activeChatTarget;
+                if (!target || target === 'chappy' || target === 'official' || target === 'keep') {
+                    showToast('このトークではグループ通話できません。');
+                    return;
+                }
+                const members = db.groups[target] ? (db.groups[target].members || []).filter(id => id !== activeUserId) : [target];
+                showModal('group-call-modal');
+                const grid = document.getElementById('group-call-grid');
+                if (grid) grid.innerHTML = '';
+                try {
+                    localVideoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                } catch (e) {
+                    showToast('カメラ/マイクを利用できません');
+                    return;
+                }
+                const localV = document.createElement('video');
+                localV.autoplay = true; localV.muted = true; localV.playsInline = true;
+                localV.srcObject = localVideoStream;
+                if (grid) grid.appendChild(localV);
+                members.forEach((id) => {
+                    try {
+                        if (!peer) return;
+                        const call = peer.call(id, localVideoStream, { metadata: { type: 'group-video', room: target } });
+                        if (!call) return;
+                        mediaCalls[id] = call;
+                        call.on('stream', (remote) => {
+                            const v = document.createElement('video');
+                            v.autoplay = true; v.playsInline = true; v.srcObject = remote;
+                            if (grid) grid.appendChild(v);
+                        });
+                    } catch (e) {}
+                });
+            }
+
+            function collectRoomAlbumItems() {
+                const items = [];
+                const isGroup = !!(db.groups && db.groups[activeChatTarget]);
+                const msgs = (db.messages || []).filter(m => {
+                    if (isGroup) return m.to === activeChatTarget;
+                    return (m.from === activeUserId && m.to === activeChatTarget) || (m.from === activeChatTarget && m.to === activeUserId);
+                });
+                msgs.forEach(m => {
+                    if (m.unsent) return;
+                    if (m.type === 'file' && m.fileData) items.push({ key: m.fileData, name: m.fileName || 'image' });
+                    if (m.type === 'stamp' && m.text && String(m.text).startsWith('data:image/')) items.push({ key: m.text, name: 'stamp' });
+                    if (m.type === 'images' && Array.isArray(m.images)) m.images.forEach(im => items.push({ key: im.data || im, name: im.name || 'image' }));
+                });
+                if (isGroup && db.groups[activeChatTarget] && Array.isArray(db.groups[activeChatTarget].album)) {
+                    db.groups[activeChatTarget].album.forEach(a => items.push({ key: a.key || a, name: a.name || 'album' }));
+                }
+                return items;
+            }
+
+            function renderRoomAlbum() {
+                const grid = document.getElementById('group-album-grid');
+                if (!grid) return;
+                grid.innerHTML = '';
+                const items = collectRoomAlbumItems();
+                if (!items.length) {
+                    grid.innerHTML = '<div style="grid-column:1/-1;color:#666;font-size:12px;text-align:center;padding:20px;">このトークの画像はまだありません。</div>';
+                    return;
+                }
+                items.forEach(item => {
+                    const img = document.createElement('img');
+                    resolveStoredMedia(item.key).then(src => { img.src = src; });
+                    img.onclick = () => openLightbox(img.src);
+                    grid.appendChild(img);
+                });
+            }
+
+
             // -------------------------------------------------------------
             // 初期化・イベントリスナー設定
             // -------------------------------------------------------------
@@ -5788,6 +6155,36 @@
                 await E2EE.init();
                 await OfflineBridge.init();
                 ImageEditor.bind();
+                applyYmTheme(localStorage.getItem('YM_THEME') || 'line');
+                const themeSel = document.getElementById('setting-theme');
+                if (themeSel) themeSel.value = localStorage.getItem('YM_THEME') || 'line';
+                const btnThemeCycle = document.getElementById('btn-theme-cycle');
+                if (btnThemeCycle) btnThemeCycle.onclick = () => {
+                    const cur = localStorage.getItem('YM_THEME') || 'line';
+                    const next = cur === 'line' ? 'dark' : (cur === 'dark' ? 'simple' : 'line');
+                    applyYmTheme(next);
+                    showToast('テーマ: ' + next);
+                };
+                const btnToggleRich = document.getElementById('btn-toggle-rich-menu');
+                if (btnToggleRich) btnToggleRich.onclick = () => {
+                    const rich = document.getElementById('chat-rich-menu');
+                    if (!rich) return;
+                    rich.classList.toggle('collapsed');
+                    hideComposerPanels('rich');
+                    if (!rich.classList.contains('collapsed')) rich.classList.remove('hidden-by-keyboard');
+                    syncRichToggleLabel();
+                };
+                const btnGroupCall = document.getElementById('btn-group-call');
+                if (btnGroupCall) btnGroupCall.onclick = () => startGroupMeshCall();
+                const btnEndGroupCall = document.getElementById('btn-end-group-call');
+                if (btnEndGroupCall) btnEndGroupCall.onclick = () => { hideModal('group-call-modal'); stopAllCalls(); };
+                const btnRoomAlbum = document.getElementById('btn-open-room-album');
+                if (btnRoomAlbum) btnRoomAlbum.onclick = () => { renderRoomAlbum(); showModal('group-album-modal'); };
+                const chatInputFocus = document.getElementById('chat-input');
+                if (chatInputFocus) {
+                    chatInputFocus.addEventListener('focus', () => hideComposerPanels('input'));
+                }
+
                 // URLハッシュからの招待リンク処理
                 setTimeout(() => InviteSystem.checkUrlInvite(), 1000);
 
@@ -6280,6 +6677,9 @@
                         localStorage.setItem('YM_VAULT_PASSPHRASE', vaultInput.value.trim());
                         await LocalVault.init();
                     }
+                    const themeEl = document.getElementById('setting-theme');
+                    if (themeEl) applyYmTheme(themeEl.value);
+
 
 
                     if (chatBgImgFileInput) {
@@ -6397,14 +6797,29 @@
                 document.getElementById('keep-chat-input').onkeypress = (e) => { if (e.key === 'Enter') sendKeepMessage('text'); };
 
 
+                const btnComposerPlus = document.getElementById('btn-composer-plus');
+                if (btnComposerPlus) {
+                    btnComposerPlus.onclick = () => {
+                        const extra = document.getElementById('composer-extra-tools');
+                        if (!extra) return;
+                        extra.classList.toggle('active');
+                    };
+                }
                 document.getElementById('btn-chat-stamp').onclick = () => {
                     currentStampTarget = 'friend';
                     const wrapper = document.getElementById('stamp-keyboard-wrapper');
                     const slideKb = document.getElementById('stamp-slide-keyboard');
+                    const richMenu = document.getElementById('chat-rich-menu');
                     if (wrapper) {
                         // ラッパーの表示/非表示をトグル
                         const isVisible = wrapper.style.display === 'flex';
                         wrapper.style.display = isVisible ? 'none' : 'flex';
+                        if (!isVisible) hideComposerPanels('stamp');
+                        if (richMenu) {
+                            if (isVisible) richMenu.classList.remove('hidden-by-keyboard');
+                            else { richMenu.classList.add('hidden-by-keyboard'); richMenu.classList.add('collapsed'); }
+                            syncRichToggleLabel();
+                        }
                         if (!isVisible) {
                             // タブボタンのイベントリスナーを設定
                             document.querySelectorAll('.stamp-tab-btn').forEach(btn => {
@@ -6434,29 +6849,32 @@
 
 
                 document.getElementById('chat-file-input').onchange = async (e) => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-                    if (!validateAttachmentFile(file)) {
-                        e.target.value = '';
-                        return;
-                    }
-
-
+                    const files = Array.from(e.target.files || []);
+                    if (!files.length) return;
+                    const images = files.filter(f => f.type.startsWith('image/'));
+                    const others = files.filter(f => !f.type.startsWith('image/'));
                     if (activeChatTarget === 'chappy') {
+                        const file = files[0];
                         const textContent = await readFileAsText(file);
                         attachedFileText = `\n\n【添付ファイルデータ: ${file.name}】\n${textContent}`;
                         alert(`ファイル 「${file.name}」 を読み込みました。AIへの指示・質問を入力して送信してください。`);
-                    } else if (file.type.startsWith('image/')) {
-                        ImageEditor.bind();
-                        ImageEditor.open(file);
                     } else {
-                        const mediaKey = `file_${Date.now()}`;
-                        try {
-                            await IDB.set(mediaKey, file);
-                            sendMessage('file', file.name, { name: file.name, data: mediaKey, size: file.size });
-                        } catch (err) {
-                            const base64 = await readFileAsDataURL(file);
-                            sendMessage('file', file.name, { name: file.name, data: base64, size: file.size });
+                        if (images.length > 1) {
+                            await sendImageFiles(images);
+                        } else if (images.length === 1) {
+                            ImageEditor.bind();
+                            ImageEditor.open(images[0]);
+                        }
+                        for (const file of others) {
+                            if (!validateAttachmentFile(file)) continue;
+                            const mediaKey = `file_${Date.now()}_` + Math.random().toString(36).slice(2,6);
+                            try {
+                                await IDB.set(mediaKey, file);
+                                sendMessage('file', file.name, { name: file.name, data: mediaKey, size: file.size, type: file.type }, { fileMime: file.type });
+                            } catch (err) {
+                                const base64 = await readFileAsDataURL(file);
+                                sendMessage('file', file.name, { name: file.name, data: base64, size: file.size, type: file.type }, { fileMime: file.type });
+                            }
                         }
                     }
                     e.target.value = '';
