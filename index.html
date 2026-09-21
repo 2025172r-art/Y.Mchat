@@ -1624,8 +1624,8 @@
         // --- IndexedDB 統合ストレージエンジンの拡張導入 ---
         const IDB = {
             dbName: 'YM_Media_Storage',
-            dbVersion: 3
-            db: null、
+            dbVersion: 3,
+            db: null,
             init() {
                 return new Promise((resolve, reject) => {
                     const request = indexedDB.open(this.dbName, this.dbVersion);
