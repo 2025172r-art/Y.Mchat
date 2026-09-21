@@ -1814,16 +1814,16 @@
                 await this._importDek(dekRaw);
                 localStorage.setItem('YM_VAULT_CREATED_AT', String(Date.now()));
                 this._waiters.splice(0).forEach(fn => fn(true));
-                trueを返します。
+                return true;
             },
             async unlock(passphrase) {
                 const pass = String(passphrase || '');
                 if (!pass) return false;
-                試す {
+                try {
                     if (this.hasWrappedKey()) {
                         const dekRaw = await this._unwrapDek(pass);
                         await this._importDek(dekRaw);
-                    } それ以外 {
+                    } else {
                         const legacyPass = localStorage.getItem('YM_VAULT_PASSPHRASE') || pass;
                         let saltB64 = localStorage.getItem('YM_VAULT_SALT');
                         if (!saltB64) {
