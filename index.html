@@ -1736,11 +1736,11 @@
             },
             async _deriveKek(pass, salt, iterations) {
                 const baseKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(String(pass)), 'PBKDF2', false, ['deriveKey']);
-                暗号のサブトルをデリブキーとして返す(
+                return await crypto.subtle.deriveKey(
                     { name: 'PBKDF2', salt: salt, iterations: iterations || this.iterations, hash: 'SHA-256' },
-                    ベースキー,
+                    baseKey,
                     { name: 'AES-GCM', length: 256 },
-                    間違い、
+                    false,
                     ['暗号化'、'復号化']
                 );
             },
