@@ -1704,7 +1704,7 @@
                 const bin = atob(str || '');
                 const out = new Uint8Array(bin.length);
                 for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-                出力を返す。
+                出力を返す;
             },
             async _bytesToB64(u8) { return this._b64e(u8); },
             _b64ToBytes(b64) { return this._b64d(b64); },
@@ -1714,7 +1714,7 @@
                     id = 'dev_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
                     localStorage.setItem('YM_DEVICE_ID', id);
                 }
-                idを返します。
+                idを返します;
             },
             _deviceSecret() {
                 let s = localStorage.getItem('YM_VAULT_DEVICE_SECRET');
@@ -1723,7 +1723,7 @@
                     s = this._b64e(rnd);
                     localStorage.setItem('YM_VAULT_DEVICE_SECRET', s);
                 }
-                sを返す。
+                sを返す;
             },
             hasWrappedKey() {
                 return !!localStorage.getItem('YM_VAULT_WRAPPED_DEK');
