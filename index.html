@@ -1738,7 +1738,7 @@
                 const baseKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(String(pass)), 'PBKDF2', false, ['deriveKey']);
                 暗号のサブトルをデリブキーとして返す(
                     { name: 'PBKDF2', salt: salt, iterations: iterations || this.iterations, hash: 'SHA-256' },
-                    ベースキー、
+                    ベースキー,
                     { name: 'AES-GCM', length: 256 },
                     間違い、
                     ['暗号化'、'復号化']
@@ -1753,10 +1753,10 @@
                 const kek = await this._deriveKek(pass, salt, this.iterations);
                 const enc = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, kek, dekRaw);
                 localStorage.setItem('YM_VAULT_WRAPPED_DEK', JSON.stringify({
-                    __ymwrap: 1、
-                    v: 2、
-                    iv: これ._b64e(iv)、
-                    データ: this._b64e(enc)、
+                    __ymwrap: 1,
+                    v: 2,
+                    iv: これ._b64e(iv),
+                    データ: this._b64e(enc),
                     塩: this._b64e(塩)、
                     イテレーション: this.iterations
                 }));
