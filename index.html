@@ -1845,7 +1845,7 @@
                         localStorage.removeItem('YM_VAULT_PASSPHRASE');
                     }
                     this._waiters.splice(0).forEach(fn => fn(true));
-                    trueを返します。
+                    return true;
                 } catch (e) {
                     console.warn('[LocalVault] ロック解除に失敗しました', e);
                     this.ready = false;
@@ -1853,7 +1853,7 @@
                     this.dekRaw = null;
                     this.locked = true;
                     this.unlocked = false;
-                    falseを返す。
+                    return false;
                 }
             },
             async lock() {
