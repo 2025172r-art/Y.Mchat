@@ -1768,24 +1768,24 @@
                 return { iv: this._b64e(iv), data: this._b64e(enc) };
             },
             async _unwrapDek(pass) {
-                const raw = localStorage.getItem('YM_VAULT_WRAPPED_DEK');
-                if (!raw) throw new Error('NO_WRAPPED_DEK');
-                const wrap = JSON.parse(raw);
-                let salt, iterations;
-                if (wrap.salt) {
-                    salt = this._b64d(wrap.salt);
-                    iterations = wrap.iterations || this.iterations;
-                } それ以外 {
-                    const saltB64 = localStorage.getItem('YM_VAULT_SALT');
-                    if (!saltB64) throw new Error('NO_SALT');
-                    salt = this._b64d(saltB64);
-                    反復回数 = 180000;
-                }
-                const iv = this._b64d(wrap.iv);
-                const data = this._b64d(wrap.data);
-                const kek = await this._deriveKek(pass, salt, iterations);
-                return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, kek, data));
-            },
+        const raw = localStorage.getItem('YM_VAULT_WRAPPED_DEK');
+        if (!raw) throw new Error('NO_WRAPPED_DEK');
+        const wrap = JSON.parse(raw);
+        let salt, iterations;
+        if (wrap.salt) {
+            salt = this._b64d(wrap.salt);
+            iterations = wrap.iterations || this.iterations;
+        } else {
+            const saltB64 = localStorage.getItem('YM_VAULT_SALT');
+            if (!saltB64) throw new Error('NO_SALT');
+            salt = this._b64d(saltB64);
+            iterations = 180000;
+        }
+        const iv = this._b64d(wrap.iv);
+        const data = this._b64d(wrap.data);
+        const kek = await this._deriveKek(pass, salt, iterations);
+        return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, kek, data));
+    },
             async _unwrapDekWithKek(wrapped, kek) {
                 const iv = this._b64d(wrapped.iv);
                 const data = this._b64d(wrapped.data);
