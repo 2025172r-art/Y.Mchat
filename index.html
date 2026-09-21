@@ -1748,21 +1748,20 @@
                 return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
             },
             async _wrapDek(dekRaw, pass) {
-                const salt = crypto.getRandomValues(new Uint8Array(16));
-                const iv = crypto.getRandomValues(new Uint8Array(12));
-                const kek = await this._deriveKek(pass, salt, this.iterations);
-                const enc = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, kek, dekRaw);
-                localStorage.setItem('YM_VAULT_WRAPPED_DEK', JSON.stringify({
-                    __ymwrap: 1,
-                    v: 2,
-                    iv: これ._b64e(iv),
-                    データ: this._b64e(enc),
-                    塩: this._b64e(塩)、
-                    イテレーション: this.iterations
-                }));
-                localStorage.setItem('YM_VAULT_SALT', this._b64e(salt));
-                localStorage.removeItem('YM_VAULT_PASSPHRASE');
-            },
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const kek = await this._deriveKek(pass, salt, this.iterations);
+        const enc = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, kek, dekRaw);
+        localStorage.setItem('YM_VAULT_WRAPPED_DEK', JSON.stringify({
+            __ymwrap: 1,
+            v: 2,
+            iv: this._b64e(iv),
+            data: this._b64e(enc),
+            salt: this._b64e(salt),
+            iterations: this.iterations
+        }));
+        localStorage.setItem('YM_VAULT_SALT', this._b64e(salt));
+    },
             async _wrapDekWithKek(dekRaw, kek) {
                 const iv = crypto.getRandomValues(new Uint8Array(12));
                 const enc = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, kek, dekRaw);
