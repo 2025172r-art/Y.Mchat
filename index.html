@@ -699,6 +699,45 @@
             .stamp-keyboard-wrapper, #stamp-keyboard-wrapper { max-height:120px; }
         }
 
+        /* ===== Y.M purchase safety and performance additions ===== */
+        .ym-payment-gate { margin:12px 0; padding:12px; border:1px solid #f59e0b; background:#fffbeb; color:#92400e; border-radius:10px; font-size:12px; line-height:1.6; }
+        .ym-payment-gate strong { display:block; margin-bottom:4px; }
+        .ym-payment-gate .ym-payment-status { color:#065f46; font-weight:800; }
+        .ym-plan-card button[disabled] { opacity:.65; cursor:not-allowed; }
+
+        /* ===== YM Layout Organize (visual only; no feature removal) ===== */
+        html, body { height: 100dvh; overflow: hidden; }
+        body { display: flex; flex-direction: row; align-items: stretch; min-width: 0; }
+        .sidebar {
+            width: 320px; min-width: 280px; max-width: 360px; flex: 0 0 320px;
+            display: flex; flex-direction: column; gap: 0; min-height: 0;
+        }
+        .sidebar-header { flex-shrink: 0; }
+        .user-info { flex-shrink: 0; }
+        .sidebar > .menu-btn { flex-shrink: 0; margin-bottom: 6px; }
+        .talk-accordion-header { flex-shrink: 0; }
+        .talk-accordion-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+        .friend-list { flex: 1; min-height: 120px; max-height: none; }
+        .main-content { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+        .page-view { flex: 1; min-height: 0; overflow: auto; }
+        .chat-box.page-view { overflow: hidden; display: flex; flex-direction: column; }
+        .chat-header-row { flex-shrink: 0; align-items: center; gap: 8px; }
+        .chat-toolbar { flex-shrink: 0; }
+        .chat-messages { flex: 1; min-height: 0; }
+        .composer-dock, .composer-row, #chat-rich-menu, #stamp-keyboard-wrapper { flex-shrink: 0; }
+        .modal { align-items: center; justify-content: center; padding: 16px; }
+        .modal-box { width: min(480px, 92vw); max-height: min(90vh, 860px); }
+        .card { overflow: auto; }
+        #system-announcement-container { display: none !important; }
+        #announcement-popup-modal .modal-box { width: min(440px, 92vw); }
+        .ym-plan-grid { align-items: stretch; }
+        .ym-plan-card { min-height: 0; }
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { flex: none; width: 100% !important; max-width: none; min-width: 0; }
+            .main-content { flex: 1; }
+        }
+
     </style>
 </head>
 <body>
@@ -1028,7 +1067,12 @@
                     <h1>👑 プランショップ</h1>
                     <p>あなたに最適なプランを選んで、<br>AIの可能性を最大限に引き出しましょう！</p>
                 </div>
-                <div class="ym-plan-status" id="ym-plan-status-box">
+                <div class="ym-payment-gate" id="ym-payment-gate" role="status">
+                <strong>💳 AIプランの支払いについて</strong>
+                有料プランは、支払いが正常に確認されるまで有効化されません。支払いができなくなった場合は、契約期間終了後に自動的に無料プランへ戻り、AI利用は無料プランの範囲で継続できます。未払いの有料プランを付与することはありません。
+                <div class="ym-payment-status" id="ym-payment-status">支払い確認待ちではありません。</div>
+            </div>
+            <div class="ym-plan-status" id="ym-plan-status-box">
                     <div class="k">現在のプラン</div>
                     <div class="v" id="ym-plan-current-name">無料</div>
                     <div class="k">残り期間</div>
@@ -1112,6 +1156,18 @@
 
 
             <div id="dev-tab-upgrade" class="dev-tab-content hidden">
+                <div id="dev-payment-review" style="background:#f8f9fa;padding:15px;border-radius:8px;border:1px solid #e0e0e0;margin-top:10px;">
+                    <h4>💳 AIプラン支払い確認</h4>
+                    <p style="font-size:12px;color:#666;">支払い確認が完了するまで、有料プランは有効化されません。確認できない場合は無料プランへ戻します。</p>
+                    <label>確認対象プラン</label>
+                    <select id="dev-payment-plan"></select>
+                    <label>決済確認番号</label>
+                    <input type="text" id="dev-payment-reference" placeholder="取引IDまたは確認番号">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button class="menu-btn btn-success" id="btn-dev-confirm-payment" style="margin:0;">支払いを確認して有効化</button>
+                        <button class="menu-btn btn-warning" id="btn-dev-reject-payment" style="margin:0;">支払い不可・無料へ戻す</button>
+                    </div>
+                </div>
                 <h3>📢 全体アナウンス・一斉通知設定</h3>
                 <p style="font-size:12px; color:#666; margin-bottom:10px;">ユーザー画面上部に全端末へリアルタイムに安全なアナウンスを表示・一斉通知します。</p>
                 
@@ -4756,6 +4812,11 @@
                         saveData();
                         renderApp();
                     }
+                } else if (data.type === 'UPDATE_ANNOUNCEMENT') {
+                    db.systemAnnouncement = data.text || '';
+                    db.systemAnnouncementStyle = data.style || 'normal';
+                    saveData();
+                    showSystemAnnouncementPopup(true);
                 }
             }
 
@@ -4827,7 +4888,7 @@
             const PlanShop = {
                 key: 'YM_PLAN_STATE',
                 pendingId: null,
-                state: { planId:'free', startedAt:0, expiresAt:0, usageDate:'', usageCount:0 },
+                state: { planId:'free', startedAt:0, expiresAt:0, usageDate:'', usageCount:0, paymentStatus:'none', paymentReference:'', paymentUpdatedAt:0 },
                 today() {
                     const d = new Date();
                     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
@@ -4838,6 +4899,7 @@
                         const raw = localStorage.getItem(this.key);
                         if (raw) this.state = Object.assign(this.state, JSON.parse(raw));
                     } catch (e) {}
+                    if (!this.state.paymentStatus) this.state.paymentStatus = this.state.planId === 'free' ? 'none' : 'confirmed';
                     this.expireIfNeeded();
                     this.resetDailyIfNeeded();
                     this.save();
@@ -4851,6 +4913,8 @@
                         this.state.planId = 'free';
                         this.state.startedAt = 0;
                         this.state.expiresAt = 0;
+                        this.state.paymentStatus = 'expired';
+                        this.state.paymentReference = '';
                     }
                 },
                 resetDailyIfNeeded() {
@@ -4865,9 +4929,9 @@
                     const cur = this.current();
                     if (cur.id === 'free') return '無期限';
                     const left = Math.max(0, (this.state.expiresAt || 0) - Date.now());
-                    const days = Math.floor(left / 86400000);
-                    const hours = Math.floor((left % 86400000) / 3600000);
-                    return days + '日 ' + hours + '時間';
+                    const hours = Math.floor(left / 3600000);
+                    const mins = Math.floor((left % 3600000) / 60000);
+                    return hours + '時間 ' + mins + '分（日額）';
                 },
                 nextName() {
                     const ids = YM_PLAN_DEFS.filter(p => !p.special).map(p => p.id);
@@ -4947,8 +5011,16 @@
                     document.body.classList.toggle('ym-legend-live', cur.id === 'legend' || cur.id === 'legendx');
                     if (typeof FocusBoard !== 'undefined') FocusBoard.refreshReport();
                 },
+                updatePaymentStatus() {
+                    const el = document.getElementById('ym-payment-status');
+                    if (!el) return;
+                    const status = this.state.paymentStatus || 'none';
+                    const labels = { none:'支払い確認待ちではありません。', pending:'支払い確認中です。確認が完了するまで有料プランは有効になりません。', confirmed:'支払い確認済みです。', failed:'支払いを確認できませんでした。無料プランで継続しています。', expired:'有料プランの期間が終了しました。無料プランへ戻りました。' };
+                    el.textContent = labels[status] || labels.none;
+                },
                 render() {
                     this.load();
+                    this.updatePaymentStatus();
                     this.updateStatusWidgets();
                     const grid = document.getElementById('ym-plan-grid');
                     if (grid) {
@@ -4967,7 +5039,7 @@
                             const tag = document.createElement('div'); tag.className = 'ym-plan-tag'; tag.textContent = '「' + p.copy + '」';
                             const price = document.createElement('div'); price.className = 'ym-plan-price';
                             price.appendChild(document.createTextNode(this.yen(p.price)));
-                            const per = document.createElement('span'); per.textContent = '/ 週'; price.appendChild(per);
+                            const per = document.createElement('span'); per.textContent = '/ 日'; price.appendChild(per);
                             const limit = document.createElement('div'); limit.className = 'ym-plan-limit'; limit.textContent = '1日のAI利用：' + p.daily + '回';
                             const ul = document.createElement('ul'); ul.className = 'ym-plan-feats';
                             p.feats.forEach(f => { const li = document.createElement('li'); li.textContent = '✓ ' + f; ul.appendChild(li); });
@@ -4992,7 +5064,7 @@
                         const sub = document.createElement('div'); sub.className = 'sub'; sub.textContent = '企業・研究開発向け';
                         const price = document.createElement('div'); price.className = 'ym-plan-price';
                         price.appendChild(document.createTextNode(this.yen(xp.price)));
-                        const per = document.createElement('span'); per.textContent = '/ 週'; price.appendChild(per);
+                        const per = document.createElement('span'); per.textContent = '/ 日'; price.appendChild(per);
                         const desc = document.createElement('div'); desc.className = 'desc';
                         desc.textContent = '一般ユーザー向けではない、Y.M-chatの特別最上位プラン。';
                         const feats = document.createElement('div'); feats.className = 'ym-plan-x-feats';
@@ -5015,27 +5087,45 @@
                     const title = document.getElementById('ym-plan-change-title');
                     const body = document.getElementById('ym-plan-change-body');
                     if (title) title.textContent = p.name + 'に変更しますか？';
-                    if (body) body.textContent = '料金：' + this.yen(p.price) + ' / 週\n利用可能AI：' + p.modelsLabel + '\n利用上限：1日' + p.daily + '回';
+                    if (body) body.textContent = '料金：' + this.yen(p.price) + ' / 日\n利用可能AI：' + p.modelsLabel + '\n利用上限：1日' + p.daily + '回\n\n有料プランは先に支払いを完了してください。支払い確認後に有効化されます。支払いができない場合は無料プランで利用を続けられます。';
                     if (body) body.style.whiteSpace = 'pre-line';
                     showModal('ym-plan-change-modal');
                 },
                 confirmChange() {
                     const id = this.pendingId;
                     if (!id) return;
-                    const now = Date.now();
-                    this.state.planId = id;
-                    if (id === 'free') {
-                        this.state.startedAt = 0;
-                        this.state.expiresAt = 0;
-                    } else {
-                        this.state.startedAt = now;
-                        this.state.expiresAt = now + 7 * 24 * 60 * 60 * 1000;
+                    const p = this.def(id);
+                    if (id !== 'free' && p.price > 0) {
+                        const reference = window.prompt('支払い完了後に、決済サービスの取引IDまたは確認番号を入力してください。支払いができない場合はキャンセルしてください。', '');
+                        if (!reference || !String(reference).trim()) {
+                            this.state.paymentStatus = 'failed';
+                            this.state.paymentReference = '';
+                            this.state.paymentUpdatedAt = Date.now();
+                            this.save();
+                            this.updatePaymentStatus();
+                            showToast('支払い確認ができないため、無料プランのままです。');
+                            return;
+                        }
+                        this.state.paymentStatus = 'pending';
+                        this.state.paymentReference = String(reference).trim().slice(0, 160);
+                        this.state.paymentUpdatedAt = Date.now();
+                        this.save();
+                        this.updatePaymentStatus();
+                        showToast('支払い確認中です。確認完了まで無料プランのままです。');
+                        return;
                     }
+                    const now = Date.now();
+                    this.state.planId = 'free';
+                    this.state.startedAt = 0;
+                    this.state.expiresAt = 0;
+                    this.state.paymentStatus = 'none';
+                    this.state.paymentReference = '';
+                    this.state.paymentUpdatedAt = now;
                     this.save();
                     hideModal('ym-plan-change-modal');
                     this.render();
                     this.syncAiModelSelect();
-                    showToast('プランを変更しました！');
+                    showToast('無料プランに変更しました。');
                 },
                 init() { this.load(); this.updateStatusWidgets(); }
             };
@@ -5205,18 +5295,46 @@
                 db.notifications.unshift({ id: 'nt_' + Date.now(), kind: kind || 'system', title: title || '', body: body || '', ts: Date.now(), read: false });
                 db.notifications = db.notifications.slice(0, 200);
             }
+            function showSystemAnnouncementPopup(force) {
+                const text = (db && db.systemAnnouncement) ? String(db.systemAnnouncement) : '';
+                const style = (db && db.systemAnnouncementStyle) ? db.systemAnnouncementStyle : 'normal';
+                const modal = document.getElementById('announcement-popup-modal');
+                const content = document.getElementById('announcement-popup-content');
+                const title = document.getElementById('announcement-popup-title');
+                if (!modal) return;
+                if (!text) {
+                    modal.classList.add('hidden');
+                    return;
+                }
+                const dismissed = localStorage.getItem('YM_DISMISSED_ANNOUNCEMENT') || '';
+                if (!force && dismissed === text) return;
+                if (content) {
+                    content.textContent = text;
+                    if (style === 'danger') {
+                        content.style.background = '#fef2f2';
+                        content.style.borderColor = '#fecaca';
+                        content.style.color = '#991b1b';
+                    } else if (style === 'success') {
+                        content.style.background = '#ecfdf5';
+                        content.style.borderColor = '#a7f3d0';
+                        content.style.color = '#065f46';
+                    } else {
+                        content.style.background = '#fffbeb';
+                        content.style.borderColor = '#fde68a';
+                        content.style.color = '#92400e';
+                    }
+                }
+                if (title) {
+                    title.textContent = style === 'danger' ? '🚨 重要なお知らせ' : (style === 'success' ? '🎉 お知らせ' : '📢 全体アナウンス');
+                }
+                modal.classList.remove('hidden');
+            }
             function renderNotificationCenter() {
                 const list = document.getElementById('notif-center-list');
                 if (!list) return;
                 list.innerHTML = '';
-                const rows = db.notifications || [];
-                if (db.systemAnnouncement) {
-                    const item = document.createElement('div');
-                    item.className = 'notif-item';
-                    item.textContent = '📢 全体アナウンス: ' + db.systemAnnouncement;
-                    list.appendChild(item);
-                }
-                if (!rows.length && !db.systemAnnouncement) {
+                const rows = (db.notifications || []).filter(n => !(n.kind === 'system' && (n.title || '') === '全体アナウンス'));
+                if (!rows.length) {
                     list.innerHTML = '<div class="text-sub">通知はありません。</div>';
                     return;
                 }
@@ -5292,14 +5410,10 @@
                 DeviceRegistry.ensure();
                 const banner = document.getElementById('system-announcement-container');
                 if (banner) {
-                    if (db.systemAnnouncement) {
-                        banner.style.cssText = 'padding:8px 12px; font-size:13px; font-weight:700; background:#fef3c7; border-bottom:1px solid #f59e0b;';
-                        banner.textContent = '📢 ' + db.systemAnnouncement;
-                    } else {
-                        banner.textContent = '';
-                        banner.style.cssText = '';
-                    }
+                    banner.textContent = '';
+                    banner.style.cssText = 'display:none;';
                 }
+                showSystemAnnouncementPopup(false);
 
 
                 if (userObj.isBlocked) {
@@ -8726,7 +8840,41 @@
                 }, 5000);
 
 
-                const devTabBtns = document.querySelectorAll('.dev-tab-btn');
+                let devPaymentConfirmBound = false;
+            function bindDevPaymentControls() {
+                if (devPaymentConfirmBound) return;
+                const confirm = document.getElementById('btn-dev-confirm-payment');
+                const reject = document.getElementById('btn-dev-reject-payment');
+                if (!confirm || !reject) return;
+                devPaymentConfirmBound = true;
+                confirm.onclick = () => {
+                    if (!AdminGuard.require()) return;
+                    const id = document.getElementById('dev-payment-plan')?.value || '';
+                    const ref = document.getElementById('dev-payment-reference')?.value.trim() || '';
+                    if (!id || !ref || id === 'free') { showToast('有料プランと確認番号を入力してください。'); return; }
+                    const p = PlanShop.def(id);
+                    PlanShop.state.planId = id;
+                    PlanShop.state.startedAt = Date.now();
+                    PlanShop.state.expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+                    PlanShop.state.paymentStatus = 'confirmed';
+                    PlanShop.state.paymentReference = ref.slice(0,160);
+                    PlanShop.state.paymentUpdatedAt = Date.now();
+                    PlanShop.save(); PlanShop.render(); PlanShop.syncAiModelSelect();
+                    showToast(p.name + 'を有効化しました。');
+                };
+                reject.onclick = () => {
+                    if (!AdminGuard.require()) return;
+                    PlanShop.state.planId = 'free'; PlanShop.state.startedAt = 0; PlanShop.state.expiresAt = 0;
+                    PlanShop.state.paymentStatus = 'failed'; PlanShop.state.paymentReference = '';
+                    PlanShop.state.paymentUpdatedAt = Date.now(); PlanShop.save(); PlanShop.render(); PlanShop.syncAiModelSelect();
+                    showToast('支払いを確認できないため、無料プランへ戻しました。');
+                };
+                const select = document.getElementById('dev-payment-plan');
+                if (select) { select.innerHTML = ''; YM_PLAN_DEFS.filter(p => !p.special && p.id !== 'free').forEach(p => { const o=document.createElement('option'); o.value=p.id; o.textContent=p.name; select.appendChild(o); }); }
+            }
+            bindDevPaymentControls();
+
+            const devTabBtns = document.querySelectorAll('.dev-tab-btn');
                 devTabBtns.forEach(btn => {
                     btn.addEventListener('click', () => {
                         devTabBtns.forEach(b => b.classList.remove('active'));
@@ -9879,11 +10027,12 @@
                     const style = document.getElementById('dev-announcement-style').value;
                     db.systemAnnouncement = text;
                     db.systemAnnouncementStyle = style;
-                    pushNotification('system', '全体アナウンス', text);
+                    if (text) localStorage.removeItem('YM_DISMISSED_ANNOUNCEMENT');
                     saveData();
                     broadcastData({ type: 'UPDATE_ANNOUNCEMENT', text: text, style: style });
                     renderApp();
-                    showToast('全体アナウンスを通知センターへ配信しました。');
+                    showSystemAnnouncementPopup(true);
+                    showToast(text ? '全体アナウンスをポップアップで配信しました。' : '全体アナウンスを解除しました。');
                 };
 
 
