@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content, maximum-scale=5.0, user-scalable=yes">
     <title id="app-title">Y.M Ultimate Chat</title>
     <link id="app-favicon" rel="icon" href="https://via.placeholder.com/192/007bff/ffffff?text=YM">
     <link id="app-manifest" rel="manifest" href="ym-manifest.json">
@@ -731,7 +731,7 @@
         .modal { align-items: center; justify-content: center; padding: 16px; }
         .modal-box { width: min(480px, 92vw); max-height: min(90vh, 860px); }
         .card { overflow: auto; }
-        #system-announcement-container { display: none !important; }
+        #system-announcement-container { display: block; }
         #announcement-popup-modal .modal-box { width: min(440px, 92vw); }
         .ym-plan-grid { align-items: stretch; }
         .ym-plan-card { min-height: 0; }
@@ -741,6 +741,46 @@
             .main-content { flex: 1; }
         }
 
+
+
+        /* ===== YM patch 2026-09: modal stack / mobile history / bubble overflow ===== */
+        body.ym-modal-open { overflow: hidden; }
+        .modal.ym-modal-behind { visibility: hidden; pointer-events: none; }
+        .msg, .msg * { overflow-wrap: anywhere; word-break: break-word; }
+        .msg img, .msg video, .stamp-msg img, .img-grid img { max-width: 100%; height: auto; }
+        .msg pre { max-width: 100%; overflow-x: auto; }
+        @media (max-width: 768px) {
+            body.mobile-chat-active #stamp-keyboard-wrapper[style*="flex"] ~ .composer-dock,
+            body.mobile-chat-active #stamp-keyboard-wrapper[style*="flex"] + .composer-row { }
+        }
+
+        /* ===== YM patch: layout/e2ee/delivery (additive) ===== */
+        @media (min-width: 769px) {
+            .chat-header-row { flex-wrap: nowrap !important; }
+            .chat-toolbar { flex-wrap: nowrap !important; }
+        }
+        @media (max-width: 768px) {
+            .chat-header-row { flex-wrap: wrap !important; }
+            .chat-toolbar { flex-wrap: wrap !important; }
+        }
+        .reply-quoted-box { cursor: pointer; }
+        .ym-link-preview {
+            display:block; margin-top:6px; padding:8px 10px; border-radius:10px;
+            background:rgba(255,255,255,0.72); border:1px solid var(--border-color);
+            font-size:12px; font-weight:700; color:#0f172a; text-decoration:none;
+        }
+        .ym-e2ee-chip {
+            display:inline-block; margin-left:8px; font-size:10px; font-weight:800;
+            border-radius:999px; padding:2px 8px; vertical-align:middle;
+        }
+        .ym-e2ee-chip.ok { background:#dcfce7; color:#166534; }
+        .ym-e2ee-chip.warn { background:#fef3c7; color:#92400e; }
+        .ym-settings-extras { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0 14px; }
+        .ym-retry-banner {
+            display:none; margin:8px 0; padding:8px 10px; border-radius:10px;
+            background:#fff7ed; border:1px solid #fdba74; color:#9a3412; font-size:12px; font-weight:700;
+        }
+        .ym-retry-banner.active { display:flex; justify-content:space-between; align-items:center; gap:8px; }
 
         /* ===== Y.M Control Center (developer-view only; additive) ===== */
         body.ym-cc-active { background:#070b14; }
@@ -885,6 +925,8 @@
         </div>
 
 
+        <details class="ym-side-more" id="ym-sidebar-extras">
+            <summary>その他の機能</summary>
         <button class="menu-btn" style="background:#0ea5e9;" id="btn-open-plan-shop">👑 プランショップ</button>
 
         <button class="menu-btn" style="background:#fb7185;" id="btn-open-pet-home">🐾 Y.Mペット</button>
@@ -894,6 +936,7 @@
         <button class="menu-btn" style="background:#28a745;" id="btn-open-shop">🎨 スタンプショップ</button>
         <button class="menu-btn" style="background:#eab308;" id="btn-open-collection">⭐ スタリアコレクション</button>
         <button class="menu-btn" style="background:#4f46e5;" id="btn-backup-data">💾 データバックアップ/復元</button>
+        </details>
         
         <!-- サイドバー「トーク」項目（友達・グループをトークの中に設置） -->
         <div class="talk-accordion-header" id="talk-accordion-btn">
@@ -932,7 +975,8 @@
             <div style="margin-top:15px; background:#e9ecef; padding:10px; border-radius:6px; font-size:12px;">
                 🌐 <strong>通信ステータス (P2P リアルタイム同期中):</strong><br>
                 自端末のPeerID: <span id="my-peer-id" style="font-weight:bold; color:#007bff;">接続準備中...</span><br>
-                🔒 <strong>E2EE (エンドツーエンド暗号化):</strong> <span id="e2ee-status" style="font-weight:bold; color:#10b981;">有効</span>
+                🔒 <strong>E2EE (エンドツーエンド暗号化):</strong> <span id="e2ee-status" style="font-weight:bold; color:#f59e0b;">未確認</span>
+                <div id="ym-retry-banner" class="ym-retry-banner">接続できません。再試行できます。<button type="button" class="menu-btn" id="btn-ym-retry-conn" style="width:auto;margin:0;padding:4px 8px;">再接続</button></div>
             </div>
         </div>
 
@@ -952,11 +996,7 @@
 
 
             <div class="chat-header-row">
-                <h3 id="chat-target-name" style="color:white;">チャット</h3>
-                <!-- メッセージ検索フォーム -->
-                <div style="display:flex; align-items:center; gap:4px;">
-                    <button class="menu-btn" style="width:auto; padding:5px 10px; background:#64748b;" id="btn-open-chat-search">🔍 検索</button>
-                </div>
+                <h3 id="chat-target-name" style="color:white;">チャット <span id="ym-e2ee-chip" class="ym-e2ee-chip warn">未確認</span></h3>
                 <div class="chat-toolbar">
                     <button class="menu-btn mobile-only" style="width:auto; padding:5px 10px; background:#334155;" id="btn-mobile-show-sidebar" aria-label="トーク一覧へ戻る">☰ 一覧</button>
                     <button class="menu-btn btn-success" style="width:auto; padding:5px 12px;" id="btn-start-call" aria-label="音声通話">📞 通話</button>
@@ -964,6 +1004,7 @@
                     <div class="header-overflow">
                         <button class="menu-btn" style="width:auto; padding:5px 12px; background:#334155;" id="btn-header-more" aria-label="その他の操作">…</button>
                         <div class="header-overflow-menu" id="header-overflow-menu">
+                            <button class="menu-btn" style="background:#64748b;" id="btn-open-chat-search">🔍 検索</button>
                             <button class="menu-btn" style="background:#0ea5e9;" id="btn-open-plan-shop-header">👑 プランショップ</button>
                             <button class="menu-btn" style="background:#8b5cf6;" id="btn-open-new-chat">＋ 新規チャット</button>
                             <button class="menu-btn" style="background:#475569;" id="btn-open-pinned-list">📌 ピン留め一覧</button>
@@ -1067,7 +1108,7 @@
 
 
             <!-- リッチメニュー (大型ビジュアルアクションメニュー) -->
-            <button type="button" class="rich-menu-toggle" id="btn-toggle-rich-menu">メニューを閉じる ▲</button>
+            <button type="button" class="rich-menu-toggle" id="btn-toggle-rich-menu">メニューを開く ▼</button>
             <div class="rich-menu-container" id="chat-rich-menu">
                 <div class="rich-menu-item" onclick="document.getElementById('btn-open-shop').click()">
                     <span style="font-size:18px;">🎨</span> SHOP
@@ -1171,8 +1212,8 @@
                     <p>あなたに最適なプランを選んで、<br>AIの可能性を最大限に引き出しましょう！</p>
                 </div>
                 <div class="ym-payment-gate" id="ym-payment-gate" role="status">
-                <strong>💳 AIプランは先払いです</strong>
-                有料プランは、コインを先に支払ったあとだけ有効になります。未払いで有料プランを付けることはありません。途中で払えなくなった場合は、すぐに無料プランへ戻り、AIは無料の回数のまま使えます。
+                <strong>💳 有料プランは先払い</strong>
+                コイン支払い後に有効。払えなければ無料のまま使えます。
                 <div class="ym-payment-status" id="ym-payment-status">支払い待ちではありません。</div>
                 <button type="button" class="menu-btn btn-warning" id="btn-plan-cannot-pay" style="width:auto;margin:8px 0 0;padding:6px 10px;">払えなくなったので無料に戻す</button>
             </div>
@@ -1574,8 +1615,15 @@
         <div class="modal-box">
             <h3>🪙 コイン送金</h3>
             <p id="transfer-target-label" style="font-size:14px; margin-bottom:10px; font-weight:bold; color:var(--primary);"></p>
+            <p id="transfer-balance-label" class="text-sub" style="margin-bottom:8px;">所持コイン: 0</p>
+            <p id="transfer-hint-label" class="text-note" style="margin-bottom:8px;line-height:1.6;">大きな残高は 1e+98 のような指数表記（e）を使いません。数字のまま送ります。コインが足りない／支払えないときは無料プランのまま使えます。</p>
             <label>送金するコイン数</label>
-            <input type="number" id="transfer-coin-amount" min="1" value="10" placeholder="金額を入力...">
+            <input type="text" inputmode="numeric" id="transfer-coin-amount" value="10" placeholder="金額を入力（カンマ可）">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px;">
+                <button type="button" class="menu-btn" id="btn-transfer-preset-10" style="width:auto;margin:0;padding:4px 10px;font-size:12px;">10</button>
+                <button type="button" class="menu-btn" id="btn-transfer-preset-100" style="width:auto;margin:0;padding:4px 10px;font-size:12px;">100</button>
+                <button type="button" class="menu-btn" id="btn-transfer-all" style="width:auto;margin:0;padding:4px 10px;font-size:12px;background:#0f766e;">全額</button>
+            </div>
             <button class="menu-btn btn-success" id="btn-submit-transfer">送金を実行する</button>
             <button class="menu-btn btn-danger closeModalBtn" style="margin-top:5px;">キャンセル</button>
         </div>
@@ -1730,6 +1778,13 @@
                 <option value="simple">シンプルブルー</option>
             </select>
 
+            <div class="section-title">その他の機能</div>
+            <div class="ym-settings-extras">
+                <button type="button" class="menu-btn" id="btn-settings-plan" style="background:#0ea5e9;margin:0;">👑 プラン</button>
+                <button type="button" class="menu-btn" id="btn-settings-pet" style="background:#fb7185;margin:0;">🐾 ペット</button>
+                <button type="button" class="menu-btn" id="btn-settings-focus" style="background:#7c3aed;margin:0;">🎯 フォーカス</button>
+                <button type="button" class="menu-btn" id="btn-settings-collection" style="background:#eab308;margin:0;">⭐ コレクション</button>
+            </div>
             <button class="menu-btn btn-success" id="btn-save-settings">設定を保存</button>
             <button class="menu-btn btn-danger closeModalBtn" style="margin-top:5px;">キャンセル</button>
         </div>
@@ -1756,6 +1811,9 @@
                 <label>安全番号（相手と同じ数字なら正規の相手です）</label>
                 <input type="text" id="my-safety-number" readonly style="background:#fff;">
                 <p style="font-size:11px;color:#047857;margin:0;">公開鍵の指紋です。電話や別アプリで数字を読み合わせてください。</p>
+                <label>相手の安全番号（一致したら検証済みにする）</label>
+                <input type="text" id="peer-safety-number-input" placeholder="相手の安全番号を入力">
+                <button class="menu-btn btn-success" id="btn-verify-peer-safety" style="background:#059669;">安全番号を照合して検証</button>
             </div>
 
 
@@ -2713,6 +2771,26 @@
                         console.error('[E2EE] 公開鍵インポートエラー:', e);
                     }
                 },
+                loadVerified() {
+                    try { this.verifiedPeers = JSON.parse(localStorage.getItem('YM_E2EE_VERIFIED') || '{}') || {}; }
+                    catch (e) { this.verifiedPeers = {}; }
+                    return this.verifiedPeers;
+                },
+                isPeerVerified(peerId) {
+                    if (!this.verifiedPeers) this.loadVerified();
+                    return !!(peerId && this.verifiedPeers[peerId]);
+                },
+                markPeerVerified(peerId, on) {
+                    if (!peerId) return;
+                    if (!this.verifiedPeers) this.loadVerified();
+                    if (on === false) delete this.verifiedPeers[peerId];
+                    else this.verifiedPeers[peerId] = Date.now();
+                    try { localStorage.setItem('YM_E2EE_VERIFIED', JSON.stringify(this.verifiedPeers)); } catch (e) {}
+                },
+                hasAnyVerified() {
+                    if (!this.verifiedPeers) this.loadVerified();
+                    return Object.keys(this.verifiedPeers || {}).length > 0;
+                },
                 // メッセージ暗号化（相手の公開鍵でAES鍵を暗号化、本文をAES-GCMで暗号化）
                 async encryptMessage(text, recipientPubKey, peerId) {
                     try {
@@ -2812,9 +2890,9 @@
                     try {
                         const senderSignKey = this.signPublicKeys ? this.signPublicKeys[msgObj.from] : null;
                         if (!senderSignKey) {
-                            // 署名鍵がない場合は検証スキップ（相手が古いバージョンの場合）
-                            console.warn('[E2EE] 送信者の署名鍵が未登録:', msgObj.from);
-                            return true;
+                            // 署名鍵がない場合は検証失敗（中間者対策。未検証を成功扱いにしない）
+                            console.warn('[E2EE] 送信者の署名鍵が未登録のため検証失敗:', msgObj.from);
+                            return false;
                         }
                         const signData = JSON.stringify({
                             from: msgObj.from,
@@ -3210,7 +3288,7 @@
             // デベロッパーツールによるバイパスが理論上可能です。
             // 「管理者機能」は端末ローカルのデバッグツールとして運用してください。
             const TARGET_DEV_USER = "YM";
-            const TARGET_DEV_PASS_HASH = "b3c654aa9119428fdddfd27bf2fcd82e150016e4b387abd74bdabb309525c07c"; // yamanesaiki の SHA-256
+            const TARGET_DEV_PASS_HASH = "b3c654aa9119428fdddfd27bf2fcd82e150016e4b387abd74bdabb309525c07c"; // 開発者ログイン: ユーザー名 YM / パスワード yamanesaiki
             const YM_AI_DEFAULT_GATEWAY = (localStorage.getItem('YM_AI_GATEWAY') || '').trim();
 
             const AdminGuard = {
@@ -3272,28 +3350,103 @@
                 }
             };
 
+            const CoinMath = {
+                // 指数表記(1e+98)を使わず、十進文字列 / BigInt で残高を扱う
+                expandSci(raw) {
+                    const s = String(raw || '').trim().replace(/,/g, '').replace(/_/g, '').replace(/\s/g, '');
+                    const m = s.match(/^([+-]?)(\d+)(?:\.(\d+))?[eE]([+-]?\d+)$/);
+                    if (!m) return null;
+                    const sign = m[1] === '-' ? '-' : '';
+                    const intp = m[2];
+                    const frac = m[3] || '';
+                    const exp = parseInt(m[4], 10);
+                    const digits = intp + frac;
+                    const pointAt = intp.length + exp;
+                    if (pointAt <= 0) return sign + '0';
+                    if (pointAt >= digits.length) return sign + digits + '0'.repeat(pointAt - digits.length);
+                    return sign + digits.slice(0, pointAt);
+                },
+                norm(v) {
+                    if (v == null || v === '') return '0';
+                    if (typeof v === 'bigint') return v < 0n ? '0' : v.toString();
+                    if (typeof v === 'number') {
+                        if (!isFinite(v) || v <= 0) return '0';
+                        if (Number.isSafeInteger(v)) return String(v);
+                        const sci = this.expandSci(v.toString());
+                        if (sci) return sci.replace(/^-/, '') || '0';
+                        return String(Math.floor(v));
+                    }
+                    let s = String(v).trim().replace(/,/g, '').replace(/_/g, '').replace(/\s/g, '');
+                    if (!s) return '0';
+                    const sci = this.expandSci(s);
+                    if (sci !== null) s = sci;
+                    s = s.replace(/^-/, '');
+                    if (s.indexOf('.') >= 0) s = s.split('.')[0];
+                    s = s.replace(/^0+(?=\d)/, '');
+                    if (!/^\d+$/.test(s)) return '0';
+                    return s || '0';
+                },
+                big(v) {
+                    try { return BigInt(this.norm(v)); } catch (e) { return 0n; }
+                },
+                store(v) {
+                    const s = this.norm(v);
+                    const b = this.big(s);
+                    if (b <= BigInt(Number.MAX_SAFE_INTEGER)) return Number(b);
+                    return s;
+                },
+                cmp(a, b) {
+                    const x = this.big(a), y = this.big(b);
+                    return x === y ? 0 : (x > y ? 1 : -1);
+                },
+                add(a, b) { return this.store(this.big(a) + this.big(b)); },
+                sub(a, b) {
+                    const x = this.big(a) - this.big(b);
+                    return this.store(x < 0n ? 0n : x);
+                },
+                format(v) {
+                    const s = this.norm(v);
+                    return s.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                }
+            };
+            window.CoinMath = CoinMath;
+
             const CoinLedger = {
                 ensure() {
                     if (!db.transactions) db.transactions = [];
                     if (!db.users[activeUserId]) return;
-                    if (typeof db.users[activeUserId].coins !== 'number') db.users[activeUserId].coins = 0;
+                    if (db.users[activeUserId].coins == null || db.users[activeUserId].coins === '') {
+                        db.users[activeUserId].coins = 0;
+                    } else {
+                        db.users[activeUserId].coins = CoinMath.store(db.users[activeUserId].coins);
+                    }
                 },
-                apply({ type, amount, from, to, memo }) {
+                hasTx(txId) {
+                    return !!(txId && (db.transactions || []).some(t => t && t.txId === txId));
+                },
+                apply({ type, amount, from, to, memo, txId, creditOnly }) {
                     this.ensure();
-                    const n = parseInt(amount, 10) || 0;
-                    if (n <= 0) return { ok: false, reason: 'invalid-amount' };
-                    const txId = 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-                    if (db.transactions.some(t => t.clientNonce && t.clientNonce === memo)) {
+                    const nStr = CoinMath.norm(amount);
+                    const n = CoinMath.big(nStr);
+                    if (n <= 0n) return { ok: false, reason: 'invalid-amount' };
+                    const id = txId || ('tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
+                    if (this.hasTx(id)) return { ok: false, reason: 'duplicate', txId: id };
+                    if (memo && db.transactions.some(t => t.clientNonce && t.clientNonce === memo)) {
                         return { ok: false, reason: 'duplicate' };
                     }
-                    if (from && db.users[from] && (db.users[from].coins || 0) < n) {
+                    if (!creditOnly && from && db.users[from] && CoinMath.cmp(db.users[from].coins, nStr) < 0) {
                         return { ok: false, reason: 'insufficient' };
                     }
-                    if (from && db.users[from]) db.users[from].coins = (db.users[from].coins || 0) - n;
-                    if (to && db.users[to]) db.users[to].coins = (db.users[to].coins || 0) + n;
+                    if (!creditOnly && from && db.users[from]) {
+                        db.users[from].coins = CoinMath.sub(db.users[from].coins, nStr);
+                    }
+                    if (to && db.users[to] && to !== from) {
+                        db.users[to].coins = CoinMath.add(db.users[to].coins, nStr);
+                    }
                     const row = {
-                        txId, type: type || 'transfer', amount: n, from: from || null, to: to || null,
-                        memo: memo || '', ts: Date.now(), device: LocalVault.deviceId(), status: 'local-committed'
+                        txId: id, type: type || 'transfer', amount: nStr, from: from || null, to: to || null,
+                        memo: memo || '', ts: Date.now(), device: LocalVault.deviceId(), status: 'local-committed',
+                        clientNonce: memo || ''
                     };
                     db.transactions.push(row);
                     const serverUrl = (localStorage.getItem('YM_SERVER_URL') || '').trim();
@@ -3307,13 +3460,15 @@
                             if (res.ok) {
                                 const j = await res.json().catch(() => ({}));
                                 row.status = 'server-committed';
-                                if (j && j.balance != null && db.users[activeUserId]) db.users[activeUserId].coins = j.balance;
+                                if (j && j.balance != null && db.users[activeUserId]) {
+                                    db.users[activeUserId].coins = CoinMath.store(j.balance);
+                                }
                             } else {
                                 row.status = 'server-rejected';
                             }
                         }).catch(() => { row.status = 'server-queued'; });
                     }
-                    return { ok: true, txId };
+                    return { ok: true, txId: id, amount: nStr };
                 }
             };
 
@@ -4326,7 +4481,7 @@
             let _isSyncingFromTab = false; // タブ間同期ループ防止フラグ
 
 
-            async function saveData() {
+            async function saveDataImmediate() {
                 try {
                     if (!LocalVault.isUnlocked()) {
                         console.warn('saveData skipped: vault locked');
@@ -4342,6 +4497,20 @@
                 }
                 broadcastTabSync();
             }
+            let _ymSaveTimer = null;
+            let _ymSaveChain = Promise.resolve();
+            function saveData() {
+                if (_ymSaveTimer) clearTimeout(_ymSaveTimer);
+                return new Promise((resolve) => {
+                    _ymSaveTimer = setTimeout(() => {
+                        _ymSaveChain = _ymSaveChain.then(() => saveDataImmediate()).catch((e) => console.warn(e)).then(resolve);
+                    }, 450);
+                });
+            }
+            window.saveDataNow = function() {
+                if (_ymSaveTimer) { clearTimeout(_ymSaveTimer); _ymSaveTimer = null; }
+                return saveDataImmediate();
+            };
 
             function roomKeyOf(msg) {
                 if (!msg) return '';
@@ -4357,8 +4526,8 @@
                 } catch (e) {}
             }
 
-            let chatVisibleCount = 50;
-            const CHAT_PAGE_SIZE = 50;
+            let chatVisibleCount = 100;
+            const CHAT_PAGE_SIZE = 100;
 
             const Ringtone = {
                 ctx: null,
@@ -5035,9 +5204,26 @@
                     }
                 } else if (data.type === 'COIN_TRANSFER') {
                     const myUser = db.users[activeUserId];
-                    if (myUser) {
-                        myUser.coins = (myUser.coins || 0) + data.amount;
+                    const toId = data.to || null;
+                    const fromId = data.from || null;
+                    const txId = data.txId || ('xfer_' + Date.now());
+                    if (myUser && toId === activeUserId && fromId !== activeUserId) {
+                        const already = typeof CoinLedger !== 'undefined' && CoinLedger.hasTx && CoinLedger.hasTx(txId);
+                        if (!already) {
+                            CoinLedger.apply({
+                                type: 'transfer-in',
+                                amount: data.amount,
+                                from: fromId,
+                                to: activeUserId,
+                                memo: data.memo || ('recv:' + txId),
+                                txId: txId,
+                                creditOnly: true
+                            });
+                        }
                         saveData();
+                        renderApp();
+                        showToast((db.users[fromId] && db.users[fromId].name ? db.users[fromId].name : fromId) + ' から ' + (window.CoinMath ? CoinMath.format(data.amount) : data.amount) + ' コインを受け取りました');
+                    } else if (myUser && fromId === activeUserId) {
                         renderApp();
                     }
                 } else if (data.type === 'UPDATE_ANNOUNCEMENT') {
@@ -5060,8 +5246,61 @@
             }
 
 
-            function showModal(id) { document.getElementById(id).classList.remove('hidden'); }
-            function hideModal(id) { document.getElementById(id).classList.add('hidden'); }
+            const ModalManager = {
+                stack: [],
+                show(id) {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    this.stack = this.stack.filter(x => x !== id);
+                    this.stack.push(id);
+                    this.stack.forEach((mid, i) => {
+                        const m = document.getElementById(mid);
+                        if (!m) return;
+                        m.classList.remove('hidden');
+                        m.style.zIndex = String(12000 + i * 20);
+                        if (i < this.stack.length - 1) m.classList.add('ym-modal-behind');
+                        else m.classList.remove('ym-modal-behind');
+                    });
+                    document.body.classList.add('ym-modal-open');
+                },
+                hide(id) {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.classList.add('hidden');
+                        el.classList.remove('ym-modal-behind');
+                    }
+                    this.stack = this.stack.filter(x => x !== id);
+                    if (!this.stack.length) {
+                        document.body.classList.remove('ym-modal-open');
+                        return;
+                    }
+                    const top = this.stack[this.stack.length - 1];
+                    const topEl = document.getElementById(top);
+                    if (topEl) {
+                        topEl.classList.remove('hidden');
+                        topEl.classList.remove('ym-modal-behind');
+                        topEl.style.zIndex = String(12000 + this.stack.length * 20);
+                    }
+                },
+                hideTop() {
+                    if (!this.stack.length) return false;
+                    this.hide(this.stack[this.stack.length - 1]);
+                    return true;
+                }
+            };
+            function showModal(id) { ModalManager.show(id); }
+            function hideModal(id) { ModalManager.hide(id); }
+            if (!window.__ymModalKeysBound) {
+                window.__ymModalKeysBound = true;
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') ModalManager.hideTop();
+                });
+                document.addEventListener('click', (e) => {
+                    if (!e.target || !e.target.classList || !e.target.classList.contains('modal')) return;
+                    const id = e.target.id;
+                    if (id) ModalManager.hide(id);
+                });
+            }
 
 
             function openNewChatModal() {
@@ -5154,17 +5393,22 @@
                 coinBalance() {
                     try {
                         if (typeof db !== 'undefined' && db.users && typeof activeUserId !== 'undefined' && db.users[activeUserId]) {
-                            return parseInt(db.users[activeUserId].coins, 10) || 0;
+                            return (typeof CoinMath !== 'undefined') ? CoinMath.norm(db.users[activeUserId].coins) : String(db.users[activeUserId].coins || 0);
                         }
                     } catch (e) {}
-                    return 0;
+                    return '0';
                 },
                 tryPayFirst(amount, memo) {
-                    const n = parseInt(amount, 10) || 0;
-                    if (n <= 0) return true;
-                    if (this.coinBalance() < n) return false;
+                    const nStr = (typeof CoinMath !== 'undefined') ? CoinMath.norm(amount) : String(parseInt(amount, 10) || 0);
+                    if ((typeof CoinMath !== 'undefined' ? CoinMath.big(nStr) : Number(nStr)) <= 0) return true;
+                    const bal = this.coinBalance();
+                    if (typeof CoinMath !== 'undefined') {
+                        if (CoinMath.cmp(bal, nStr) < 0) return false;
+                    } else if ((parseInt(bal, 10) || 0) < (parseInt(nStr, 10) || 0)) {
+                        return false;
+                    }
                     if (typeof CoinLedger === 'undefined' || typeof CoinLedger.apply !== 'function') return false;
-                    const res = CoinLedger.apply({ type: 'plan-pay', amount: n, from: activeUserId, memo: memo || ('plan-pay:' + Date.now()) });
+                    const res = CoinLedger.apply({ type: 'plan-pay', amount: nStr, from: activeUserId, memo: memo || ('plan-pay:' + Date.now()) });
                     if (!res || res.ok === false) return false;
                     this.state.paymentReference = res.txId || memo || '';
                     if (typeof saveData === 'function') saveData();
@@ -5374,8 +5618,8 @@
                     }
                     const amt = document.getElementById('ym-pay-amount');
                     const bal = document.getElementById('ym-pay-balance');
-                    if (amt) amt.textContent = String(p.price || 0);
-                    if (bal) bal.textContent = String(this.coinBalance());
+                    if (amt) amt.textContent = (typeof CoinMath !== 'undefined') ? CoinMath.format(p.price || 0) : String(p.price || 0);
+                    if (bal) bal.textContent = (typeof CoinMath !== 'undefined') ? CoinMath.format(this.coinBalance()) : String(this.coinBalance());
                     if (payBox) payBox.style.display = (p.id === 'free' || !p.price) ? 'none' : 'block';
                     if (okBtn) okBtn.textContent = (p.id === 'free' || !p.price) ? '無料に戻す' : '先に支払う';
                     showModal('ym-plan-change-modal');
@@ -5527,6 +5771,35 @@
                 document.body.classList.toggle('mobile-list-active', !showChat);
                 applyMobileViewportLayout();
                 if (showChat) checkAndSendReadReceipts();
+                try {
+                    const wantHash = showChat ? '#chat' : '#talks';
+                    const st = { ymMobileChat: !!showChat };
+                    if ((location.hash || '') !== wantHash) {
+                        history.pushState(st, '', wantHash);
+                    } else {
+                        history.replaceState(st, '', wantHash);
+                    }
+                } catch (e) {}
+            }
+            if (!window.__ymPopstateBound) {
+                window.__ymPopstateBound = true;
+                window.addEventListener('popstate', () => {
+                    const hash = location.hash || '';
+                    if (hash === '#chat') {
+                        const chat = document.getElementById('chat-view');
+                        if (chat && !chat.classList.contains('hidden')) setMobileChatView(true);
+                    } else {
+                        if (document.body.classList.contains('mobile-chat-active')) {
+                            setMobileChatView(false);
+                            const home = document.getElementById('home-view');
+                            const chat = document.getElementById('chat-view');
+                            if (chat && !chat.classList.contains('hidden') && home) {
+                                /* トーク一覧へ戻すだけでアプリは閉じない */
+                            }
+                        }
+                        if (typeof ModalManager !== 'undefined') ModalManager.hideTop();
+                    }
+                });
             }
 
             function attachHorizontalSwipe(el, onSwipeRight, onSwipeLeft, threshold) {
@@ -5731,19 +6004,23 @@
 
                 document.getElementById('my-name').textContent = userObj.name;
                 document.getElementById('my-avatar').src = userObj.icon || 'https://via.placeholder.com/40';
-                document.getElementById('my-coins').textContent = userObj.coins;
+                document.getElementById('my-coins').textContent = (typeof CoinMath !== 'undefined') ? CoinMath.format(userObj.coins) : userObj.coins;
 
-                // E2EEステータス表示更新
+                // E2EEステータス表示更新（検証済みのときだけ緑）
                 const e2eeStatusEl = document.getElementById('e2ee-status');
                 if (e2eeStatusEl) {
-                    if (E2EE.isReady()) {
-                        e2eeStatusEl.textContent = '有効';
-                        e2eeStatusEl.style.color = '#10b981';
-                    } else {
+                    if (!E2EE.isReady()) {
                         e2eeStatusEl.textContent = '初期化中...';
                         e2eeStatusEl.style.color = '#f59e0b';
+                    } else if (typeof E2EE.hasAnyVerified === 'function' && E2EE.hasAnyVerified()) {
+                        e2eeStatusEl.textContent = '有効（検証済み）';
+                        e2eeStatusEl.style.color = '#10b981';
+                    } else {
+                        e2eeStatusEl.textContent = '鍵あり・相手未確認';
+                        e2eeStatusEl.style.color = '#d97706';
                     }
                 }
+                if (typeof ymUpdateE2eeChip === 'function') ymUpdateE2eeChip();
 
 
                 document.title = userObj.tabTitle || 'Y.M';
@@ -6692,26 +6969,39 @@
                 }).catch(() => {});
             }
 
+            async function ymAiTextRequest(systemPrompt, userText, maxChars) {
+                const gatewayUrl = (typeof YmServer !== 'undefined' && YmServer.aiEndpoint && YmServer.aiEndpoint())
+                    ? YmServer.aiEndpoint()
+                    : ((localStorage.getItem('YM_AI_GATEWAY') || localStorage.getItem('YM_SERVER_URL') || '').trim());
+                const sessionTok = (sessionStorage.getItem('YM_AI_SESSION') || sessionStorage.getItem('YM_SESSION_TOKEN') || '').trim();
+                let endpoint = gatewayUrl ? (gatewayUrl.replace(/\/$/, '') + ((gatewayUrl.indexOf('/ai') >= 0 || gatewayUrl.indexOf('pollinations') >= 0) ? '' : '/ai')) : '';
+                if (!endpoint) endpoint = 'https://text.pollinations.ai/';
+                const headers = { 'Content-Type': 'application/json' };
+                if (sessionTok) headers.Authorization = 'Bearer ' + sessionTok;
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: String(userText || '').slice(0, maxChars || 3000) }
+                        ],
+                        model: 'openai',
+                        stream: false
+                    })
+                });
+                const raw = await res.text();
+                let out = raw;
+                try { const parsed = JSON.parse(raw); out = parsed.choices?.[0]?.message?.content || parsed.text || raw; } catch (e) {}
+                return String(out || '');
+            }
+
             async function translateMessage(msgId) {
                 const msg = db.messages.find(m => m.msgId === msgId);
                 if (!msg || !msg.text) return;
                 showToast('翻訳しています...');
                 try {
-                    const res = await fetch('https://text.pollinations.ai/', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            messages: [
-                                { role: 'system', content: '次の文を自然な日本語に翻訳してください。翻訳結果だけを返してください。' },
-                                { role: 'user', content: String(msg.text).slice(0, 3000) }
-                            ],
-                            model: 'openai',
-                            stream: false
-                        })
-                    });
-                    const raw = await res.text();
-                    let out = raw;
-                    try { const parsed = JSON.parse(raw); out = parsed.choices?.[0]?.message?.content || parsed.text || raw; } catch (e) {}
+                    const out = await ymAiTextRequest('次の文を自然な日本語に翻訳してください。翻訳結果だけを返してください。', msg.text, 3000);
                     showToast('翻訳: ' + String(out).slice(0, 180));
                 } catch (e) {
                     showToast('翻訳に失敗しました。');
@@ -6729,21 +7019,8 @@
                 if (!pack) return showToast('要約するメッセージがありません。');
                 showToast('要約を作成しています...');
                 try {
-                    const res = await fetch('https://text.pollinations.ai/', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            messages: [
-                                { role: 'system', content: 'チャットログを日本語で3行以内に要約してください。' },
-                                { role: 'user', content: pack.slice(0, 4000) }
-                            ],
-                            model: 'openai', stream: false
-                        })
-                    });
-                    const raw = await res.text();
-                    let out = raw;
-                    try { const parsed = JSON.parse(raw); out = parsed.choices?.[0]?.message?.content || parsed.text || raw; } catch (e) {}
-                    alert(String(out).slice(0, 800));
+                    const out = await ymAiTextRequest('チャットログを日本語で3行以内に要約してください。', pack, 4000);
+                    showToast(String(out).slice(0, 800));
                 } catch (e) {
                     showToast('要約に失敗しました。');
                 }
@@ -6757,20 +7034,7 @@
                 }
                 if (activeChatTarget !== lastMsg.from && activeChatTarget !== lastMsg.to) return;
                 try {
-                    const res = await fetch('https://text.pollinations.ai/', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            messages: [
-                                { role: 'system', content: '次のメッセージへの短い日本語返信候補を3つ、改行区切りだけで返してください。' },
-                                { role: 'user', content: String(lastMsg.text || '').slice(0, 500) }
-                            ],
-                            model: 'openai', stream: false
-                        })
-                    });
-                    const raw = await res.text();
-                    let out = raw;
-                    try { const parsed = JSON.parse(raw); out = parsed.choices?.[0]?.message?.content || parsed.text || raw; } catch (e) {}
+                    const out = await ymAiTextRequest('次のメッセージへの短い日本語返信候補を3つ、改行区切りだけで返してください。', lastMsg.text || '', 500);
                     const lines = String(out).split('\n').map(s => s.replace(/^\d+[\.\)\s]+/, '').trim()).filter(Boolean).slice(0, 3);
                     bar.innerHTML = '';
                     lines.forEach(line => {
@@ -6999,7 +7263,8 @@
                     // 引用返信スレッド表示
                     let replyHtml = '';
                     if (m.replyTo) {
-                        replyHtml = `<div class="reply-quoted-box">↩ <strong>${escapeHTML(m.replyTo.senderName)}</strong>: ${escapeHTML(m.replyTo.text)}</div>`;
+                        const jumpId = m.replyTo.msgId || m.replyTo.id || '';
+                        replyHtml = `<div class="reply-quoted-box" data-jump-id="${escapeHTML(jumpId)}">↩ <strong>${escapeHTML(m.replyTo.senderName)}</strong>: ${escapeHTML(m.replyTo.text)}</div>`;
                     }
 
 
@@ -7105,8 +7370,7 @@
                             attachCodeCopyButtons(div);
                         } else {
                             div.innerHTML = sanitizeHTML(senderLabel + replyHtml);
-                            const textNode = document.createTextNode(m.text);
-                            div.appendChild(textNode);
+                            ymAppendTextWithLinks(div, m.text);
                         }
                     }
 
@@ -7305,6 +7569,16 @@
                     actionBar.appendChild(actionMenu);
                     wrapper.appendChild(actionBar);
                     wrapper.dataset.msgId = m.msgId;
+                    const qbox = wrapper.querySelector('.reply-quoted-box');
+                    if (qbox) {
+                        qbox.onclick = (ev) => {
+                            ev.stopPropagation();
+                            const jid = qbox.getAttribute('data-jump-id');
+                            if (!jid) return;
+                            const el = document.querySelector('[data-msg-id="' + CSS.escape(jid) + '"]');
+                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        };
+                    }
                     attachHorizontalSwipe(wrapper, () => startReply(m.msgId), null, 70);
                     bindMsgContext(wrapper, m);
                     fragment.appendChild(wrapper);
@@ -9036,10 +9310,11 @@
                     st.owned = st.owned || [];
                     if (!st.owned.includes(item.id) && item.price > 0) {
                         const coins = (db.users[activeUserId] && db.users[activeUserId].coins) || 0;
-                        if (coins < item.price) { showToast('コインが足りません'); return; }
+                        if ((typeof CoinMath !== 'undefined') ? CoinMath.cmp(coins, item.price) < 0 : (coins < item.price)) { showToast('コインが足りません'); return; }
                         const res = CoinLedger.apply({ type: 'spend', amount: item.price, from: activeUserId, memo: 'pet:' + item.id });
                         if (!res || res.ok === false) {
-                            db.users[activeUserId].coins = coins - item.price;
+                            showToast(res && res.reason === 'insufficient' ? 'コインが不足しています。' : '購入できませんでした。');
+                            return;
                         }
                         st.owned.push(item.id);
                         showToast(item.name + ' を購入しました');
@@ -9087,11 +9362,123 @@
             window.addEventListener('online', ymUpdateNetBanner);
             window.addEventListener('offline', ymUpdateNetBanner);
 
+            function ymAppendTextWithLinks(div, text) {
+                const raw = String(text || '');
+                const urlRe = /(https?:\/\/[^\s<]+)/g;
+                let last = 0;
+                let m;
+                const frag = document.createDocumentFragment();
+                while ((m = urlRe.exec(raw))) {
+                    if (m.index > last) frag.appendChild(document.createTextNode(raw.slice(last, m.index)));
+                    const a = document.createElement('a');
+                    a.href = m[1];
+                    a.target = '_blank';
+                    a.rel = 'noopener noreferrer';
+                    a.textContent = m[1];
+                    frag.appendChild(a);
+                    last = m.index + m[0].length;
+                }
+                if (last < raw.length) frag.appendChild(document.createTextNode(raw.slice(last)));
+                if (!frag.childNodes.length) frag.appendChild(document.createTextNode(raw));
+                div.appendChild(frag);
+                const firstUrl = (raw.match(/https?:\/\/[^\s<]+/) || [])[0];
+                if (firstUrl) {
+                    const card = document.createElement('a');
+                    card.className = 'ym-link-preview';
+                    card.href = firstUrl;
+                    card.target = '_blank';
+                    card.rel = 'noopener noreferrer';
+                    try { card.textContent = '🔗 ' + new URL(firstUrl).hostname; }
+                    catch (e) { card.textContent = '🔗 リンク'; }
+                    div.appendChild(card);
+                }
+            }
+            function ymUpdateE2eeChip() {
+                const chip = document.getElementById('ym-e2ee-chip');
+                if (!chip) return;
+                const target = window.activeChatTarget;
+                if (!target || target === 'chappy' || target === 'official' || (db && db.groups && db.groups[target])) {
+                    chip.textContent = E2EE.isReady() ? '暗号化準備OK' : '初期化中';
+                    chip.className = 'ym-e2ee-chip warn';
+                    return;
+                }
+                if (typeof E2EE.isPeerVerified === 'function' && E2EE.isPeerVerified(target)) {
+                    chip.textContent = '検証済み';
+                    chip.className = 'ym-e2ee-chip ok';
+                } else {
+                    chip.textContent = '未確認';
+                    chip.className = 'ym-e2ee-chip warn';
+                }
+            }
+            function ymBindKeyboardGuard() {
+                if (window._ymVvBound) return;
+                window._ymVvBound = true;
+                const apply = () => {
+                    const vv = window.visualViewport;
+                    if (!vv) return;
+                    document.documentElement.style.setProperty('--vvh', vv.height + 'px');
+                    const dock = document.querySelector('#chat-view .composer-row');
+                    if (dock && document.body.classList.contains('mobile-chat-active')) {
+                        const overlap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+                        dock.style.marginBottom = overlap ? (overlap + 'px') : '';
+                    }
+                };
+                if (window.visualViewport) {
+                    window.visualViewport.addEventListener('resize', apply);
+                    window.visualViewport.addEventListener('scroll', apply);
+                }
+                apply();
+            }
+            function ymRetryConnections() {
+                try {
+                    if (typeof schedulePeerReconnect === 'function') schedulePeerReconnect();
+                    const friends = (db && db.friends && db.friends[activeUserId]) || [];
+                    friends.forEach(fId => { if (typeof connectToRemotePeer === 'function') connectToRemotePeer(fId); });
+                    showToast('再接続を試しています');
+                } catch (e) {
+                    showToast('再接続に失敗しました');
+                }
+            }
+            async function ymVerifyPeerSafety() {
+                const input = document.getElementById('peer-safety-number-input');
+                const peerId = (document.getElementById('remote-peer-id-input') || {}).value || activeChatTarget;
+                if (!input || !peerId) { showToast('相手のPeerIDと安全番号を入力してください'); return; }
+                const typed = String(input.value || '').replace(/\s+/g, '').toUpperCase();
+                if (!typed) { showToast('安全番号を入力してください'); return; }
+                let theirKey = '';
+                try {
+                    if (E2EE.publicKeys && E2EE.publicKeys[peerId]) theirKey = String(E2EE.publicKeys[peerId]);
+                } catch (e) {}
+                const raw = theirKey || String(peerId || '');
+                const hex = (typeof LocalVault !== 'undefined' && LocalVault._sha256Hex) ? await LocalVault._sha256Hex('ym-safety:' + raw) : '';
+                const norm = String(hex || '').slice(0, 16).toUpperCase();
+                if (norm && typed.replace(/-/g, '') === norm) {
+                    E2EE.markPeerVerified(peerId, true);
+                    ymUpdateE2eeChip();
+                    if (typeof renderApp === 'function') renderApp();
+                    showToast('安全番号が一致しました。検証済みにしました');
+                } else {
+                    E2EE.markPeerVerified(peerId, false);
+                    ymUpdateE2eeChip();
+                    showToast('番号が一致しません。未確認のままです');
+                }
+            }
+
             function ymBindUpgradeUi() {
                 const acc = document.getElementById('ym-account-id-label');
                 const dev = document.getElementById('ym-device-id-label');
                 if (acc) acc.textContent = activeAccountId;
                 if (dev) dev.textContent = deviceId;
+                const mapClick = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
+                mapClick('btn-settings-plan', () => { hideModal('account-settings-modal'); document.getElementById('btn-open-plan-shop')?.click(); });
+                mapClick('btn-settings-pet', () => { hideModal('account-settings-modal'); document.getElementById('btn-open-pet-home')?.click(); });
+                mapClick('btn-settings-focus', () => { hideModal('account-settings-modal'); document.getElementById('btn-open-focus-board')?.click(); });
+                mapClick('btn-settings-collection', () => { hideModal('account-settings-modal'); document.getElementById('btn-open-collection')?.click(); });
+                mapClick('btn-verify-peer-safety', () => ymVerifyPeerSafety());
+                mapClick('btn-ym-retry-conn', () => ymRetryConnections());
+                ymBindKeyboardGuard();
+                ymUpdateE2eeChip();
+                if (typeof E2EE.loadVerified === 'function') E2EE.loadVerified();
                 const petBtn = document.getElementById('btn-open-pet-home');
                 if (petBtn) petBtn.onclick = () => { YMPetShop.render(); switchPage('ym-pet-home-view'); };
                 const petHome = document.getElementById('btn-pet-to-home');
@@ -9642,7 +10029,7 @@
                     }
                 }, 60000);
                 window.addEventListener('beforeunload', () => {
-                    try { if (typeof saveData === 'function') saveData(); } catch (e) {}
+                    try { if (typeof window.saveDataNow === 'function') window.saveDataNow(); else if (typeof saveData === 'function') saveData(); } catch (e) {}
                 });
 
 
@@ -9808,7 +10195,7 @@
                             saveData();
                             renderApp();
                             hideModal('backup-modal');
-                            alert("データの復元が完了しました。");
+                            showToast("データの復元が完了しました。");
                         } catch (err) {
                             showToast("無効なJSONファイルです。");
                         }
@@ -9940,7 +10327,7 @@
                     triggerFullTabSync();
                     hideModal('stamp-pack-create-modal');
                     renderStamps();
-                    alert('スタンプパックを出品しました！');
+                    showToast('スタンプパックを出品しました！');
                 };
 
 
@@ -10010,7 +10397,7 @@
                     renderStamps();
                     renderCollection();
                     renderApp();
-                    alert('出品が完了しました！');
+                    showToast('出品が完了しました！');
                 };
 
 
@@ -10124,7 +10511,7 @@
                     triggerFullTabSync();
                     hideModal('account-settings-modal');
                     renderApp();
-                    alert('設定を更新しました。');
+                    showToast('設定を更新しました。');
                 };
 
 
@@ -10133,7 +10520,7 @@
                     document.getElementById('setting-chat-bg-img').value = '';
                     saveData();
                     renderApp();
-                    alert('背景画像を解除しました。');
+                    showToast('背景画像を解除しました。');
                 };
 
 
@@ -10288,7 +10675,7 @@
                         const file = files[0];
                         const textContent = await readFileAsText(file);
                         attachedFileText = `\n\n【添付ファイルデータ: ${file.name}】\n${textContent}`;
-                        alert(`ファイル 「${file.name}」 を読み込みました。AIへの指示・質問を入力して送信してください。`);
+                        showToast(`ファイル 「${file.name}」 を読み込みました。AIへの指示・質問を入力して送信してください。`);
                     } else {
                         if (images.length > 1) {
                             await sendImageFiles(images);
@@ -10396,28 +10783,92 @@
 
                 document.getElementById('btn-open-transfer-modal').onclick = () => {
                     if (!activeChatTarget) return;
+                    if (activeChatTarget === 'chappy' || activeChatTarget === 'official' || activeChatTarget === 'keep') {
+                        showToast('この相手には送金できません。');
+                        return;
+                    }
+                    if (db.groups && db.groups[activeChatTarget]) {
+                        showToast('グループへは直接送金できません。相手を1人選んでトークから送金してください。');
+                        return;
+                    }
                     const targetName = db.users[activeChatTarget] ? db.users[activeChatTarget].name : activeChatTarget;
                     document.getElementById('transfer-target-label').textContent = `送金先: ${targetName}`;
+                    const balEl = document.getElementById('transfer-balance-label');
+                    const myCoins = (db.users[activeUserId] && db.users[activeUserId].coins) || 0;
+                    if (balEl) balEl.textContent = '所持コイン: ' + ((typeof CoinMath !== 'undefined') ? CoinMath.format(myCoins) : myCoins);
+                    const amtEl = document.getElementById('transfer-coin-amount');
+                    if (amtEl && !amtEl.value) amtEl.value = '10';
                     showModal('transfer-coin-modal');
                 };
 
+                const bindTransferPreset = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.onclick = () => {
+                        const amtEl = document.getElementById('transfer-coin-amount');
+                        if (!amtEl) return;
+                        if (val === 'ALL') {
+                            const myCoins = (db.users[activeUserId] && db.users[activeUserId].coins) || 0;
+                            amtEl.value = (typeof CoinMath !== 'undefined') ? CoinMath.norm(myCoins) : String(myCoins);
+                        } else {
+                            amtEl.value = String(val);
+                        }
+                    };
+                };
+                bindTransferPreset('btn-transfer-preset-10', 10);
+                bindTransferPreset('btn-transfer-preset-100', 100);
+                bindTransferPreset('btn-transfer-all', 'ALL');
 
                 document.getElementById('btn-submit-transfer').onclick = () => {
-                    const amount = parseInt(document.getElementById('transfer-coin-amount').value);
-                    if (!amount || amount <= 0) {
+                    if (!activeChatTarget || !activeUserId) {
+                        showToast('送金先が選ばれていません。');
+                        return;
+                    }
+                    if (db.groups && db.groups[activeChatTarget]) {
+                        showToast('グループへは直接送金できません。');
+                        return;
+                    }
+                    if (!db.users[activeChatTarget]) {
+                        showToast('送金先ユーザーが見つかりません。');
+                        return;
+                    }
+                    const rawAmt = (document.getElementById('transfer-coin-amount').value || '').trim();
+                    const amountStr = (typeof CoinMath !== 'undefined') ? CoinMath.norm(rawAmt) : String(parseInt(rawAmt.replace(/,/g,''), 10) || 0);
+                    if ((typeof CoinMath !== 'undefined' ? CoinMath.big(amountStr) : Number(amountStr)) <= 0) {
                         showToast('正しいコイン数を入力してください。');
                         return;
                     }
-                    const res = CoinLedger.apply({ type: 'transfer', amount, from: activeUserId, to: activeChatTarget, memo: 'xfer:' + Date.now() });
+                    const myCoins = (db.users[activeUserId] && db.users[activeUserId].coins) || 0;
+                    if ((typeof CoinMath !== 'undefined') ? CoinMath.cmp(myCoins, amountStr) < 0 : ((parseInt(myCoins, 10) || 0) < (parseInt(amountStr, 10) || 0))) {
+                        showToast('コインが不足しています。足りないときは送れません。');
+                        return;
+                    }
+                    const memo = 'xfer:' + Date.now() + ':' + activeUserId + ':' + activeChatTarget;
+                    const res = CoinLedger.apply({ type: 'transfer', amount: amountStr, from: activeUserId, to: activeChatTarget, memo: memo });
                     if (!res.ok) {
-                        showToast(res.reason === 'insufficient' ? 'コインが不足しています。' : '送金できませんでした。');
+                        const why = res.reason === 'insufficient' ? 'コインが不足しています。' : (res.reason === 'duplicate' ? '同じ送金が重複しました。' : '送金できませんでした。');
+                        showToast(why);
                         return;
                     }
                     saveData();
-                    broadcastData({ type: 'COIN_TRANSFER', amount: amount, from: activeUserId, txId: res.txId });
+                    broadcastData({
+                        type: 'COIN_TRANSFER',
+                        amount: amountStr,
+                        from: activeUserId,
+                        to: activeChatTarget,
+                        txId: res.txId,
+                        memo: memo
+                    });
+                    try {
+                        const pretty = (typeof CoinMath !== 'undefined') ? CoinMath.format(amountStr) : amountStr;
+                        if (typeof sendMessage === 'function') {
+                            sendMessage('text', '🪙 ' + pretty + ' コインを送金しました');
+                        }
+                    } catch (e) {}
                     hideModal('transfer-coin-modal');
                     renderApp();
-                    showToast(amount + ' コインを送金しました（' + res.txId + '）');
+                    const pretty = (typeof CoinMath !== 'undefined') ? CoinMath.format(amountStr) : amountStr;
+                    showToast(pretty + ' コインを送金しました（' + res.txId + '）');
                 };
 
 
@@ -10444,7 +10895,7 @@
                         saveData();
                         renderApp();
                     }
-                    alert('接続を試行し、友達リストに追加しました。');
+                    showToast('接続を試行し、友達リストに追加しました。');
                     hideModal('add-friend-modal');
                 };
 
@@ -10505,7 +10956,7 @@
                     if (word) {
                         await registerSecretPeer(word, getPeerConfig());
                     }
-                    alert('合言葉を更新しました。');
+                    showToast('合言葉を更新しました。');
                 };
 
 
@@ -10545,7 +10996,7 @@
                                 saveData();
                                 renderApp();
                             }
-                            alert(`${uData.name} さんを友達に追加しました。`);
+                            showToast(`${uData.name} さんを友達に追加しました。`);
                         };
                         item.appendChild(addBtn);
                         container.appendChild(item);
@@ -10810,13 +11261,18 @@
 
 
                     if (type === 'coin') {
-                        const amount = parseInt(document.getElementById('dist-coin-amount').value) || 0;
+                        const amountRaw = (document.getElementById('dist-coin-amount').value || '').trim();
+                        const amount = (typeof CoinMath !== 'undefined') ? CoinMath.norm(amountRaw) : String(parseInt(amountRaw, 10) || 0);
+                        if ((typeof CoinMath !== 'undefined' ? CoinMath.big(amount) : Number(amount)) <= 0) {
+                            showToast('配布するコイン数を入力してください。');
+                            return;
+                        }
                         if (target === 'ALL') {
                             Object.keys(db.users).forEach(u => {
-                                db.users[u].coins = (db.users[u].coins || 0) + amount;
+                                db.users[u].coins = (typeof CoinMath !== 'undefined') ? CoinMath.add(db.users[u].coins || 0, amount) : ((db.users[u].coins || 0) + (parseInt(amount, 10) || 0));
                             });
                         } else if (db.users[target]) {
-                            db.users[target].coins = (db.users[target].coins || 0) + amount;
+                            db.users[target].coins = (typeof CoinMath !== 'undefined') ? CoinMath.add(db.users[target].coins || 0, amount) : ((db.users[target].coins || 0) + (parseInt(amount, 10) || 0));
                         }
                     } else {
                         const name = document.getElementById('dist-stamp-name').value.trim();
@@ -10848,7 +11304,7 @@
                     triggerFullTabSync();
                     renderDevPanel();
                     renderApp();
-                    alert('配布を完了しました。');
+                    showToast('配布を完了しました。');
                 };
 
 
@@ -10894,7 +11350,7 @@
                     broadcastData({ type: 'OFFICIAL_CHAT', userKey: selectedDirectUser, log: logObj });
                     hideModal('dev-direct-msg-modal');
                     renderDevPanel();
-                    alert('返信を送信しました。');
+                    showToast('返信を送信しました。');
                 };
 
 
