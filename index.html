@@ -704,6 +704,9 @@
         .ym-payment-gate strong { display:block; margin-bottom:4px; }
         .ym-payment-gate .ym-payment-status { color:#065f46; font-weight:800; }
         .ym-plan-card button[disabled] { opacity:.65; cursor:not-allowed; }
+        .ym-pay-first-box { margin:10px 0 0; padding:10px; border:1px solid #334155; border-radius:10px; background:#0b1220; color:#e2e8f0; font-size:12px; line-height:1.6; }
+        .ym-pay-first-box .ym-pay-row { display:flex; justify-content:space-between; gap:8px; margin:4px 0; font-weight:800; }
+        .ym-pay-first-help { color:#94a3b8; font-size:11px; margin-top:6px; }
 
         /* ===== YM Layout Organize (visual only; no feature removal) ===== */
         html, body { height: 100dvh; overflow: hidden; }
@@ -738,6 +741,106 @@
             .main-content { flex: 1; }
         }
 
+
+        /* ===== Y.M Control Center (developer-view only; additive) ===== */
+        body.ym-cc-active { background:#070b14; }
+        body.ym-cc-active #app-sidebar,
+        body.ym-cc-active .ym-bottom-nav,
+        body.ym-cc-active .skip-link { display:none !important; }
+        body.ym-cc-active .main-content { padding:0; gap:0; background:#070b14; overflow:hidden; }
+        body.ym-cc-active #developer-view.ym-cc {
+            display:flex !important; flex-direction:row; border-radius:0; padding:0; margin:0;
+            background:#070b14; color:#e5eefc; border:none; box-shadow:none; min-height:100%; height:100%;
+            overflow:hidden; font-family: ui-sans-serif, 'Segoe UI', 'Hiragino Sans', sans-serif;
+        }
+        .ym-cc-nav {
+            width:228px; flex:0 0 228px; background:#0b1220; border-right:1px solid #1e293b;
+            display:flex; flex-direction:column; min-height:0; overflow:auto;
+        }
+        .ym-cc-brand { padding:16px 14px 10px; border-bottom:1px solid #1e293b; }
+        .ym-cc-brand .k { font-size:10px; letter-spacing:.16em; color:#64748b; font-weight:800; }
+        .ym-cc-brand h2 { font-size:16px; margin:4px 0 0; color:#f8fafc; font-weight:800; }
+        .ym-cc-search { padding:10px 12px; }
+        .ym-cc-search input {
+            width:100%; margin:0; background:#111827; color:#e2e8f0; border:1px solid #334155;
+            border-radius:8px; padding:8px 10px; font-size:12px;
+        }
+        .ym-cc-nav-btn {
+            width:calc(100% - 16px); margin:2px 8px; padding:8px 10px; border:none; border-radius:8px;
+            background:transparent; color:#94a3b8; text-align:left; cursor:pointer; font-weight:700; font-size:12px;
+        }
+        .ym-cc-nav-btn:hover { background:#122033; color:#e2e8f0; }
+        .ym-cc-nav-btn.active { background:#16324a; color:#7dd3fc; box-shadow:inset 3px 0 0 #38bdf8; }
+        .ym-cc-nav-foot { margin-top:auto; padding:10px; border-top:1px solid #1e293b; }
+        .ym-cc-main { flex:1; min-width:0; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+        .ym-cc-top {
+            flex-shrink:0; display:flex; align-items:center; justify-content:space-between; gap:10px;
+            padding:10px 16px; background:#0b1220; border-bottom:1px solid #1e293b;
+        }
+        .ym-cc-top h3 { margin:0; font-size:15px; color:#f8fafc; }
+        .ym-cc-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:0 0 14px; }
+        .ym-cc-kpi {
+            background:linear-gradient(180deg,#111827,#0b1220); border:1px solid #1e293b; border-radius:12px; padding:12px;
+        }
+        .ym-cc-kpi .l { font-size:10px; color:#94a3b8; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+        .ym-cc-kpi .n { font-size:22px; font-weight:900; margin-top:4px; color:#f8fafc; }
+        .ym-cc-kpi .s { font-size:11px; color:#64748b; margin-top:2px; }
+        .ym-cc-grid2 { display:grid; grid-template-columns:1.4fr .8fr; gap:12px; }
+        .ym-cc-card { background:#0b1220; border:1px solid #1e293b; border-radius:12px; padding:12px; }
+        .ym-cc-card h4 { margin:0 0 8px; font-size:13px; color:#e2e8f0; }
+        .ym-cc-sys { display:flex; flex-direction:column; gap:6px; }
+        .ym-cc-sys-row { display:flex; justify-content:space-between; align-items:center; font-size:12px; padding:6px 0; border-bottom:1px solid #1e293b; }
+        .ym-cc-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; }
+        .ym-cc-dot.ok { background:#22c55e; box-shadow:0 0 8px #22c55e; }
+        .ym-cc-dot.warn { background:#eab308; }
+        .ym-cc-dot.bad { background:#ef4444; }
+        .ym-cc-log {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size:12px; background:#05080f; color:#86efac; border:1px solid #1e293b; border-radius:10px;
+            padding:10px; min-height:240px; max-height:58vh; overflow:auto; white-space:pre-wrap; line-height:1.55;
+        }
+        .ym-cc-log .err { color:#fca5a5; }
+        .ym-cc-toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+        .ym-cc-toolbar input, .ym-cc-toolbar select {
+            width:auto; margin:0; background:#111827; color:#e2e8f0; border:1px solid #334155; padding:6px 8px; font-size:12px;
+        }
+        #developer-view.ym-cc .dev-tab-content { flex:1; min-height:0; overflow:auto; padding:14px 16px 24px; }
+        #developer-view.ym-cc .dev-panel table, #developer-view.ym-cc table {
+            width:100%; border-collapse:separate; border-spacing:0; border:1px solid #1e293b; border-radius:10px; overflow:hidden; background:#0b1220;
+        }
+        #developer-view.ym-cc th { background:#111827; color:#94a3b8; }
+        #developer-view.ym-cc td, #developer-view.ym-cc th { border-bottom:1px solid #1e293b; color:#e2e8f0; font-size:12px; padding:8px 10px; }
+        #developer-view.ym-cc label { color:#94a3b8; }
+        #developer-view.ym-cc input, #developer-view.ym-cc textarea, #developer-view.ym-cc select {
+            background:#111827; color:#e2e8f0; border-color:#334155;
+        }
+        #developer-view.ym-cc h3 { color:#f8fafc; }
+        .ym-cc-drawer {
+            width:0; flex:0 0 0; overflow:hidden; background:#0b1220; border-left:1px solid #1e293b; transition:flex-basis .2s ease, width .2s ease;
+        }
+        .ym-cc-drawer.open { width:320px; flex-basis:320px; padding:14px; overflow:auto; }
+        .ym-cc-bar { height:8px; background:#1e293b; border-radius:99px; overflow:hidden; }
+        .ym-cc-bar > i { display:block; height:100%; background:#38bdf8; }
+        .ym-cc-chip { display:inline-block; border-radius:999px; padding:2px 8px; font-size:10px; font-weight:800; background:#1e293b; color:#cbd5e1; }
+        .ym-cc-chip.ok { background:#052e16; color:#86efac; }
+        .ym-cc-chip.bad { background:#450a0a; color:#fca5a5; }
+        .ym-cc-bars { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+        .ym-cc-bar-row { display:grid; grid-template-columns:92px 1fr 48px; gap:8px; align-items:center; font-size:11px; color:#cbd5e1; }
+        .ym-cc-bar-row b { font-weight:700; color:#94a3b8; }
+        .ym-cc-bar-row em { font-style:normal; text-align:right; font-weight:800; color:#e2e8f0; }
+        .ym-cc-hotkeys { font-size:10px; color:#64748b; padding:8px 12px 12px; line-height:1.5; }
+        .ym-cc-req-col { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+        .ym-cc-req-col h5 { margin:0 0 6px; font-size:11px; color:#94a3b8; }
+        .ym-cc-req-item { background:#111827; border:1px solid #334155; border-radius:8px; padding:8px; font-size:12px; margin-bottom:6px; }
+        @media (max-width: 900px) {
+            body.ym-cc-active #developer-view.ym-cc { flex-direction:column; }
+            .ym-cc-nav { width:100%; flex:none; max-height:38vh; flex-direction:row; flex-wrap:wrap; }
+            .ym-cc-kpis, .ym-cc-grid2, .ym-cc-req-col { grid-template-columns:1fr 1fr; }
+            .ym-cc-drawer.open { width:100%; flex-basis:auto; max-height:40vh; }
+        }
+        @media (max-width: 640px) {
+            .ym-cc-kpis, .ym-cc-grid2, .ym-cc-req-col { grid-template-columns:1fr; }
+        }
     </style>
 </head>
 <body>
@@ -1068,9 +1171,10 @@
                     <p>あなたに最適なプランを選んで、<br>AIの可能性を最大限に引き出しましょう！</p>
                 </div>
                 <div class="ym-payment-gate" id="ym-payment-gate" role="status">
-                <strong>💳 AIプランの支払いについて</strong>
-                有料プランは、支払いが正常に確認されるまで有効化されません。支払いができなくなった場合は、契約期間終了後に自動的に無料プランへ戻り、AI利用は無料プランの範囲で継続できます。未払いの有料プランを付与することはありません。
-                <div class="ym-payment-status" id="ym-payment-status">支払い確認待ちではありません。</div>
+                <strong>💳 AIプランは先払いです</strong>
+                有料プランは、コインを先に支払ったあとだけ有効になります。未払いで有料プランを付けることはありません。途中で払えなくなった場合は、すぐに無料プランへ戻り、AIは無料の回数のまま使えます。
+                <div class="ym-payment-status" id="ym-payment-status">支払い待ちではありません。</div>
+                <button type="button" class="menu-btn btn-warning" id="btn-plan-cannot-pay" style="width:auto;margin:8px 0 0;padding:6px 10px;">払えなくなったので無料に戻す</button>
             </div>
             <div class="ym-plan-status" id="ym-plan-status-box">
                     <div class="k">現在のプラン</div>
@@ -1089,24 +1193,70 @@
         </div>
 
         <!-- 開発者専用ダッシュボード -->
-        <div id="developer-view" class="page-view dev-panel hidden">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <h2>🛠️ 開発者専用管理システム (YM)</h2>
-                <button class="menu-btn btn-danger" style="width:auto;" id="btn-exit-dev">ユーザー画面に戻る</button>
+        <div id="developer-view" class="page-view dev-panel ym-cc hidden">
+            <aside class="ym-cc-nav" id="ym-cc-nav">
+                <div class="ym-cc-brand">
+                    <div class="k">Y.M CONTROL CENTER</div>
+                    <h2>開発者OS</h2>
+                </div>
+                <div class="ym-cc-search">
+                    <input type="search" id="ym-cc-global-search" placeholder="検索 / ユーザー / YM-ID  ( / )" autocomplete="off">
+                </div>
+                <button class="dev-tab-btn ym-cc-nav-btn active" data-tab="dev-tab-overview">Overview</button>
+                <button class="dev-tab-btn ym-cc-nav-btn" data-tab="dev-tab-users">Users</button>
+                <button class="dev-tab-btn ym-cc-nav-btn" data-tab="dev-tab-messages">Messages</button>
+                <button class="dev-tab-btn ym-cc-nav-btn" data-tab="dev-tab-ai">AI</button>
+                <button class="dev-tab-btn ym-cc-nav-btn" data-tab="dev-tab-calls">Calls</button>
+                <button class="dev-tab-btn ym-cc-nav-btn" data-tab="dev-tab-distribute">Coins</button>
+                <button class="dev-tab-btn ym-cc-nav-btn" data-tab="dev-tab-plans">Plans</button>
+                <button class="dev-tab-btn ym-cc-nav-btn" data-tab="dev-tab-stamps">Stamps</button>
+                <button class="dev-tab-btn ym-cc-nav-btn" data-tab="dev-tab-requests">Requests</button>
+                <button class="dev-tab-btn ym-cc-nav-btn" data-tab="dev-tab-upgrade">Announcements</button>
+                <button class="dev-tab-btn ym-cc-nav-btn" data-tab="dev-tab-system">System</button>
+                <button class="dev-tab-btn ym-cc-nav-btn" data-tab="dev-tab-security">Security</button>
+                <button class="dev-tab-btn ym-cc-nav-btn" data-tab="dev-tab-logs">Logs</button>
+                <div class="ym-cc-nav-foot">
+                    <button class="menu-btn btn-danger" id="btn-exit-dev" style="margin:0;">ユーザー画面に戻る</button>
+                </div>
+            </aside>
+            <div class="ym-cc-main">
+                <div class="ym-cc-top">
+                    <h3 id="ym-cc-page-title">Overview</h3>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <span class="ym-cc-chip" id="ym-cc-session-chip">SESSION</span>
+                        <span class="text-sub" id="ym-cc-clock" style="color:#94a3b8;font-size:12px;"></span>
+                    </div>
+                </div>
+
+            <div id="dev-tab-overview" class="dev-tab-content">
+                <div class="ym-cc-kpis" id="ym-cc-kpis"></div>
+                <div class="ym-cc-grid2">
+                    <div class="ym-cc-card">
+                        <h4>直近ログ</h4>
+                        <div class="ym-cc-log" id="ym-cc-overview-log"></div>
+                    </div>
+                    <div class="ym-cc-card">
+                        <h4>システム状態</h4>
+                        <div class="ym-cc-sys" id="ym-cc-overview-sys"></div>
+                        <div style="margin-top:10px;font-size:12px;color:#fbbf24;" id="ym-cc-alerts">障害・警告なし</div>
+                        <h4 style="margin-top:14px;">本日の活動</h4>
+                        <div class="ym-cc-bars" id="ym-cc-overview-bars"></div>
+                    </div>
+                </div>
+                <p class="ym-cc-hotkeys">ショートカット: / 検索 ・ Esc 詳細を閉じる ・ 1-9 カテゴリ切替</p>
             </div>
 
-
-            <div class="dev-tabs">
-                <button class="dev-tab-btn active" data-tab="dev-tab-users">1. ユーザー一覧・管理</button>
-                <button class="dev-tab-btn" data-tab="dev-tab-distribute">2. 配布</button>
-                <button class="dev-tab-btn" data-tab="dev-tab-upgrade">3. 全体通知設定</button>
-                <button class="dev-tab-btn" data-tab="dev-tab-requests">4. 要望管理</button>
-                <button class="dev-tab-btn" data-tab="dev-tab-stamps">5. スタンプ管理</button>
-            </div>
-
-
-            <div id="dev-tab-users" class="dev-tab-content">
+            <div id="dev-tab-users" class="dev-tab-content hidden">
                 <h3>登録端末・アカウント管理</h3>
+                <div class="ym-cc-toolbar">
+                    <input type="search" id="ym-cc-user-q" placeholder="ユーザー名 / YM-ID">
+                    <select id="ym-cc-user-status">
+                        <option value="all">すべて</option>
+                        <option value="online">オンライン</option>
+                        <option value="offline">オフライン</option>
+                        <option value="blocked">停止中</option>
+                    </select>
+                </div>
                 <table>
                     <thead>
                         <tr>
@@ -1119,11 +1269,50 @@
                     </thead>
                     <tbody id="dev-user-list"></tbody>
                 </table>
+                <div id="ym-cc-user-extra" style="margin-top:12px;"></div>
             </div>
 
+            <div id="dev-tab-messages" class="dev-tab-content hidden">
+                <h3>Messages</h3>
+                <div class="ym-cc-toolbar">
+                    <input type="search" id="ym-cc-msg-q" placeholder="本文・送信者で検索">
+                </div>
+                <div id="ym-cc-msg-list" class="ym-cc-log"></div>
+            </div>
+
+            <div id="dev-tab-ai" class="dev-tab-content hidden">
+                <h3>AI管理</h3>
+                <div class="ym-cc-kpis" id="ym-cc-ai-kpis"></div>
+                <div class="ym-cc-card" style="margin-top:10px;">
+                    <h4>AI設定</h4>
+                    <label>AI機能</label>
+                    <select id="ym-cc-ai-enabled">
+                        <option value="on">ON</option>
+                        <option value="off">OFF</option>
+                    </select>
+                    <label>1日あたり追加上限（0でプラン上限のみ）</label>
+                    <input type="number" id="ym-cc-ai-limit" min="0" value="0">
+                    <label>既定モデル</label>
+                    <select id="ym-cc-ai-default">
+                        <option value="ym-auto">Y.M AI（おすすめ）</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="qwen-coder">Qwen Coder</option>
+                        <option value="deepseek">DeepSeek</option>
+                    </select>
+                    <button class="menu-btn btn-success" id="btn-ym-cc-save-ai" style="width:auto;">AI設定を保存</button>
+                    <div id="ym-cc-ai-models" style="margin-top:12px;"></div>
+                </div>
+            </div>
+
+            <div id="dev-tab-calls" class="dev-tab-content hidden">
+                <h3>Calls</h3>
+                <div class="ym-cc-kpis" id="ym-cc-call-kpis"></div>
+                <div class="ym-cc-log" id="ym-cc-call-log"></div>
+            </div>
 
             <div id="dev-tab-distribute" class="dev-tab-content hidden">
                 <h3>配布システム (コイン・特別スタンプ)</h3>
+                <div id="ym-cc-coin-stats" class="ym-cc-kpis"></div>
                 <div style="background:#f8f9fa; padding:15px; border-radius:6px; border:1px solid #e0e0e0; margin-top:10px;">
                     <label>対象ユーザー</label>
                     <select id="distribute-target"></select>
@@ -1152,8 +1341,17 @@
 
                     <button class="menu-btn btn-success" id="btn-exec-distribute">指定ユーザーへ配布実行</button>
                 </div>
+                <div class="ym-cc-card" style="margin-top:12px;">
+                    <h4>コイン流通</h4>
+                    <div id="ym-cc-tx-list" class="ym-cc-log"></div>
+                </div>
             </div>
 
+            <div id="dev-tab-plans" class="dev-tab-content hidden">
+                <h3>プラン管理</h3>
+                <p class="text-sub" style="color:#94a3b8;">プランショップと連動します。価格・1日上限・機能メモを保存できます。</p>
+                <div id="ym-cc-plan-editor"></div>
+            </div>
 
             <div id="dev-tab-upgrade" class="dev-tab-content hidden">
                 <div id="dev-payment-review" style="background:#f8f9fa;padding:15px;border-radius:8px;border:1px solid #e0e0e0;margin-top:10px;">
@@ -1184,6 +1382,11 @@
                         <option value="normal">💛 通常お知らせ (黄色/標準)</option>
                         <option value="danger">🚨 重要警告・メンテナンス (赤色)</option>
                         <option value="success">🎉 成功・イベント告知 (緑色)</option>
+                        <option value="notice">📢 お知らせ作成</option>
+                        <option value="emergency">🚨 緊急通知</option>
+                        <option value="maintenance">🔧 メンテナンス</option>
+                        <option value="feature">✨ 新機能</option>
+                        <option value="campaign">🎁 キャンペーン</option>
                     </select>
 
 
@@ -1193,18 +1396,42 @@
                 </div>
             </div>
 
-
             <div id="dev-tab-requests" class="dev-tab-content hidden">
                 <h3>📥 ユーザーからの要望・ログ管理</h3>
+                <p class="text-sub" style="color:#94a3b8;">状態: 要望 → 確認済み → 検討中 → 開発中 → テスト中 → リリース済み</p>
+                <div id="ym-cc-request-board" class="ym-cc-req-col"></div>
                 <div id="dev-requests-container" style="display:flex; flex-direction:column; gap:10px; margin-top:10px;"></div>
             </div>
-
 
             <div id="dev-tab-stamps" class="dev-tab-content hidden">
                 <h3>🎨 出品スタンプ全件管理 (管理者権限)</h3>
                 <p style="font-size:12px; color:#666; margin-bottom:10px;">出品者に関わらず、すべてのスタンプを直接「削除」できます。</p>
                 <div id="dev-stamps-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:15px; margin-top:10px;"></div>
             </div>
+
+            <div id="dev-tab-system" class="dev-tab-content hidden">
+                <h3>System</h3>
+                <div class="ym-cc-sys" id="ym-cc-system-full"></div>
+            </div>
+
+            <div id="dev-tab-security" class="dev-tab-content hidden">
+                <h3>Security</h3>
+                <div class="ym-cc-card">
+                    <div id="ym-cc-security-box"></div>
+                    <p style="font-size:12px;color:#94a3b8;margin-top:10px;">実サービスでは停止・コイン変更・プラン変更はサーバー側で認可してください。今の認証はクライアント側です。</p>
+                </div>
+            </div>
+
+            <div id="dev-tab-logs" class="dev-tab-content hidden">
+                <h3>Logs</h3>
+                <div class="ym-cc-toolbar">
+                    <label style="margin:0;text-transform:none;"><input type="checkbox" id="ym-cc-log-errors-only" style="width:auto;display:inline;margin-right:6px;">エラーだけ</label>
+                    <button class="menu-btn" id="btn-ym-cc-clear-logs" style="width:auto;background:#334155;margin:0;">表示をクリア</button>
+                </div>
+                <div class="ym-cc-log" id="ym-cc-log-full"></div>
+            </div>
+            </div>
+            <aside class="ym-cc-drawer" id="ym-cc-drawer"></aside>
         </div>
     </div>
 
@@ -3420,6 +3647,7 @@
 
                 } catch (e) {
                     if (e && e.name === 'AbortError') return;
+                    try { if (typeof YMControlCenter !== 'undefined') YMControlCenter.log('AI_ERROR', String((e && e.message) || e), 'error'); } catch (_e) {}
                     console.warn("AI gateway error:", e);
                     if (String(e && e.message) === 'AI_GATEWAY_REQUIRED') {
                         showToast('AIはY.Mサーバー経由です。設定でゲートウェイURLを指定してください。');
@@ -4888,7 +5116,7 @@
             const PlanShop = {
                 key: 'YM_PLAN_STATE',
                 pendingId: null,
-                state: { planId:'free', startedAt:0, expiresAt:0, usageDate:'', usageCount:0, paymentStatus:'none', paymentReference:'', paymentUpdatedAt:0 },
+                state: { planId:'free', startedAt:0, expiresAt:0, usageDate:'', usageCount:0, paymentStatus:'none', paymentReference:'', paymentUpdatedAt:0, autoRenew:true },
                 today() {
                     const d = new Date();
                     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
@@ -4909,13 +5137,54 @@
                     try { localStorage.setItem(this.key, JSON.stringify(this.state)); } catch (e) {}
                 },
                 expireIfNeeded() {
-                    if (this.state.planId !== 'free' && this.state.expiresAt && Date.now() > this.state.expiresAt) {
-                        this.state.planId = 'free';
-                        this.state.startedAt = 0;
-                        this.state.expiresAt = 0;
-                        this.state.paymentStatus = 'expired';
-                        this.state.paymentReference = '';
+                    if (this.state.planId === 'free' || !this.state.expiresAt || Date.now() <= this.state.expiresAt) return;
+                    const oldId = this.state.planId;
+                    const p = this.def(oldId);
+                    if (this.state.autoRenew !== false && p && p.price > 0 && this.tryPayFirst(p.price, 'plan-renew:' + oldId)) {
+                        const now = Date.now();
+                        this.state.planId = oldId;
+                        this.state.startedAt = now;
+                        this.state.expiresAt = now + 24 * 60 * 60 * 1000;
+                        this.state.paymentStatus = 'confirmed';
+                        this.state.paymentUpdatedAt = now;
+                        return;
                     }
+                    this.revertToFree('expired');
+                },
+                coinBalance() {
+                    try {
+                        if (typeof db !== 'undefined' && db.users && typeof activeUserId !== 'undefined' && db.users[activeUserId]) {
+                            return parseInt(db.users[activeUserId].coins, 10) || 0;
+                        }
+                    } catch (e) {}
+                    return 0;
+                },
+                tryPayFirst(amount, memo) {
+                    const n = parseInt(amount, 10) || 0;
+                    if (n <= 0) return true;
+                    if (this.coinBalance() < n) return false;
+                    if (typeof CoinLedger === 'undefined' || typeof CoinLedger.apply !== 'function') return false;
+                    const res = CoinLedger.apply({ type: 'plan-pay', amount: n, from: activeUserId, memo: memo || ('plan-pay:' + Date.now()) });
+                    if (!res || res.ok === false) return false;
+                    this.state.paymentReference = res.txId || memo || '';
+                    if (typeof saveData === 'function') saveData();
+                    if (typeof renderApp === 'function') {
+                        try { renderApp(); } catch (e) {}
+                    }
+                    return true;
+                },
+                revertToFree(reason) {
+                    const now = Date.now();
+                    this.state.planId = 'free';
+                    this.state.startedAt = 0;
+                    this.state.expiresAt = 0;
+                    this.state.paymentStatus = reason === 'expired' ? 'expired' : (reason === 'cannot-pay' ? 'failed' : 'none');
+                    this.state.paymentReference = '';
+                    this.state.paymentUpdatedAt = now;
+                    this.save();
+                    this.updatePaymentStatus();
+                    this.updateStatusWidgets();
+                    this.syncAiModelSelect();
                 },
                 resetDailyIfNeeded() {
                     const t = this.today();
@@ -5015,7 +5284,13 @@
                     const el = document.getElementById('ym-payment-status');
                     if (!el) return;
                     const status = this.state.paymentStatus || 'none';
-                    const labels = { none:'支払い確認待ちではありません。', pending:'支払い確認中です。確認が完了するまで有料プランは有効になりません。', confirmed:'支払い確認済みです。', failed:'支払いを確認できませんでした。無料プランで継続しています。', expired:'有料プランの期間が終了しました。無料プランへ戻りました。' };
+                    const labels = {
+                        none:'先払い待ちではありません。無料プランで利用中です。',
+                        pending:'先払いが完了していません。有料プランはまだ無効です。',
+                        confirmed:'先払い済みです。契約期間中はこのプランを使えます。',
+                        failed:'支払いできないため、無料プランで継続しています。',
+                        expired:'期間終了または更新できなかったため、無料プランへ戻りました。'
+                    };
                     el.textContent = labels[status] || labels.none;
                 },
                 render() {
@@ -5025,7 +5300,7 @@
                     const grid = document.getElementById('ym-plan-grid');
                     if (grid) {
                         grid.innerHTML = '';
-                        YM_PLAN_DEFS.filter(p => !p.special).forEach(p => {
+                        YM_PLAN_DEFS.filter(p => p.id !== 'legendx').forEach(p => {
                             const card = document.createElement('div');
                             card.className = 'ym-plan-card ' + p.cls;
                             if (p.top) {
@@ -5046,7 +5321,7 @@
                             const bonus = document.createElement('div'); bonus.className = 'ym-plan-bonus'; bonus.textContent = p.bonus || '';
                             const btn = document.createElement('button');
                             btn.className = 'ym-plan-button' + (this.current().id === p.id ? ' current' : '');
-                            btn.textContent = this.current().id === p.id ? '現在のプラン' : 'このプランに変更';
+                            btn.textContent = this.current().id === p.id ? '現在のプラン' : (p.id === 'free' ? '無料に戻す' : '先に支払って変更');
                             if (this.current().id !== p.id) btn.onclick = () => this.openChange(p.id);
                             card.appendChild(icon); card.appendChild(name); card.appendChild(tag);
                             card.appendChild(price); card.appendChild(limit); card.appendChild(ul);
@@ -5075,7 +5350,7 @@
                         const note = document.createElement('div'); note.className = 'desc'; note.textContent = '専用環境・研究用途の特別契約プランです。';
                         const btn = document.createElement('button');
                         btn.className = 'ym-plan-button' + (this.current().id === 'legendx' ? ' current' : '');
-                        btn.textContent = this.current().id === 'legendx' ? '現在のプラン' : 'このプランに変更';
+                        btn.textContent = this.current().id === 'legendx' ? '現在のプラン' : '先に支払って変更';
                         if (this.current().id !== 'legendx') btn.onclick = () => this.openChange('legendx');
                         right.appendChild(note); right.appendChild(btn);
                         x.appendChild(left); x.appendChild(right);
@@ -5086,46 +5361,62 @@
                     const p = this.def(id);
                     const title = document.getElementById('ym-plan-change-title');
                     const body = document.getElementById('ym-plan-change-body');
-                    if (title) title.textContent = p.name + 'に変更しますか？';
-                    if (body) body.textContent = '料金：' + this.yen(p.price) + ' / 日\n利用可能AI：' + p.modelsLabel + '\n利用上限：1日' + p.daily + '回\n\n有料プランは先に支払いを完了してください。支払い確認後に有効化されます。支払いができない場合は無料プランで利用を続けられます。';
-                    if (body) body.style.whiteSpace = 'pre-line';
+                    const payBox = document.getElementById('ym-pay-first-box');
+                    const okBtn = document.getElementById('ym-plan-change-ok');
+                    if (title) title.textContent = p.id === 'free' ? '無料プランに戻します' : (p.name + 'を先払いします');
+                    if (body) {
+                        body.style.whiteSpace = 'pre-line';
+                        if (p.id === 'free' || !p.price) {
+                            body.textContent = '料金はかかりません。すぐに無料プランへ戻ります。AIは1日' + p.daily + '回まで使えます。';
+                        } else {
+                            body.textContent = p.name + '\n先払い：' + p.price + 'コイン / 日\n利用可能AI：' + p.modelsLabel + '\n利用上限：1日' + p.daily + '回\n\nコインが足りない、または払えなくなった場合は無料プランのままです。';
+                        }
+                    }
+                    const amt = document.getElementById('ym-pay-amount');
+                    const bal = document.getElementById('ym-pay-balance');
+                    if (amt) amt.textContent = String(p.price || 0);
+                    if (bal) bal.textContent = String(this.coinBalance());
+                    if (payBox) payBox.style.display = (p.id === 'free' || !p.price) ? 'none' : 'block';
+                    if (okBtn) okBtn.textContent = (p.id === 'free' || !p.price) ? '無料に戻す' : '先に支払う';
                     showModal('ym-plan-change-modal');
                 },
                 confirmChange() {
                     const id = this.pendingId;
                     if (!id) return;
                     const p = this.def(id);
-                    if (id !== 'free' && p.price > 0) {
-                        const reference = window.prompt('支払い完了後に、決済サービスの取引IDまたは確認番号を入力してください。支払いができない場合はキャンセルしてください。', '');
-                        if (!reference || !String(reference).trim()) {
-                            this.state.paymentStatus = 'failed';
-                            this.state.paymentReference = '';
-                            this.state.paymentUpdatedAt = Date.now();
-                            this.save();
-                            this.updatePaymentStatus();
-                            showToast('支払い確認ができないため、無料プランのままです。');
-                            return;
-                        }
-                        this.state.paymentStatus = 'pending';
-                        this.state.paymentReference = String(reference).trim().slice(0, 160);
+                    hideModal('ym-plan-change-modal');
+                    if (id === 'free' || !p.price) {
+                        this.revertToFree('none');
+                        showToast('無料プランに変更しました。払えなくてもAIは無料の範囲で使えます。');
+                        this.render();
+                        return;
+                    }
+                    if (!this.tryPayFirst(p.price, 'plan-buy:' + id + ':' + Date.now())) {
+                        this.state.paymentStatus = 'failed';
                         this.state.paymentUpdatedAt = Date.now();
                         this.save();
                         this.updatePaymentStatus();
-                        showToast('支払い確認中です。確認完了まで無料プランのままです。');
+                        showToast('コインが足りないため支払えません。無料プランのままです。');
+                        this.render();
                         return;
                     }
                     const now = Date.now();
-                    this.state.planId = 'free';
-                    this.state.startedAt = 0;
-                    this.state.expiresAt = 0;
-                    this.state.paymentStatus = 'none';
-                    this.state.paymentReference = '';
+                    this.state.planId = id;
+                    this.state.startedAt = now;
+                    this.state.expiresAt = now + 24 * 60 * 60 * 1000;
+                    this.state.paymentStatus = 'confirmed';
                     this.state.paymentUpdatedAt = now;
                     this.save();
-                    hideModal('ym-plan-change-modal');
                     this.render();
                     this.syncAiModelSelect();
-                    showToast('無料プランに変更しました。');
+                    showToast(p.name + 'を先払いして有効化しました。');
+                },
+                cannotPayNow() {
+                    hideModal('ym-plan-change-modal');
+                    this.pendingId = null;
+                    this.revertToFree('cannot-pay');
+                    this.render();
+                    showToast('支払えないため、無料プランへ戻しました。AIは無料の回数で使えます。');
                 },
                 init() { this.load(); this.updateStatusWidgets(); }
             };
@@ -5310,14 +5601,24 @@
                 if (!force && dismissed === text) return;
                 if (content) {
                     content.textContent = text;
-                    if (style === 'danger') {
+                    const titleMap = { notice:'📢 お知らせ', emergency:'🚨 緊急通知', maintenance:'🔧 メンテナンス', feature:'✨ 新機能', campaign:'🎁 キャンペーン', danger:'🚨 重要警告', success:'🎉 成功・イベント', normal:'📢 全体アナウンス' };
+                    if (title) title.textContent = titleMap[style] || '📢 全体アナウンス';
+                    if (style === 'danger' || style === 'emergency') {
                         content.style.background = '#fef2f2';
                         content.style.borderColor = '#fecaca';
                         content.style.color = '#991b1b';
-                    } else if (style === 'success') {
+                    } else if (style === 'success' || style === 'feature') {
                         content.style.background = '#ecfdf5';
                         content.style.borderColor = '#a7f3d0';
                         content.style.color = '#065f46';
+                    } else if (style === 'maintenance') {
+                        content.style.background = '#eff6ff';
+                        content.style.borderColor = '#bfdbfe';
+                        content.style.color = '#1e3a8a';
+                    } else if (style === 'campaign') {
+                        content.style.background = '#fdf4ff';
+                        content.style.borderColor = '#f0abfc';
+                        content.style.color = '#86198f';
                     } else {
                         content.style.background = '#fffbeb';
                         content.style.borderColor = '#fde68a';
@@ -5325,7 +5626,8 @@
                     }
                 }
                 if (title) {
-                    title.textContent = style === 'danger' ? '🚨 重要なお知らせ' : (style === 'success' ? '🎉 お知らせ' : '📢 全体アナウンス');
+                    const titleMap = { danger:'🚨 重要なお知らせ', emergency:'🚨 緊急通知', maintenance:'🔧 メンテナンス', feature:'✨ 新機能', campaign:'🎁 キャンペーン', notice:'📢 お知らせ作成', success:'🎉 お知らせ', normal:'📢 全体アナウンス' };
+                    title.textContent = titleMap[style] || '📢 全体アナウンス';
                 }
                 modal.classList.remove('hidden');
             }
@@ -7625,8 +7927,17 @@
                 userList.innerHTML = '';
 
 
+                const userQ = ((document.getElementById('ym-cc-user-q') || {}).value || '').trim().toLowerCase();
+                const userSt = ((document.getElementById('ym-cc-user-status') || {}).value || 'all');
                 Object.keys(db.users).forEach(uKey => {
                     const u = db.users[uKey];
+                    const hay = ((u && u.name) || '') + ' ' + uKey;
+                    if (userQ && hay.toLowerCase().indexOf(userQ) < 0) return;
+                    let on = false;
+                    try { on = !!(typeof YMControlCenter !== 'undefined' && YMControlCenter.isOnline(uKey)); } catch (e) {}
+                    if (userSt === 'online' && !on) return;
+                    if (userSt === 'offline' && on) return;
+                    if (userSt === 'blocked' && !(u && u.isBlocked)) return;
                     const tr = document.createElement('tr');
                     tr.innerHTML = sanitizeHTML(`
                         <td><strong>${escapeHTML(u.name)}</strong><br><span style="font-size:10px; color:#888;">${uKey}</span></td>
@@ -7783,6 +8094,523 @@
                 renderDevPanel();
                 renderStamps();
             };
+
+            const YMControlCenter = {
+                logs: [],
+                bound: false,
+                reqStates: ['要望','確認済み','検討中','開発中','テスト中','リリース済み'],
+                loadLogs() {
+                    try { this.logs = JSON.parse(localStorage.getItem('YM_CC_LOGS') || '[]'); } catch (e) { this.logs = []; }
+                    if (!Array.isArray(this.logs)) this.logs = [];
+                },
+                saveLogs() {
+                    try { localStorage.setItem('YM_CC_LOGS', JSON.stringify(this.logs.slice(-800))); } catch (e) {}
+                },
+                log(type, detail, level) {
+                    const row = { t: Date.now(), type: String(type || 'EVENT'), detail: String(detail || ''), level: level || 'info' };
+                    this.logs.push(row);
+                    if (this.logs.length > 800) this.logs = this.logs.slice(-800);
+                    this.saveLogs();
+                    this.paintLogs();
+                    return row;
+                },
+                fmt(ts) {
+                    const d = new Date(ts || Date.now());
+                    const p = n => String(n).padStart(2,'0');
+                    return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+                },
+                startOfToday() {
+                    const d = new Date(); d.setHours(0,0,0,0); return d.getTime();
+                },
+                isOnline(id) {
+                    try {
+                        if (typeof onlineStatusMap !== 'undefined' && onlineStatusMap[id]) return true;
+                        if (typeof peerConnections !== 'undefined' && peerConnections[id] && peerConnections[id].open) return true;
+                    } catch (e) {}
+                    return false;
+                },
+                aiCfg() {
+                    try { return JSON.parse(localStorage.getItem('YM_CC_AI_CFG') || '{}'); } catch (e) { return {}; }
+                },
+                saveAiCfg(cfg) {
+                    localStorage.setItem('YM_CC_AI_CFG', JSON.stringify(cfg || {}));
+                },
+                planOverrides() {
+                    try { return JSON.parse(localStorage.getItem('YM_PLAN_DEFS_OVERRIDE') || '{}'); } catch (e) { return {}; }
+                },
+                reqMap() {
+                    try { return JSON.parse(localStorage.getItem('YM_CC_REQ_STATE') || '{}'); } catch (e) { return {}; }
+                },
+                setReqState(key, state) {
+                    const m = this.reqMap();
+                    m[key] = state;
+                    localStorage.setItem('YM_CC_REQ_STATE', JSON.stringify(m));
+                    this.refresh();
+                },
+                stats() {
+                    const users = (db && db.users) ? Object.keys(db.users) : [];
+                    const msgs = (db && db.messages) ? db.messages : [];
+                    const today = this.startOfToday();
+                    const online = users.filter(id => this.isOnline(id)).length;
+                    const todayMsgs = msgs.filter(m => (m.timestamp || 0) >= today).length;
+                    const todayUsers = users.filter(id => {
+                        const u = db.users[id];
+                        return (u && (u.createdAt || 0) >= today);
+                    }).length;
+                    const aiToday = (typeof PlanShop !== 'undefined' && PlanShop.state) ? (PlanShop.state.usageCount || 0) : 0;
+                    const aiAll = msgs.filter(m => m.from === 'chappy').length;
+                    const calls = (this.logs || []).filter(l => String(l.type).indexOf('CALL') === 0);
+                    const todayCalls = calls.filter(l => l.t >= today).length;
+                    let coins = 0;
+                    users.forEach(id => { coins += parseInt((db.users[id] && db.users[id].coins) || 0, 10) || 0; });
+                    const blocked = users.filter(id => db.users[id] && db.users[id].isBlocked).length;
+                    const errs = this.logs.filter(l => l.level === 'error');
+                    return { users: users.length, online, todayUsers, todayMsgs, aiToday, aiAll, todayCalls, calls: calls.length, coins, blocked, errs: errs.length };
+                },
+                systemRows() {
+                    const idbOk = !!(typeof IDB !== 'undefined' && IDB.db);
+                    const wsOk = navigator.onLine;
+                    const aiOff = this.aiCfg().enabled === 'off';
+                    let p2p = 'warn';
+                    try {
+                        if (typeof peer !== 'undefined' && peer && !peer.destroyed) p2p = 'ok';
+                    } catch (e) { p2p = 'bad'; }
+                    const turn = (localStorage.getItem('YM_TURN_URL') || '').trim() ? 'ok' : 'warn';
+                    const storage = idbOk ? 'ok' : 'bad';
+                    const errMon = this.logs.some(l => l.level === 'error' && (Date.now() - l.t) < 3600000) ? 'bad' : 'ok';
+                    return [
+                        { name: 'Database', state: (db ? 'ok' : 'bad') },
+                        { name: 'WebSocket', state: wsOk ? 'ok' : 'bad' },
+                        { name: 'AI', state: aiOff ? 'warn' : 'ok' },
+                        { name: 'P2P', state: p2p },
+                        { name: 'Storage', state: storage },
+                        { name: 'TURN', state: turn },
+                        { name: 'Error Monitor', state: errMon }
+                    ];
+                },
+                paintSys(el) {
+                    if (!el) return;
+                    const mark = { ok: '🟢', warn: '🟡', bad: '🔴' };
+                    el.innerHTML = this.systemRows().map(r => {
+                        return '<div class="ym-cc-sys-row"><span><span class="ym-cc-dot ' + r.state + '"></span>' + r.name + '</span><span>' + (mark[r.state] || '') + ' ' + r.state + '</span></div>';
+                    }).join('');
+                },
+                paintLogs() {
+                    const errOnly = !!(document.getElementById('ym-cc-log-errors-only') && document.getElementById('ym-cc-log-errors-only').checked);
+                    const rows = (this.logs || []).slice().reverse().filter(l => !errOnly || l.level === 'error').slice(0, 200);
+                    const html = rows.map(l => {
+                        const line = '[' + this.fmt(l.t) + '] ' + l.type + (l.detail ? '  ' + l.detail : '');
+                        return '<div class="' + (l.level === 'error' ? 'err' : '') + '">' + this.esc(line) + '</div>';
+                    }).join('') || '<div>ログはまだありません。</div>';
+                    const a = document.getElementById('ym-cc-overview-log');
+                    const b = document.getElementById('ym-cc-log-full');
+                    if (a) a.innerHTML = html;
+                    if (b) b.innerHTML = html;
+                },
+                esc(v) {
+                    return String(v || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+                },
+                paintKpis() {
+                    const s = this.stats();
+                    const box = document.getElementById('ym-cc-kpis');
+                    if (box) {
+                        const items = [
+                            ['総ユーザー数', s.users, '登録アカウント'],
+                            ['オンライン人数', s.online, 'P2P接続中'],
+                            ['今日の登録数', s.todayUsers, 'createdAt 基準'],
+                            ['今日のメッセージ数', s.todayMsgs, '端末内ログ'],
+                            ['AI利用回数', s.aiToday, '本日 / 累計 ' + s.aiAll],
+                            ['通話数', s.todayCalls, '本日 / 累計 ' + s.calls],
+                            ['コイン流通量', s.coins, '全ユーザー合計'],
+                            ['現在の障害・警告', s.errs, s.blocked + ' アカウント停止']
+                        ];
+                        box.innerHTML = items.map(it => '<div class="ym-cc-kpi"><div class="l">' + it[0] + '</div><div class="n">' + it[1] + '</div><div class="s">' + it[2] + '</div></div>').join('');
+                    }
+                    const alerts = document.getElementById('ym-cc-alerts');
+                    if (alerts) {
+                        const bad = this.systemRows().filter(r => r.state !== 'ok');
+                        alerts.textContent = bad.length ? bad.map(r => r.name + '=' + r.state).join(' / ') : '障害・警告なし';
+                    }
+                    this.paintSys(document.getElementById('ym-cc-overview-sys'));
+                    this.paintSys(document.getElementById('ym-cc-system-full'));
+                    const bars = document.getElementById('ym-cc-overview-bars');
+                    if (bars) {
+                        const maxv = Math.max(s.todayMsgs, s.aiToday, s.todayCalls, s.todayUsers, 1);
+                        const row = (lab, val) => '<div class="ym-cc-bar-row"><b>' + lab + '</b><div class="ym-cc-bar"><i style="width:' + Math.round(val * 100 / maxv) + '%"></i></div><em>' + val + '</em></div>';
+                        bars.innerHTML = row('メッセージ', s.todayMsgs) + row('AI', s.aiToday) + row('通話', s.todayCalls) + row('新規', s.todayUsers);
+                    }
+                    const clock = document.getElementById('ym-cc-clock');
+                    if (clock) clock.textContent = new Date().toLocaleString();
+                    const chip = document.getElementById('ym-cc-session-chip');
+                    if (chip) chip.textContent = (typeof AdminGuard !== 'undefined' && AdminGuard.isAuthed()) ? 'ADMIN YM' : 'LOCKED';
+                },
+                paintUsersExtra() {
+                    const host = document.getElementById('ym-cc-user-extra');
+                    if (!host || !db || !db.users) return;
+                    const q = ((document.getElementById('ym-cc-user-q') || {}).value || '').trim().toLowerCase();
+                    const st = ((document.getElementById('ym-cc-user-status') || {}).value || 'all');
+                    const planId = (typeof PlanShop !== 'undefined' && PlanShop.state) ? PlanShop.state.planId : 'free';
+                    const model = (typeof PlanShop !== 'undefined' && PlanShop.selectedModel) ? PlanShop.selectedModel() : '-';
+                    let rows = Object.keys(db.users);
+                    rows = rows.filter(id => {
+                        const u = db.users[id] || {};
+                        const hay = (u.name || '') + ' ' + id + ' ' + (u.accountId || '');
+                        if (q && hay.toLowerCase().indexOf(q) < 0) return false;
+                        const on = this.isOnline(id);
+                        if (st === 'online' && !on) return false;
+                        if (st === 'offline' && on) return false;
+                        if (st === 'blocked' && !u.isBlocked) return false;
+                        return true;
+                    });
+                    const table = ['<table><thead><tr><th>ユーザー</th><th>YM-ID</th><th>接続</th><th>最終ログイン</th><th>使用時間</th><th>コイン</th><th>プラン</th><th>AIモデル</th><th>停止</th><th></th></tr></thead><tbody>'];
+                    rows.forEach(id => {
+                        const u = db.users[id] || {};
+                        const on = this.isOnline(id);
+                        const last = u.lastLogin ? new Date(u.lastLogin).toLocaleString() : (u.createdAt ? new Date(u.createdAt).toLocaleString() : (u.usageTime ? '計測中' : '-'));
+                        const p = (id === (typeof activeUserId !== 'undefined' ? activeUserId : '')) ? planId : (u.planId || 'free');
+                        const umodel = (id === (typeof activeUserId !== 'undefined' ? activeUserId : '')) ? model : (u.aiModel || '-');
+                        table.push('<tr><td>' + this.esc(u.name || id) + '</td><td>' + this.esc(id) + '</td><td>' + (on ? 'オンライン' : 'オフライン') + '</td><td>' + this.esc(last) + '</td><td>' + this.esc((typeof formatUsageTime === 'function') ? formatUsageTime(u.usageTime) : (u.usageTime || 0)) + '</td><td>' + (u.coins || 0) + '</td><td>' + this.esc(p) + '</td><td>' + this.esc(umodel) + '</td><td>' + (u.isBlocked ? '停止' : '通常') + '</td><td><button class="menu-btn" style="width:auto;margin:0;padding:2px 8px;font-size:11px;background:#0ea5e9;" data-cc-user="' + this.esc(id) + '">詳細</button></td></tr>');
+                    });
+                    table.push('</tbody></table>');
+                    host.innerHTML = table.join('');
+                    host.querySelectorAll('[data-cc-user]').forEach(btn => {
+                        btn.onclick = () => this.openUser(btn.getAttribute('data-cc-user'));
+                    });
+                },
+                openUser(id) {
+                    const drawer = document.getElementById('ym-cc-drawer');
+                    if (!drawer || !db.users[id]) return;
+                    const u = db.users[id];
+                    drawer.classList.add('open');
+                    const msgs = ((db.messages) || []).filter(m => m.from === id || m.to === id).length;
+                    drawer.innerHTML = '<h3 style="margin-top:0;">アカウント詳細</h3>' +
+                        '<div class="text-sub">YM-ID</div><div style="font-weight:800;word-break:break-all;">' + this.esc(id) + '</div>' +
+                        '<div class="text-sub" style="margin-top:8px;">表示名</div><div>' + this.esc(u.name || '') + '</div>' +
+                        '<div class="text-sub" style="margin-top:8px;">コイン</div><div>' + (u.coins || 0) + '</div>' +
+                        '<div class="text-sub" style="margin-top:8px;">使用時間</div><div>' + this.esc((typeof formatUsageTime === 'function') ? formatUsageTime(u.usageTime) : '') + '</div>' +
+                        '<div class="text-sub" style="margin-top:8px;">メッセージ数</div><div>' + msgs + '</div>' +
+                        '<div class="text-sub" style="margin-top:8px;">停止</div><div>' + (u.isBlocked ? '停止中' : '通常') + '</div>' +
+                        '<button class="menu-btn ' + (u.isBlocked ? 'btn-success' : 'btn-danger') + '" id="ym-cc-drawer-block" style="margin-top:12px;">' + (u.isBlocked ? '停止解除' : '停止する') + '</button>' +
+                        '<button class="menu-btn" id="ym-cc-drawer-close" style="background:#334155;">閉じる</button>';
+                    const b = document.getElementById('ym-cc-drawer-block');
+                    if (b) b.onclick = () => { if (typeof toggleUserBlock === 'function') toggleUserBlock(id); this.openUser(id); };
+                    const c = document.getElementById('ym-cc-drawer-close');
+                    if (c) c.onclick = () => drawer.classList.remove('open');
+                },
+                paintMessages() {
+                    const el = document.getElementById('ym-cc-msg-list');
+                    if (!el || !db) return;
+                    const q = ((document.getElementById('ym-cc-msg-q') || {}).value || '').trim().toLowerCase();
+                    const list = ((db.messages) || []).slice().reverse().filter(m => {
+                        if (!q) return true;
+                        const hay = String(m.text || '') + ' ' + (m.from || '') + ' ' + (m.to || '');
+                        return hay.toLowerCase().indexOf(q) >= 0;
+                    }).slice(0, 200);
+                    el.innerHTML = list.map(m => this.esc('[' + this.fmt(m.timestamp) + '] ' + (m.from || '') + ' → ' + (m.to || '') + '  ' + String(m.text || m.type || '').slice(0, 120))).join('\n') || 'メッセージはありません。';
+                },
+                paintAi() {
+                    const s = this.stats();
+                    const box = document.getElementById('ym-cc-ai-kpis');
+                    if (box) {
+                        const week = ((db && db.messages) || []).filter(m => m.from === 'chappy' && (m.timestamp || 0) >= Date.now() - 7*86400000).length;
+                        const month = ((db && db.messages) || []).filter(m => m.from === 'chappy' && (m.timestamp || 0) >= Date.now() - 30*86400000).length;
+                        const fail = this.logs.filter(l => l.type === 'AI_ERROR').length;
+                        const ok = this.logs.filter(l => l.type === 'AI_SUCCESS').length;
+                        const rate = (ok + fail) ? Math.round(fail * 100 / (ok + fail)) : 0;
+                        box.innerHTML = [
+                            ['本日', s.aiToday, 'PlanShop 消費'],
+                            ['7日', week, 'AI返信数'],
+                            ['月', month, 'AI返信数'],
+                            ['エラー率', rate + '%', fail + ' / ' + (ok+fail)]
+                        ].map(it => '<div class="ym-cc-kpi"><div class="l">' + it[0] + '</div><div class="n">' + it[1] + '</div><div class="s">' + it[2] + '</div></div>').join('');
+                    }
+                    const cfg = this.aiCfg();
+                    const en = document.getElementById('ym-cc-ai-enabled');
+                    const lim = document.getElementById('ym-cc-ai-limit');
+                    const def = document.getElementById('ym-cc-ai-default');
+                    if (en && !en.dataset.filled) { en.value = cfg.enabled || 'on'; }
+                    if (lim && !lim.dataset.filled) { lim.value = cfg.limit || 0; }
+                    if (def && !def.dataset.filled) { def.value = cfg.model || 'ym-auto'; }
+                    const models = document.getElementById('ym-cc-ai-models');
+                    if (models) {
+                        let counts = {};
+                        try { counts = JSON.parse(localStorage.getItem('YM_CC_AI_MODELS') || '{}'); } catch (e) { counts = {}; }
+                        ((db && db.messages) || []).filter(m => m.from === 'chappy').forEach(m => {
+                            const k = m.aiModel || 'openai';
+                            if (!counts[k]) counts[k] = 0;
+                        });
+                        const keys = Object.keys(counts);
+                        models.innerHTML = '<div class="text-sub">モデル別利用状況</div>' + (keys.length ? keys.map(k => '<div>' + this.esc(k) + ': ' + counts[k] + '</div>').join('') : '<div>まだ集計がありません。</div>');
+                    }
+                },
+                paintCalls() {
+                    const box = document.getElementById('ym-cc-call-kpis');
+                    const log = document.getElementById('ym-cc-call-log');
+                    const rows = this.logs.filter(l => String(l.type).indexOf('CALL') === 0);
+                    if (box) box.innerHTML = '<div class="ym-cc-kpi"><div class="l">通話イベント</div><div class="n">' + rows.length + '</div><div class="s">開始・着信の記録</div></div>';
+                    if (log) log.textContent = rows.slice().reverse().map(l => '[' + this.fmt(l.t) + '] ' + l.type + ' ' + l.detail).join('\n') || '通話ログはまだありません。';
+                },
+                paintCoins() {
+                    const box = document.getElementById('ym-cc-coin-stats');
+                    if (box) {
+                        const s = this.stats();
+                        const txs = (db && db.transactions) ? db.transactions.length : 0;
+                        box.innerHTML = '<div class="ym-cc-kpi"><div class="l">流通量</div><div class="n">' + s.coins + '</div><div class="s">合計コイン</div></div><div class="ym-cc-kpi"><div class="l">取引件数</div><div class="n">' + txs + '</div><div class="s">CoinLedger</div></div>';
+                    }
+                    const list = document.getElementById('ym-cc-tx-list');
+                    if (list) {
+                        const txs = ((db && db.transactions) || []).slice().reverse().slice(0, 80);
+                        list.textContent = txs.map(t => '[' + this.fmt(t.ts) + '] ' + (t.type || '') + ' ' + (t.amount || 0) + '  ' + (t.from || '-') + ' → ' + (t.to || '-') + '  ' + (t.status || '')).join('\n') || '取引はありません。';
+                    }
+                },
+                paintPlans() {
+                    const host = document.getElementById('ym-cc-plan-editor');
+                    if (!host || typeof YM_PLAN_DEFS === 'undefined') return;
+                    if (host.dataset.ready === '1') return;
+                    host.dataset.ready = '1';
+                    const ov = this.planOverrides();
+                    host.innerHTML = '';
+                    YM_PLAN_DEFS.filter(p => !p.special).forEach(p => {
+                        const cur = Object.assign({}, p, ov[p.id] || {});
+                        const card = document.createElement('div');
+                        card.className = 'ym-cc-card';
+                        card.style.marginBottom = '8px';
+                        card.innerHTML = '<h4>' + this.esc(cur.icon || '') + ' ' + this.esc(cur.name) + '</h4>';
+                        const price = document.createElement('input');
+                        price.type = 'number'; price.value = cur.price; price.min = 0;
+                        const daily = document.createElement('input');
+                        daily.type = 'number'; daily.value = cur.daily; daily.min = 0;
+                        const feats = document.createElement('input');
+                        feats.type = 'text'; feats.value = (cur.feats || []).join(' / ');
+                        const lab1 = document.createElement('label'); lab1.textContent = '価格（コイン）';
+                        const lab2 = document.createElement('label'); lab2.textContent = '1日上限';
+                        const lab3 = document.createElement('label'); lab3.textContent = '機能';
+                        const btn = document.createElement('button');
+                        btn.className = 'menu-btn btn-success';
+                        btn.style.width = 'auto';
+                        btn.textContent = 'このプランを保存';
+                        btn.onclick = () => {
+                            const all = this.planOverrides();
+                            all[p.id] = { price: parseInt(price.value,10)||0, daily: parseInt(daily.value,10)||0, feats: feats.value.split('/').map(x => x.trim()).filter(Boolean) };
+                            localStorage.setItem('YM_PLAN_DEFS_OVERRIDE', JSON.stringify(all));
+                            const idx = YM_PLAN_DEFS.findIndex(x => x.id === p.id);
+                            if (idx >= 0) {
+                                YM_PLAN_DEFS[idx].price = all[p.id].price;
+                                YM_PLAN_DEFS[idx].daily = all[p.id].daily;
+                                if (all[p.id].feats.length) YM_PLAN_DEFS[idx].feats = all[p.id].feats;
+                            }
+                            if (typeof PlanShop !== 'undefined') { PlanShop.save(); PlanShop.render(); }
+                            this.log('PLAN_UPDATED', p.id, 'info');
+                            if (typeof showToast === 'function') showToast(p.name + ' を更新しました');
+                        };
+                        card.appendChild(lab1); card.appendChild(price);
+                        card.appendChild(lab2); card.appendChild(daily);
+                        card.appendChild(lab3); card.appendChild(feats);
+                        card.appendChild(btn);
+                        host.appendChild(card);
+                    });
+                },
+                applyPlanOverrides() {
+                    const ov = this.planOverrides();
+                    if (typeof YM_PLAN_DEFS === 'undefined') return;
+                    YM_PLAN_DEFS.forEach(p => {
+                        if (ov[p.id]) {
+                            if (ov[p.id].price != null) p.price = ov[p.id].price;
+                            if (ov[p.id].daily != null) p.daily = ov[p.id].daily;
+                            if (ov[p.id].feats) p.feats = ov[p.id].feats;
+                        }
+                    });
+                },
+                paintRequestsBoard() {
+                    const host = document.getElementById('ym-cc-request-board');
+                    if (!host || !db) return;
+                    const map = this.reqMap();
+                    const groups = {};
+                    this.reqStates.forEach(s => { groups[s] = []; });
+                    Object.keys(db.officialChatLogs || {}).forEach(uKey => {
+                        const st = map[uKey] || '要望';
+                        if (!groups[st]) groups[st] = [];
+                        groups[st].push(uKey);
+                    });
+                    host.innerHTML = this.reqStates.map(st => {
+                        const items = groups[st] || [];
+                        return '<div><h5>' + st + ' (' + items.length + ')</h5>' + items.map(id => {
+                            const name = (db.users[id] && db.users[id].name) || id;
+                            const next = this.reqStates[Math.min(this.reqStates.indexOf(st)+1, this.reqStates.length-1)];
+                            return '<div class="ym-cc-req-item">' + this.esc(name) + '<br><button class="menu-btn" style="width:auto;margin:6px 0 0;padding:2px 8px;font-size:10px;" data-cc-req="' + this.esc(id) + '" data-cc-st="' + this.esc(next) + '">' + this.esc(next) + 'へ</button></div>';
+                        }).join('') + '</div>';
+                    }).join('');
+                    host.querySelectorAll('[data-cc-req]').forEach(btn => {
+                        btn.onclick = () => this.setReqState(btn.getAttribute('data-cc-req'), btn.getAttribute('data-cc-st'));
+                    });
+                },
+                paintSecurity() {
+                    const el = document.getElementById('ym-cc-security-box');
+                    if (!el) return;
+                    let vault = '-';
+                    try { vault = (typeof LocalVault !== 'undefined' && LocalVault.isUnlocked()) ? '金庫解除済み' : 'ロック中'; } catch (e) {}
+                    el.innerHTML = '<div>管理者ユーザー: YM</div><div>セッション: ' + ((typeof AdminGuard !== 'undefined' && AdminGuard.isAuthed()) ? '有効' : '無効') + '</div><div>端末金庫: ' + this.esc(vault) + '</div><div>停止ユーザー: ' + this.stats().blocked + '</div>';
+                },
+                refresh() {
+                    if (!document.getElementById('developer-view')) return;
+                    this.paintKpis();
+                    this.paintLogs();
+                    this.paintUsersExtra();
+                    this.paintMessages();
+                    this.paintAi();
+                    this.paintCalls();
+                    this.paintCoins();
+                    this.paintPlans();
+                    this.paintRequestsBoard();
+                    this.paintSecurity();
+                },
+                enter() {
+                    document.body.classList.add('ym-cc-active');
+                    this.log('USER_LOGIN', 'admin YM', 'info');
+                    this.refresh();
+                    if (this._tick) clearInterval(this._tick);
+                    this._tick = setInterval(() => {
+                        const view = document.getElementById('developer-view');
+                        if (view && !view.classList.contains('hidden')) this.refresh();
+                    }, 8000);
+                },
+                leave() {
+                    document.body.classList.remove('ym-cc-active');
+                    if (this._tick) { clearInterval(this._tick); this._tick = null; }
+                    const drawer = document.getElementById('ym-cc-drawer');
+                    if (drawer) drawer.classList.remove('open');
+                },
+                bind() {
+                    if (this.bound) return;
+                    this.bound = true;
+                    this.loadLogs();
+                    this.applyPlanOverrides();
+                    const q = document.getElementById('ym-cc-global-search');
+                    if (q) q.addEventListener('input', () => {
+                        const uq = document.getElementById('ym-cc-user-q');
+                        if (uq) uq.value = q.value;
+                        const mq = document.getElementById('ym-cc-msg-q');
+                        if (mq) mq.value = q.value;
+                        this.paintUsersExtra();
+                        this.paintMessages();
+                    });
+                    ['ym-cc-user-q','ym-cc-user-status','ym-cc-msg-q','ym-cc-log-errors-only'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.addEventListener(el.type === 'checkbox' ? 'change' : 'input', () => this.refresh());
+                    });
+                    const saveAi = document.getElementById('btn-ym-cc-save-ai');
+                    if (saveAi) saveAi.onclick = () => {
+                        const cfg = {
+                            enabled: (document.getElementById('ym-cc-ai-enabled') || {}).value || 'on',
+                            limit: parseInt((document.getElementById('ym-cc-ai-limit') || {}).value, 10) || 0,
+                            model: (document.getElementById('ym-cc-ai-default') || {}).value || 'ym-auto'
+                        };
+                        this.saveAiCfg(cfg);
+                        const sel = document.getElementById('aiModelSelect');
+                        if (sel && cfg.model) sel.value = cfg.model;
+                        this.log('AI_SETTING', JSON.stringify(cfg), 'info');
+                        if (typeof showToast === 'function') showToast('AI設定を保存しました');
+                    };
+                    const clr = document.getElementById('btn-ym-cc-clear-logs');
+                    if (clr) clr.onclick = () => { this.logs = []; this.saveLogs(); this.paintLogs(); };
+                    document.addEventListener('keydown', (e) => {
+                        const view = document.getElementById('developer-view');
+                        if (!view || view.classList.contains('hidden')) return;
+                        if (e.key === '/' && document.activeElement && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                            e.preventDefault();
+                            const gs = document.getElementById('ym-cc-global-search');
+                            if (gs) gs.focus();
+                        }
+                        if (e.key === 'Escape') {
+                            const drawer = document.getElementById('ym-cc-drawer');
+                            if (drawer) drawer.classList.remove('open');
+                        }
+                        if (/^[1-9]$/.test(e.key) && document.activeElement && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'SELECT') {
+                            const btns = Array.from(document.querySelectorAll('#ym-cc-nav .ym-cc-nav-btn'));
+                            const idx = parseInt(e.key, 10) - 1;
+                            if (btns[idx]) btns[idx].click();
+                        }
+                    });
+                    const nav = document.getElementById('ym-cc-nav');
+                    if (nav) {
+                        nav.addEventListener('click', (e) => {
+                            const btn = e.target.closest('.ym-cc-nav-btn');
+                            if (!btn) return;
+                            const title = document.getElementById('ym-cc-page-title');
+                            if (title) title.textContent = btn.textContent.trim();
+                            this.refresh();
+                        });
+                    }
+                    if (typeof PlanShop !== 'undefined' && PlanShop.canUseAi && !PlanShop._ymCcWrapped) {
+                        PlanShop._ymCcWrapped = true;
+                        const _can = PlanShop.canUseAi.bind(PlanShop);
+                        const _consume = PlanShop.consumeAi.bind(PlanShop);
+                        PlanShop.canUseAi = function() {
+                            const cfg = YMControlCenter.aiCfg();
+                            if (cfg.enabled === 'off') return false;
+                            if (cfg.limit > 0 && (this.state.usageCount || 0) >= cfg.limit) return false;
+                            return _can();
+                        };
+                        PlanShop.consumeAi = function() {
+                            const model = this.selectedModel ? this.selectedModel() : 'openai';
+                            YMControlCenter.log('AI_REQUEST', model, 'info');
+                            const r = _consume();
+                            YMControlCenter.log('AI_SUCCESS', 'usage=' + (this.state.usageCount || 0) + ' model=' + model, 'info');
+                            try {
+                                const counts = JSON.parse(localStorage.getItem('YM_CC_AI_MODELS') || '{}');
+                                counts[model] = (counts[model] || 0) + 1;
+                                localStorage.setItem('YM_CC_AI_MODELS', JSON.stringify(counts));
+                            } catch (e) {}
+                            try {
+                                if (db && db.users && db.users[activeUserId]) db.users[activeUserId].aiModel = model;
+                            } catch (e) {}
+                            return r;
+                        };
+                    }
+                    if (typeof startCallToPeer === 'function' && !startCallToPeer._ymCcWrapped) {
+                        const _c = startCallToPeer;
+                        startCallToPeer = function(id) {
+                            YMControlCenter.log('CALL_STARTED', String(id || ''), 'info');
+                            return _c.apply(this, arguments);
+                        };
+                        startCallToPeer._ymCcWrapped = true;
+                    }
+                    if (typeof sendMessage === 'function' && !sendMessage._ymCcWrapped) {
+                        const _s = sendMessage;
+                        sendMessage = function() {
+                            YMControlCenter.log('MESSAGE_SENT', String(arguments[0] || 'text'), 'info');
+                            return _s.apply(this, arguments);
+                        };
+                        sendMessage._ymCcWrapped = true;
+                    }
+                    if (typeof CoinLedger !== 'undefined' && CoinLedger.apply && !CoinLedger._ymCcWrapped) {
+                        CoinLedger._ymCcWrapped = true;
+                        const _a = CoinLedger.apply.bind(CoinLedger);
+                        CoinLedger.apply = function(row) {
+                            const res = _a(row);
+                            if (res && res.ok) YMControlCenter.log('PAYMENT_COMPLETED', (row && row.type) + ' ' + ((row && row.amount) || ''), 'info');
+                            return res;
+                        };
+                    }
+                }
+            };
+            window.YMControlCenter = YMControlCenter;
+            if (typeof renderDevPanel === 'function') {
+                const _rdp = renderDevPanel;
+                renderDevPanel = function() {
+                    _rdp.apply(this, arguments);
+                    try { YMControlCenter.bind(); YMControlCenter.refresh(); } catch (e) { console.warn(e); }
+                };
+            }
+            if (typeof switchPage === 'function') {
+                const _sp = switchPage;
+                switchPage = function(pageId) {
+                    const r = _sp.apply(this, arguments);
+                    if (pageId === 'developer-view') YMControlCenter.enter();
+                    else YMControlCenter.leave();
+                    return r;
+                };
+            }
 
 
 
@@ -8703,9 +9531,17 @@
                         myReactions: [],
                         disabledStamps: [],
                         disabledReactions: [],
-                        isBlocked: false
+                        isBlocked: false,
+                        createdAt: Date.now(),
+                        lastLogin: Date.now(),
+                        planId: 'free',
+                        aiModel: 'ym-auto'
                     };
                     saveData();
+                } else {
+                    const me = db.users[activeUserId];
+                    if (!me.createdAt) me.createdAt = Date.now();
+                    me.lastLogin = Date.now();
                 }
 
 
@@ -8999,6 +9835,10 @@
                 if (btnPlanFromLimit) btnPlanFromLimit.onclick = openPlanShop;
                 const ymPlanOk = document.getElementById('ym-plan-change-ok');
                 if (ymPlanOk) ymPlanOk.onclick = () => { if (typeof PlanShop !== 'undefined') PlanShop.confirmChange(); };
+                const ymPlanFree = document.getElementById('ym-plan-change-free');
+                if (ymPlanFree) ymPlanFree.onclick = () => { if (typeof PlanShop !== 'undefined') PlanShop.cannotPayNow(); };
+                const ymCannotPay = document.getElementById('btn-plan-cannot-pay');
+                if (ymCannotPay) ymCannotPay.onclick = () => { if (typeof PlanShop !== 'undefined') PlanShop.cannotPayNow(); };
                 const aiModelSel = document.getElementById('aiModelSelect');
                 if (aiModelSel) {
                     aiModelSel.addEventListener('change', () => {
@@ -10313,10 +11153,16 @@
     </div>
     <div id="ym-plan-change-modal" class="modal hidden ym-plan-modal">
         <div class="modal-box">
-            <h3 id="ym-plan-change-title">プランを変更しますか？</h3>
-            <p id="ym-plan-change-body" class="text-body" style="margin:10px 0 16px; line-height:1.7;"></p>
+            <h3 id="ym-plan-change-title">先に支払います</h3>
+            <p id="ym-plan-change-body" class="text-body" style="margin:10px 0 8px; line-height:1.7;"></p>
+            <div class="ym-pay-first-box" id="ym-pay-first-box">
+                <div class="ym-pay-row"><span>支払うコイン</span><span id="ym-pay-amount">0</span></div>
+                <div class="ym-pay-row"><span>いまの所持コイン</span><span id="ym-pay-balance">0</span></div>
+                <div class="ym-pay-first-help">先にコインを引き落としてからプランを有効化します。コインが足りない、または払えないときは無料プランのままです。</div>
+            </div>
             <div class="ym-confirm-actions">
-                <button class="menu-btn btn-success" id="ym-plan-change-ok" style="margin:0;">このプランに変更</button>
+                <button class="menu-btn btn-success" id="ym-plan-change-ok" style="margin:0;">先に支払う</button>
+                <button class="menu-btn btn-warning" id="ym-plan-change-free" style="margin:0;">払えない・無料のまま</button>
                 <button class="menu-btn btn-danger closeModalBtn" id="ym-plan-change-cancel" style="margin:0;">キャンセル</button>
             </div>
         </div>
