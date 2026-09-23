@@ -1075,10 +1075,7 @@
         <div id="home-view" class="page-view card">
             <h1>Y.M へようこそ</h1>
             <p style="margin-top:10px; color:#666;">左側のトーク一覧から友達とのチャットを始められます。スタンプやプランは設定・その他から開けます。</p>
-            <div class="ym-honesty-box">
-                <strong>表示について</strong><br>
-                いま動いているのはこの端末のブラウザ内データです。コイン残高・プラン変更・管理者停止はローカルデモです。相手端末の中身は見えません。「同期済み」は、相手Peerまたは設定したサーバーと実際に通じたときだけ変わります。
-            </div>
+            <div class="ym-honesty-box hidden" hidden></div>
             <div style="margin-top:15px; background:#e9ecef; padding:10px; border-radius:6px; font-size:12px;">
                 🌐 <strong>通信ステータス (PeerJS / 相手が同じページを開いているとき):</strong><br>
                 自端末のPeerID: <span id="my-peer-id" style="font-weight:bold; color:#007bff;">接続準備中...</span><br>
@@ -1106,6 +1103,7 @@
                 <h3 id="chat-target-name" style="color:white;">チャット <span id="ym-e2ee-chip" class="ym-e2ee-chip warn">未確認</span></h3>
                 <div class="chat-toolbar">
                     <button class="menu-btn mobile-only" style="width:auto; padding:5px 10px; background:#334155;" id="btn-mobile-show-sidebar" aria-label="トーク一覧へ戻る">☰ 一覧</button>
+                    <button class="menu-btn hidden" style="width:auto; padding:5px 10px; background:#0f766e;" id="btn-ai-chat-settings" aria-label="AI設定">⚙️ AI設定</button>
                     <button class="menu-btn btn-success" style="width:auto; padding:5px 12px;" id="btn-start-call" aria-label="音声通話">📞 通話</button>
                     <button class="menu-btn btn-danger hidden" style="width:auto; padding:5px 12px;" id="btn-end-call" aria-label="通話切断">📵 切断</button>
                     <div class="header-overflow">
@@ -4306,9 +4304,9 @@
                     });
                     if (response.status === 429) {
                         showToast('AIが混雑しています。しばらくお待ちください');
-                        const waitMs = Math.min(16000, 1000 * Math.pow(2, attempt || 0));
+                        const waitMs = Math.min(1500, 400 * Math.pow(2, attempt || 0));
                         await new Promise(r => setTimeout(r, waitMs));
-                        if ((attempt || 0) < 3) return postAi(streamMode, (attempt || 0) + 1);
+                        if ((attempt || 0) < 1) return postAi(streamMode, (attempt || 0) + 1);
                     }
                     return response;
                 }
@@ -4371,7 +4369,7 @@
                                     aiRenderTimers[placeholderMsgId] = setTimeout(() => {
                                         delete aiRenderTimers[placeholderMsgId];
                                         if (activeChatTarget === 'chappy') renderChat(false);
-                                    }, 180);
+                                    }, 60);
                                 }
                                 if (!aiSaveTimers[placeholderMsgId]) {
                                     aiSaveTimers[placeholderMsgId] = setTimeout(() => {
@@ -4870,6 +4868,12 @@
                 const s = String(u || '');
                 if (!s) return false;
                 return /via\.placeholder\.com|placehold\.co|placehold\.it|dummyimage\.com|text=LIKE|ffffff\?text=/i.test(s);
+            }
+            function ymIsStampContent(t) {
+                const s = String(t || '');
+                if (!s) return false;
+                if (s.indexOf('data:image/') === 0) return true;
+                return /\.(png|jpe?g|gif|webp|svg)(\?|$)/i.test(s) && /^(https?:|data:|blob:)/i.test(s);
             }
             function ymSafeIconUrl(u) {
                 const s = String(u || '');
@@ -5947,7 +5951,8 @@
                     db.systemAnnouncement = data.text || '';
                     db.systemAnnouncementStyle = data.style || 'normal';
                     saveData();
-                    showSystemAnnouncementPopup(true);
+                    const dismissedNow = localStorage.getItem('YM_DISMISSED_ANNOUNCEMENT') || '';
+                    if (dismissedNow !== String(data.text || '')) showSystemAnnouncementPopup(true);
                 }
             }
 
@@ -7043,13 +7048,16 @@
                 
                 const aiControls = document.getElementById('ai-extra-controls');
                 const aiPreset = document.getElementById('ai-preset-bar');
+                const aiSetBtn = document.getElementById('btn-ai-chat-settings');
                 if (targetKey === 'chappy') {
-                    if (aiControls) aiControls.classList.remove('hidden');
-                    if (aiPreset) aiPreset.classList.remove('hidden');
+                    if (aiControls) { aiControls.classList.remove('hidden'); aiControls.classList.add('ym-force-show'); }
+                    if (aiPreset) { aiPreset.classList.remove('hidden'); aiPreset.classList.add('ym-force-show'); }
+                    if (aiSetBtn) aiSetBtn.classList.remove('hidden');
                     if (typeof PlanShop !== 'undefined') PlanShop.syncAiModelSelect();
                 } else {
-                    if (aiControls) aiControls.classList.add('hidden');
-                    if (aiPreset) aiPreset.classList.add('hidden');
+                    if (aiControls) { aiControls.classList.add('hidden'); aiControls.classList.remove('ym-force-show'); }
+                    if (aiPreset) { aiPreset.classList.add('hidden'); aiPreset.classList.remove('ym-force-show'); }
+                    if (aiSetBtn) aiSetBtn.classList.add('hidden');
                     const lim = document.getElementById('ym-plan-limit-banner');
                     if (lim) lim.classList.remove('active');
                 }
@@ -8023,7 +8031,7 @@
                         unsentText.style.fontStyle = 'italic';
                         unsentText.style.opacity = '0.7';
                         div.appendChild(unsentText);
-                    } else if (m.type === 'stamp') {
+                    } else if (m.type === 'stamp' || (typeof ymIsStampContent === 'function' && ymIsStampContent(m.text))) {
                         div.classList.add('stamp-msg');
                         div.innerHTML = sanitizeHTML(senderLabel + replyHtml);
                         const img = document.createElement('img');
@@ -8394,7 +8402,22 @@
                     const div = document.createElement('div');
                     if (msg.sender === 'DEV') {
                         div.className = 'msg msg-dev';
-                        div.innerHTML = sanitizeHTML(`<strong>📢 開発チーム:</strong><br>${escapeHTML(msg.text)}<div style="font-size:10px; opacity:0.8; margin-top:4px;">${timeStr}</div>`);
+                        if (msg.type === 'stamp' || (typeof ymIsStampContent === 'function' && ymIsStampContent(msg.text))) {
+                            div.classList.add('stamp-msg');
+                            const lab = document.createElement('strong');
+                            lab.textContent = '📢 開発チーム:';
+                            div.appendChild(lab);
+                            const img = document.createElement('img');
+                            img.src = (typeof ymSafeIconUrl === 'function') ? ymSafeIconUrl(msg.text) : msg.text;
+                            img.onclick = () => openLightbox(img.src);
+                            div.appendChild(img);
+                            const tm = document.createElement('div');
+                            tm.style.cssText = 'font-size:10px;opacity:0.8;margin-top:4px;';
+                            tm.textContent = timeStr;
+                            div.appendChild(tm);
+                        } else {
+                            div.innerHTML = sanitizeHTML(`<strong>📢 開発チーム:</strong><br>${escapeHTML(msg.text)}<div style="font-size:10px; opacity:0.8; margin-top:4px;">${timeStr}</div>`);
+                        }
                     } else {
                         div.className = 'msg msg-me';
                         if (msg.type === 'stamp') {
@@ -9014,19 +9037,35 @@
 
 
                         const logsList = document.createElement('div');
-                        logsList.style.cssText = 'max-height:120px; overflow-y:auto; font-size:12px; background:#fff; padding:8px; border-radius:6px; border:1px solid #e5e7eb;';
+                        logsList.style.cssText = 'max-height:180px; overflow-y:auto; overflow-x:hidden; font-size:12px; background:#fff; padding:8px; border-radius:6px; border:1px solid #e5e7eb;';
 
 
                         logs.forEach((m, idx) => {
                             if (hiddenRequestIndices[uKey] && hiddenRequestIndices[uKey].includes(idx)) return;
                             const isDev = m.sender === 'DEV';
                             const item = document.createElement('div');
-                            item.style.cssText = `margin-bottom:4px; border-bottom:1px dashed #eee; padding-bottom:4px; color:${isDev ? '#065f46' : '#1f2937'}; display:flex; justify-content:space-between; align-items:center;`;
-                            item.innerHTML = sanitizeHTML(`<span><strong>${isDev ? '📢 返信' : '💬 要望'}:</strong> ${escapeHTML(m.text)}</span>`);
+                            item.style.cssText = `margin-bottom:6px; border-bottom:1px dashed #eee; padding-bottom:6px; color:${isDev ? '#065f46' : '#1f2937'}; display:flex; justify-content:space-between; align-items:flex-start; gap:8px; max-width:100%;`;
+                            const body = document.createElement('div');
+                            body.style.cssText = 'min-width:0; flex:1; overflow-wrap:anywhere; word-break:break-word;';
+                            const kind = document.createElement('strong');
+                            kind.textContent = isDev ? '📢 返信: ' : '💬 要望: ';
+                            body.appendChild(kind);
+                            if (m.type === 'stamp' || (typeof ymIsStampContent === 'function' && ymIsStampContent(m.text))) {
+                                const img = document.createElement('img');
+                                img.src = (typeof ymSafeIconUrl === 'function') ? ymSafeIconUrl(m.text) : String(m.text || '');
+                                img.style.cssText = 'width:72px;height:72px;object-fit:cover;border-radius:8px;display:block;margin-top:4px;';
+                                body.appendChild(img);
+                            } else {
+                                const span = document.createElement('span');
+                                const raw = String(m.text || '');
+                                span.textContent = (raw.length > 180 && /^[A-Za-z0-9+/=\n]+$/.test(raw)) ? '[暗号化データ]' : raw;
+                                body.appendChild(span);
+                            }
+                            item.appendChild(body);
 
 
                             const hideBtn = document.createElement('button');
-                            hideBtn.style.cssText = 'background:none; border:none; color:#ef4444; cursor:pointer; font-size:10px; text-decoration:underline; margin-left:8px;';
+                            hideBtn.style.cssText = 'background:#fff; border:1px solid #fecaca; color:#ef4444; cursor:pointer; font-size:10px; flex:0 0 auto; padding:2px 6px; border-radius:6px;';
                             hideBtn.textContent = '非表示';
                             hideBtn.onclick = () => {
                                 if (!hiddenRequestIndices[uKey]) hiddenRequestIndices[uKey] = [];
@@ -10102,9 +10141,8 @@
                 const el = document.getElementById('ym-net-banner');
                 if (!el) return;
                 if (navigator.onLine) {
-                    el.className = 'ym-net-banner online';
-                    el.textContent = 'ブラウザはオンラインです（サーバー同期とは限りません）';
-                    setTimeout(() => { if (navigator.onLine) { el.className = 'ym-net-banner'; el.textContent = ''; } }, 1800);
+                    el.className = 'ym-net-banner';
+                    el.textContent = '';
                 } else {
                     el.className = 'ym-net-banner offline';
                     el.textContent = 'オフラインです。復帰後に自動で再送します。';
@@ -12126,6 +12164,48 @@
                 };
 
 
+                const btnAiSet = document.getElementById('btn-ai-chat-settings');
+                if (btnAiSet) {
+                    btnAiSet.onclick = () => {
+                        const m = document.getElementById('ai-chat-settings-model');
+                        const r = document.getElementById('ai-chat-settings-rate');
+                        const t = document.getElementById('ai-chat-settings-tts');
+                        const g = document.getElementById('ai-chat-settings-gateway');
+                        const k = document.getElementById('ai-chat-settings-token');
+                        const srcM = document.getElementById('aiModelSelect');
+                        const srcR = document.getElementById('speechRate');
+                        const srcT = document.getElementById('autoTTS');
+                        if (m && srcM) m.value = srcM.value;
+                        if (r && srcR) r.value = srcR.value;
+                        if (t && srcT) t.checked = srcT.checked;
+                        if (g) g.value = localStorage.getItem('YM_AI_GATEWAY') || '';
+                        if (k) k.value = sessionStorage.getItem('YM_AI_SESSION') || '';
+                        showModal('ai-chat-settings-modal');
+                    };
+                }
+                const btnSaveAiSet = document.getElementById('btn-save-ai-chat-settings');
+                if (btnSaveAiSet) {
+                    btnSaveAiSet.onclick = () => {
+                        const m = document.getElementById('ai-chat-settings-model');
+                        const r = document.getElementById('ai-chat-settings-rate');
+                        const t = document.getElementById('ai-chat-settings-tts');
+                        const g = document.getElementById('ai-chat-settings-gateway');
+                        const k = document.getElementById('ai-chat-settings-token');
+                        const srcM = document.getElementById('aiModelSelect');
+                        const srcR = document.getElementById('speechRate');
+                        const srcT = document.getElementById('autoTTS');
+                        const srcRv = document.getElementById('rateValue');
+                        if (m && srcM) srcM.value = m.value;
+                        if (r && srcR) srcR.value = r.value;
+                        if (srcRv && r) srcRv.textContent = r.value;
+                        if (t && srcT) srcT.checked = t.checked;
+                        if (g) localStorage.setItem('YM_AI_GATEWAY', g.value.trim());
+                        if (k) sessionStorage.setItem('YM_AI_SESSION', k.value.trim());
+                        hideModal('ai-chat-settings-modal');
+                        showToast('AI設定を保存しました');
+                    };
+                }
+
                 document.getElementById('btn-send-direct-msg').onclick = () => {
                     const text = document.getElementById('direct-msg-text').value.trim();
                     if (!text || !selectedDirectUser) return;
@@ -12276,6 +12356,27 @@
         })();
     </script>
 
+    <div id="ai-chat-settings-modal" class="modal hidden">
+        <div class="modal-box">
+            <h3>⚙️ AI設定</h3>
+            <p class="text-sub">このチャットのAI動作だけを変えます。プラン変更は含みません。</p>
+            <label>モデル</label>
+            <select id="ai-chat-settings-model">
+                <option value="openai">OpenAI (標準・高精度)</option>
+                <option value="qwen-coder">Qwen Coder (コード特化)</option>
+                <option value="deepseek">DeepSeek (論理思考)</option>
+            </select>
+            <label>朗読速度</label>
+            <input type="range" id="ai-chat-settings-rate" min="0.5" max="2.0" step="0.1" value="1.0">
+            <label><input type="checkbox" id="ai-chat-settings-tts" style="width:auto;display:inline;margin-right:6px;"> 自動朗読</label>
+            <label>AIゲートウェイ（任意）</label>
+            <input type="text" id="ai-chat-settings-gateway" placeholder="空なら標準経路">
+            <label>AIセッション（任意）</label>
+            <input type="password" id="ai-chat-settings-token" placeholder="任意" autocomplete="off">
+            <button class="menu-btn btn-success" id="btn-save-ai-chat-settings">保存</button>
+            <button class="menu-btn btn-danger closeModalBtn">閉じる</button>
+        </div>
+    </div>
     <div id="ym-pet-home-view" class="page-view card hidden">
         <h2>🐾 Y.Mペット</h2>
         <p class="text-sub">プロフィールに置けるデジタルペットです。コインで種類・衣装・部屋を変えられます。</p>
