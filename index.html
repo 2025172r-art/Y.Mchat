@@ -983,6 +983,20 @@
         #dev-auth-modal .ym-dev-local-note { font-size: 12px; color: #92400e; background: #fffbeb; border: 1px solid #f59e0b; border-radius: 8px; padding: 8px; margin: 0 0 10px; }
         body.ym-quiet-ui .user-info .ym-account-meta,
         body.ym-quiet-ui .user-info .ym-ultimate-badge { display: none; }
+
+        /* ===== YM persist / calendar / sync hub (additive 2026-09-23) ===== */
+        .ym-cal-wrap { display:flex; flex-direction:column; gap:10px; }
+        .ym-cal-head { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+        .ym-cal-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; }
+        .ym-cal-dow, .ym-cal-day { text-align:center; font-size:11px; padding:6px 2px; border-radius:8px; }
+        .ym-cal-dow { color:#64748b; font-weight:800; }
+        .ym-cal-day { background:#f8fafc; border:1px solid var(--border-color); cursor:pointer; min-height:42px; }
+        .ym-cal-day.has { background:#ecfdf5; border-color:#a7f3d0; font-weight:800; }
+        .ym-cal-day.today { outline:2px solid var(--primary); }
+        .ym-cal-day.sel { background:#dbeafe; border-color:#93c5fd; }
+        .ym-cal-day.mute { opacity:.45; }
+        .ym-cal-event { font-size:12px; padding:8px; border:1px solid var(--border-color); border-radius:8px; background:#f9fafb; }
+        .ym-sync-row { display:flex; justify-content:space-between; gap:8px; align-items:center; padding:8px 0; border-bottom:1px solid var(--border-color); font-size:12px; }
     </style>
 </head>
 <body class="ym-quiet-ui">
@@ -1036,6 +1050,8 @@
         <button class="menu-btn" style="background:#0369a1;" id="btn-open-message-requests">📥 メッセージリクエスト</button>
 
         <button class="menu-btn" style="background:#7c3aed;" id="btn-open-focus-board">🎯 フォーカスボード</button>
+        <button class="menu-btn" style="background:#0ea5e9;" id="btn-open-ym-calendar">📅 カレンダー同期</button>
+        <button class="menu-btn" style="background:#334155;" id="btn-open-ym-sync-hub">🔄 情報同期ハブ</button>
         <button class="menu-btn" style="background:#28a745;" id="btn-open-shop">🎨 スタンプショップ</button>
         <button class="menu-btn" style="background:#eab308;" id="btn-open-collection">⭐ スタリアコレクション</button>
         <button class="menu-btn" style="background:#4f46e5;" id="btn-backup-data">💾 データバックアップ/復元</button>
@@ -4253,7 +4269,40 @@
                 );
 
 
-                const SYSTEM_PROMPT = `あなたの名前は『チャッピー (AI / YM-CORE)』です。ユーザーに寄り添う親切・高精度で論理的なAIアシスタントです。事実に基づいた正確で有用な回答を提供してください。`;
+                function ymFormatNowJst() {
+                    try {
+                        return new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', year:'numeric', month:'long', day:'numeric', weekday:'long', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false });
+                    } catch (e) {
+                        return new Date().toString();
+                    }
+                }
+                function ymIsTimeQuestion(text) {
+                    const t = String(text || '');
+                    return /(今(の)?(時間|時刻|日時)|現在(の)?(時刻|時間|日時)|今何時|いま何時|今何分|いま何分|what time|current time|今日(の日付|は何日|の曜日)|何曜日|何日|日付を|時刻を|時間を教えて|いまの時間)/i.test(t);
+                }
+                function ymLocalTimeAnswer(text) {
+                    const now = ymFormatNowJst();
+                    const d = new Date();
+                    const ymd = d.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', year:'numeric', month:'long', day:'numeric', weekday:'long' });
+                    const hm = d.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false });
+                    if (/(日付|何日|何曜日|today)/i.test(String(text||'')) && !/(何時|時刻|時間|time)/i.test(String(text||''))) {
+                        return '今日は ' + ymd + ' です。（日本時間）';
+                    }
+                    return 'いまの日本時間は ' + now + ' です。\n日付: ' + ymd + '\n時刻: ' + hm;
+                }
+                if (ymIsTimeQuestion(userPrompt)) {
+                    const ans = ymLocalTimeAnswer(userPrompt);
+                    const targetMsg = db.messages.find(m => m.msgId === placeholderMsgId);
+                    if (targetMsg) {
+                        targetMsg.text = ans;
+                        saveData();
+                        if (activeChatTarget === 'chappy') renderChat(false);
+                    }
+                    const autoTTS = document.getElementById('autoTTS');
+                    if (autoTTS && autoTTS.checked) speakText(ans);
+                    return;
+                }
+                const SYSTEM_PROMPT = `あなたの名前は『チャッピー (AI / YM-CORE)』です。ユーザーに寄り添う親切・高精度で論理的なAIアシスタントです。事実に基づいた正確で有用な回答を提供してください。現在の日本時間は ${ymFormatNowJst()} です。時間や日付を聞かれたらこの時刻を使って答えてください。`;
 
 
                 const messagesHistory = [{ role: 'system', content: SYSTEM_PROMPT }];
@@ -5141,6 +5190,11 @@
                     blockedPeers: {},
                     systemAnnouncement: '',
                     systemAnnouncementStyle: 'normal',
+                    announcementId: '',
+                    announcementDismissedFp: '',
+                    announcementDismissedText: '',
+                    calendarEvents: [],
+                    syncLinks: {},
                     systemVersion: '1.3.0',
                     transactions: [],
                     devices: {},
@@ -5151,7 +5205,7 @@
                 try {
                     const idbData = await IDB.get('app_db', 'appData');
                     if (idbData && typeof idbData === 'object' && !idbData.__ymenc) {
-                        return ymScrubDeadMedia(Object.assign({}, defaultDb, idbData, {
+                        return ymMergePersistSnapshot(ymScrubDeadMedia(Object.assign({}, defaultDb, idbData, {
                             users: idbData.users || {},
                             friends: idbData.friends || {},
                             groups: idbData.groups || {},
@@ -5161,8 +5215,12 @@
                             keepLogs: idbData.keepLogs || {},
                             transactions: idbData.transactions || [],
                             devices: idbData.devices || {},
-                            notifications: idbData.notifications || []
-                        }));
+                            notifications: idbData.notifications || [],
+                            calendarEvents: idbData.calendarEvents || [],
+                            syncLinks: idbData.syncLinks || {},
+                            announcementId: idbData.announcementId || '',
+                            announcementDismissedFp: idbData.announcementDismissedFp || ''
+                        })));
                     }
 
 
@@ -5172,12 +5230,12 @@
                         if (!LocalVault.ready) throw new Error('Vault locked during migration');
                         await IDB.set('app_db', parsed, 'appData');
                         localStorage.removeItem('YM_DB');
-                        return ymScrubDeadMedia(Object.assign({}, defaultDb, parsed));
+                        return ymMergePersistSnapshot(ymScrubDeadMedia(Object.assign({}, defaultDb, parsed)));
                     }
-                    return defaultDb;
+                    return ymMergePersistSnapshot(defaultDb);
                 } catch (e) {
                     console.error("DB Load Error:", e);
-                    return defaultDb;
+                    try { return ymMergePersistSnapshot(defaultDb); } catch (e2) { return defaultDb; }
                 }
             }
 
@@ -5195,6 +5253,7 @@
                         return;
                     }
                     await IDB.set('app_db', db, 'appData');
+                    try { if (typeof YMPersist !== 'undefined') YMPersist.writeSnapshot(db); } catch (e3) {}
                     try { if (typeof YMSupabase !== 'undefined') YMSupabase.scheduleSync(); } catch (e2) {}
                 } catch (e) {
                     console.error("IndexedDB Save Error:", e);
@@ -5948,11 +6007,26 @@
                         renderApp();
                     }
                 } else if (data.type === 'UPDATE_ANNOUNCEMENT') {
-                    db.systemAnnouncement = data.text || '';
-                    db.systemAnnouncementStyle = data.style || 'normal';
-                    saveData();
-                    const dismissedNow = localStorage.getItem('YM_DISMISSED_ANNOUNCEMENT') || '';
-                    if (dismissedNow !== String(data.text || '')) showSystemAnnouncementPopup(true);
+                    const nextText = data.text || '';
+                    const nextStyle = data.style || 'normal';
+                    const nextId = data.announcementId || '';
+                    const prevFp = (typeof ymAnnouncementFingerprint === 'function') ? ymAnnouncementFingerprint(db.systemAnnouncement, db.systemAnnouncementStyle, db.announcementId) : (String(db.systemAnnouncement||'') + String(db.systemAnnouncementStyle||''));
+                    db.systemAnnouncement = nextText;
+                    db.systemAnnouncementStyle = nextStyle;
+                    if (nextId) db.announcementId = nextId;
+                    if (typeof YMPersist !== 'undefined') YMPersist.writeAnnouncement(db);
+                    if (typeof window.saveDataNow === 'function') window.saveDataNow(); else saveData();
+                    const nextFp = (typeof ymAnnouncementFingerprint === 'function') ? ymAnnouncementFingerprint(nextText, nextStyle, db.announcementId) : (nextText + nextStyle);
+                    const dismissed = (typeof ymAnnouncementIsDismissed === 'function') ? ymAnnouncementIsDismissed(nextText, nextStyle, db.announcementId) : ((localStorage.getItem('YM_DISMISSED_ANNOUNCEMENT') || '') === nextText);
+                    if (nextText && nextFp !== prevFp && !dismissed && nextText !== (localStorage.getItem('YM_DISMISSED_ANNOUNCEMENT') || '')) showSystemAnnouncementPopup(true);
+                    else if (!nextText) {
+                        const modal = document.getElementById('announcement-popup-modal');
+                        if (modal) modal.classList.add('hidden');
+                    }
+                } else if (data.type === 'SYNC_CALENDAR') {
+                    if (typeof YMCalendar !== 'undefined') YMCalendar.mergeRemote(data.events || [], data.from);
+                } else if (data.type === 'SYNC_HUB') {
+                    if (typeof YMSyncHub !== 'undefined') YMSyncHub.mergeRemote(data);
                 }
             }
 
@@ -6387,6 +6461,395 @@
                 init() { this.load(); this.updateStatusWidgets(); }
             };
 
+            const YMPersist = {
+                snapKey: 'YM_PERSIST_SNAPSHOT',
+                annKey: 'YM_SYSTEM_ANNOUNCEMENT',
+                readJson(key) {
+                    try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; }
+                },
+                writeSnapshot(src) {
+                    if (!src || typeof src !== 'object') return;
+                    const slimUsers = {};
+                    try {
+                        Object.keys(src.users || {}).slice(0, 80).forEach(k => {
+                            const u = src.users[k] || {};
+                            slimUsers[k] = { name: u.name, coins: u.coins, planId: u.planId, secretWord: u.secretWord, lastLogin: u.lastLogin, createdAt: u.createdAt, isBlocked: u.isBlocked, myStamps: (u.myStamps||[]).slice(-30), myReactions: (u.myReactions||[]).slice(-30) };
+                        });
+                    } catch (e) {}
+                    const snap = {
+                        savedAt: Date.now(),
+                        systemAnnouncement: src.systemAnnouncement || '',
+                        systemAnnouncementStyle: src.systemAnnouncementStyle || 'normal',
+                        announcementId: src.announcementId || '',
+                        announcementDismissedFp: src.announcementDismissedFp || '',
+                        announcementDismissedText: src.announcementDismissedText || '',
+                        calendarEvents: Array.isArray(src.calendarEvents) ? src.calendarEvents.slice(0, 400) : [],
+                        syncLinks: src.syncLinks && typeof src.syncLinks === 'object' ? src.syncLinks : {},
+                        scheduledMessages: Array.isArray(src.scheduledMessages) ? src.scheduledMessages.slice(-80) : [],
+                        friends: src.friends || {},
+                        groups: src.groups || {},
+                        pinnedMessages: src.pinnedMessages || {},
+                        pinnedChats: src.pinnedChats || {},
+                        hiddenChats: src.hiddenChats || {},
+                        lastReadTimestamps: src.lastReadTimestamps || {},
+                        notifications: Array.isArray(src.notifications) ? src.notifications.slice(0, 80) : [],
+                        keepLogs: src.keepLogs || {},
+                        officialChatLogs: src.officialChatLogs || {},
+                        usersMeta: slimUsers
+                    };
+                    try { localStorage.setItem(this.snapKey, JSON.stringify(snap)); } catch (e) {
+                        try {
+                            const mini = { savedAt: snap.savedAt, systemAnnouncement: snap.systemAnnouncement, systemAnnouncementStyle: snap.systemAnnouncementStyle, announcementId: snap.announcementId, announcementDismissedFp: snap.announcementDismissedFp, announcementDismissedText: snap.announcementDismissedText, calendarEvents: snap.calendarEvents, scheduledMessages: snap.scheduledMessages, syncLinks: snap.syncLinks };
+                            localStorage.setItem(this.snapKey, JSON.stringify(mini));
+                        } catch (e2) {}
+                    }
+                    this.writeAnnouncement(src);
+                },
+                writeAnnouncement(src) {
+                    try {
+                        localStorage.setItem(this.annKey, JSON.stringify({
+                            text: (src && src.systemAnnouncement) || '',
+                            style: (src && src.systemAnnouncementStyle) || 'normal',
+                            id: (src && src.announcementId) || '',
+                            dismissedFp: (src && src.announcementDismissedFp) || '',
+                            dismissedText: (src && src.announcementDismissedText) || '',
+                            at: Date.now()
+                        }));
+                    } catch (e) {}
+                }
+            };
+            function ymMergePersistSnapshot(base) {
+                const out = base || {};
+                const snap = YMPersist.readJson(YMPersist.snapKey) || {};
+                const ann = YMPersist.readJson(YMPersist.annKey) || {};
+                if (!out.systemAnnouncement && (snap.systemAnnouncement || ann.text)) {
+                    out.systemAnnouncement = snap.systemAnnouncement || ann.text || '';
+                    out.systemAnnouncementStyle = snap.systemAnnouncementStyle || ann.style || 'normal';
+                    out.announcementId = snap.announcementId || ann.id || out.announcementId || '';
+                } else if (out.systemAnnouncement && !out.announcementId) {
+                    out.announcementId = snap.announcementId || ann.id || out.announcementId || '';
+                }
+                if (!out.announcementDismissedFp) {
+                    out.announcementDismissedFp = snap.announcementDismissedFp || ann.dismissedFp || localStorage.getItem('YM_DISMISSED_ANNOUNCEMENT_FP') || '';
+                }
+                if (!out.announcementDismissedText) {
+                    out.announcementDismissedText = snap.announcementDismissedText || ann.dismissedText || localStorage.getItem('YM_DISMISSED_ANNOUNCEMENT') || '';
+                }
+                if (!Array.isArray(out.calendarEvents) || out.calendarEvents.length === 0) {
+                    out.calendarEvents = Array.isArray(snap.calendarEvents) ? snap.calendarEvents : (out.calendarEvents || []);
+                }
+                if (!out.syncLinks || !Object.keys(out.syncLinks).length) {
+                    out.syncLinks = snap.syncLinks || out.syncLinks || {};
+                }
+                if ((!out.scheduledMessages || !out.scheduledMessages.length) && Array.isArray(snap.scheduledMessages)) {
+                    out.scheduledMessages = snap.scheduledMessages;
+                }
+                const fillObj = (key) => {
+                    if ((!out[key] || !Object.keys(out[key] || {}).length) && snap[key] && typeof snap[key] === 'object') out[key] = snap[key];
+                };
+                fillObj('friends');
+                fillObj('groups');
+                fillObj('pinnedMessages');
+                fillObj('pinnedChats');
+                fillObj('hiddenChats');
+                fillObj('lastReadTimestamps');
+                fillObj('keepLogs');
+                fillObj('officialChatLogs');
+                if ((!out.notifications || !out.notifications.length) && Array.isArray(snap.notifications)) out.notifications = snap.notifications;
+                if (snap.usersMeta && out.users) {
+                    Object.keys(snap.usersMeta).forEach(k => {
+                        if (!out.users[k]) out.users[k] = Object.assign({ icon: '', chatBg: '#8cabd9', myStamps: [], myReactions: [] }, snap.usersMeta[k]);
+                    });
+                }
+                return out;
+            }
+            window.YMPersist = YMPersist;
+
+            const YMCalendar = {
+                y: new Date().getFullYear(),
+                m: new Date().getMonth(),
+                selected: null,
+                events() {
+                    if (!db) return [];
+                    if (!Array.isArray(db.calendarEvents)) db.calendarEvents = [];
+                    return db.calendarEvents;
+                },
+                persist() {
+                    try { if (typeof YMPersist !== 'undefined') YMPersist.writeSnapshot(db); } catch (e) {}
+                    try { if (typeof window.saveDataNow === 'function') window.saveDataNow(); else if (typeof saveData === 'function') saveData(); } catch (e) {}
+                    try { broadcastData({ type: 'SYNC_CALENDAR', from: activeUserId, events: this.events() }); } catch (e) {}
+                },
+                mergeRemote(events, from) {
+                    if (!Array.isArray(events)) return;
+                    const map = {};
+                    this.events().forEach(ev => { if (ev && ev.id) map[ev.id] = ev; });
+                    events.forEach(ev => {
+                        if (!ev || !ev.id) return;
+                        const cur = map[ev.id];
+                        if (!cur || (ev.updatedAt || 0) >= (cur.updatedAt || 0)) map[ev.id] = ev;
+                    });
+                    db.calendarEvents = Object.values(map).filter(ev => !ev.deleted);
+                    this.persist();
+                    this.render();
+                },
+                add(partial) {
+                    const ev = Object.assign({
+                        id: 'cal_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+                        title: '予定',
+                        date: new Date().toISOString().slice(0, 10),
+                        time: '',
+                        note: '',
+                        source: 'local',
+                        owner: activeUserId,
+                        updatedAt: Date.now()
+                    }, partial || {});
+                    this.events().push(ev);
+                    this.persist();
+                    this.render();
+                    return ev;
+                },
+                remove(id) {
+                    const ev = this.events().find(e => e.id === id);
+                    if (ev) { ev.deleted = true; ev.updatedAt = Date.now(); }
+                    db.calendarEvents = this.events().filter(e => e.id !== id);
+                    this.persist();
+                    this.render();
+                },
+                dayKey(d) { return d.toISOString().slice(0, 10); },
+                eventsOn(dateStr) {
+                    return this.events().filter(ev => !ev.deleted && String(ev.date) === dateStr);
+                },
+                render() {
+                    const label = document.getElementById('ym-cal-label');
+                    const grid = document.getElementById('ym-cal-grid');
+                    const list = document.getElementById('ym-cal-list');
+                    if (!grid) return;
+                    const y = this.y, m = this.m;
+                    if (label) label.textContent = y + '年' + (m + 1) + '月';
+                    grid.innerHTML = '';
+                    ['日','月','火','水','木','金','土'].forEach(d => {
+                        const el = document.createElement('div');
+                        el.className = 'ym-cal-dow';
+                        el.textContent = d;
+                        grid.appendChild(el);
+                    });
+                    const first = new Date(y, m, 1);
+                    const start = first.getDay();
+                    const days = new Date(y, m + 1, 0).getDate();
+                    const today = new Date().toISOString().slice(0, 10);
+                    for (let i = 0; i < start; i++) {
+                        const el = document.createElement('div');
+                        el.className = 'ym-cal-day mute';
+                        grid.appendChild(el);
+                    }
+                    for (let d = 1; d <= days; d++) {
+                        const ds = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+                        const el = document.createElement('div');
+                        el.className = 'ym-cal-day' + (this.eventsOn(ds).length ? ' has' : '') + (ds === today ? ' today' : '') + (this.selected === ds ? ' sel' : '');
+                        el.textContent = String(d);
+                        el.onclick = () => { this.selected = ds; const inp = document.getElementById('ym-cal-date'); if (inp) inp.value = ds; this.render(); };
+                        grid.appendChild(el);
+                    }
+                    if (list) {
+                        const focus = this.selected || today;
+                        const rows = this.eventsOn(focus);
+                        list.innerHTML = '';
+                        if (!rows.length) {
+                            list.innerHTML = '<div class="text-sub">この日の予定はありません。</div>';
+                        } else {
+                            rows.forEach(ev => {
+                                const item = document.createElement('div');
+                                item.className = 'ym-cal-event';
+                                item.textContent = (ev.time ? ev.time + ' ' : '') + (ev.title || '予定') + (ev.note ? ' — ' + ev.note : '') + (ev.source && ev.source !== 'local' ? ' [' + ev.source + ']' : '');
+                                const del = document.createElement('button');
+                                del.className = 'menu-btn btn-danger';
+                                del.style.cssText = 'width:auto;display:inline-block;margin:6px 0 0;padding:2px 8px;font-size:11px;';
+                                del.textContent = '削除';
+                                del.onclick = () => this.remove(ev.id);
+                                item.appendChild(del);
+                                list.appendChild(item);
+                            });
+                        }
+                    }
+                    const ics = document.getElementById('ym-cal-ics-url');
+                    if (ics && db && db.syncLinks) ics.value = db.syncLinks.icsUrl || ics.value || '';
+                },
+                exportIcs() {
+                    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//YM Chat//Calendar//JP'];
+                    this.events().forEach(ev => {
+                        if (ev.deleted || !ev.date) return;
+                        const day = String(ev.date).replace(/-/g, '');
+                        lines.push('BEGIN:VEVENT');
+                        lines.push('UID:' + ev.id + '@ym-chat');
+                        lines.push('DTSTART;VALUE=DATE:' + day);
+                        lines.push('SUMMARY:' + String(ev.title || '予定').replace(/[,\;]/g, ' '));
+                        if (ev.note) lines.push('DESCRIPTION:' + String(ev.note).replace(/[,\;]/g, ' '));
+                        lines.push('END:VEVENT');
+                    });
+                    lines.push('END:VCALENDAR');
+                    const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = 'YM_Calendar.ics';
+                    a.click();
+                },
+                importIcsText(text) {
+                    const blocks = String(text || '').split('BEGIN:VEVENT');
+                    let n = 0;
+                    blocks.slice(1).forEach(block => {
+                        const sum = (block.match(/SUMMARY(?:;[^:]*)?:(.*)/) || [])[1];
+                        const dt = (block.match(/DTSTART(?:;[^:]*)?:([0-9]{8})/) || [])[1];
+                        const desc = (block.match(/DESCRIPTION(?:;[^:]*)?:(.*)/) || [])[1];
+                        if (!dt) return;
+                        const date = dt.slice(0,4) + '-' + dt.slice(4,6) + '-' + dt.slice(6,8);
+                        this.add({ title: (sum || '予定').trim(), date: date, note: (desc || '').trim(), source: 'ics' });
+                        n += 1;
+                    });
+                    showToast(n ? (n + '件の予定を取り込みました') : '取り込みできる予定がありません');
+                },
+                async pullIcsUrl() {
+                    const inp = document.getElementById('ym-cal-ics-url');
+                    const url = ((inp && inp.value) || (db.syncLinks && db.syncLinks.icsUrl) || '').trim();
+                    if (!url) { showToast('カレンダーURLを入力してください'); return; }
+                    if (!db.syncLinks) db.syncLinks = {};
+                    db.syncLinks.icsUrl = url;
+                    try {
+                        const res = await fetch(url);
+                        const text = await res.text();
+                        this.importIcsText(text);
+                        this.persist();
+                    } catch (e) {
+                        showToast('カレンダーURLを取得できませんでした（CORS制限の場合があります）');
+                    }
+                },
+                tickReminders() {
+                    const now = Date.now();
+                    this.events().forEach(ev => {
+                        if (ev.deleted || ev.reminded) return;
+                        if (!ev.date) return;
+                        const t = new Date(ev.date + 'T' + (ev.time || '09:00') + ':00').getTime();
+                        if (t && t <= now && (now - t) < 6 * 60 * 60 * 1000) {
+                            ev.reminded = true;
+                            try { if (typeof window.sendLocalNotification === 'function') window.sendLocalNotification('📅 ' + (ev.title || '予定'), { body: ev.note || ev.date, tag: 'cal-' + ev.id }); } catch (e) {}
+                            try { showToast('予定: ' + (ev.title || '')); } catch (e) {}
+                        }
+                    });
+                },
+                bind() {
+                    const open = () => { this.render(); showModal('ym-calendar-modal'); };
+                    const btn = document.getElementById('btn-open-ym-calendar');
+                    if (btn) btn.onclick = open;
+                    const prev = document.getElementById('ym-cal-prev');
+                    const next = document.getElementById('ym-cal-next');
+                    if (prev) prev.onclick = () => { this.m -= 1; if (this.m < 0) { this.m = 11; this.y -= 1; } this.render(); };
+                    if (next) next.onclick = () => { this.m += 1; if (this.m > 11) { this.m = 0; this.y += 1; } this.render(); };
+                    const add = document.getElementById('btn-ym-cal-add');
+                    if (add) add.onclick = () => {
+                        const title = (document.getElementById('ym-cal-title') || {}).value || '';
+                        const date = (document.getElementById('ym-cal-date') || {}).value || '';
+                        const time = (document.getElementById('ym-cal-time') || {}).value || '';
+                        const note = (document.getElementById('ym-cal-note') || {}).value || '';
+                        if (!title.trim() || !date) { showToast('タイトルと日付を入力してください'); return; }
+                        this.add({ title: title.trim(), date, time, note: note.trim() });
+                        showToast('予定を保存しました（リロード後も残ります）');
+                    };
+                    const exp = document.getElementById('btn-ym-cal-export');
+                    if (exp) exp.onclick = () => this.exportIcs();
+                    const file = document.getElementById('ym-cal-ics-file');
+                    if (file) file.onchange = (e) => {
+                        const f = e.target.files && e.target.files[0];
+                        if (!f) return;
+                        const reader = new FileReader();
+                        reader.onload = () => this.importIcsText(String(reader.result || ''));
+                        reader.readAsText(f);
+                        e.target.value = '';
+                    };
+                    const pull = document.getElementById('btn-ym-cal-pull');
+                    if (pull) pull.onclick = () => this.pullIcsUrl();
+                    if (!window._ymCalTick) window._ymCalTick = setInterval(() => this.tickReminders(), 30000);
+                }
+            };
+            window.YMCalendar = YMCalendar;
+
+            const YMSyncHub = {
+                render() {
+                    const box = document.getElementById('ym-sync-hub-list');
+                    if (!box || !db) return;
+                    const rows = [
+                        ['全体アナウンス', (db.systemAnnouncement ? '保存済み' : 'なし') + (db.announcementDismissedFp ? ' / 既読保持' : '')],
+                        ['カレンダー予定', String((db.calendarEvents || []).filter(e => !e.deleted).length) + '件'],
+                        ['予約メッセージ', String((db.scheduledMessages || []).length) + '件'],
+                        ['友達', String((db.friends && db.friends[activeUserId] || []).length) + '人'],
+                        ['グループ', String(Object.keys(db.groups || {}).length) + '件'],
+                        ['通知', String((db.notifications || []).length) + '件'],
+                        ['端末', String(((db.devices && db.devices[activeUserId]) || []).length) + '台'],
+                        ['Keepメモ', String((db.keepLogs && db.keepLogs[activeUserId] || []).length) + '件']
+                    ];
+                    box.innerHTML = rows.map(r => '<div class="ym-sync-row"><span>' + r[0] + '</span><strong>' + r[1] + '</strong></div>').join('');
+                },
+                pushAll() {
+                    try { if (typeof YMPersist !== 'undefined') YMPersist.writeSnapshot(db); } catch (e) {}
+                    try { if (typeof window.saveDataNow === 'function') window.saveDataNow(); else saveData(); } catch (e) {}
+                    try { if (typeof triggerFullTabSync === 'function') triggerFullTabSync(); } catch (e) {}
+                    try { broadcastData({ type: 'SYNC_CALENDAR', from: activeUserId, events: (db.calendarEvents || []) }); } catch (e) {}
+                    try {
+                        broadcastData({
+                            type: 'SYNC_HUB',
+                            from: activeUserId,
+                            announcement: { text: db.systemAnnouncement || '', style: db.systemAnnouncementStyle || 'normal', id: db.announcementId || '', dismissedFp: db.announcementDismissedFp || '', dismissedText: db.announcementDismissedText || '' },
+                            calendar: db.calendarEvents || [],
+                            scheduled: db.scheduledMessages || [],
+                            friends: (db.friends && db.friends[activeUserId]) || [],
+                            groups: db.groups || {},
+                            notifications: (db.notifications || []).slice(0, 40),
+                            pinnedMessages: db.pinnedMessages || {},
+                            syncLinks: db.syncLinks || {}
+                        });
+                    } catch (e) {}
+                    showToast('保存内容を同期しました');
+                    this.render();
+                },
+                mergeRemote(data) {
+                    if (!data) return;
+                    if (data.calendar) YMCalendar.mergeRemote(data.calendar, data.from);
+                    if (data.scheduled && Array.isArray(data.scheduled)) {
+                        db.scheduledMessages = db.scheduledMessages || [];
+                        const have = new Set(db.scheduledMessages.map(s => s.id));
+                        data.scheduled.forEach(s => { if (s && s.id && !have.has(s.id)) db.scheduledMessages.push(s); });
+                    }
+                    if (data.announcement && data.announcement.text && !db.systemAnnouncement) {
+                        db.systemAnnouncement = data.announcement.text;
+                        db.systemAnnouncementStyle = data.announcement.style || 'normal';
+                        db.announcementId = data.announcement.id || db.announcementId || '';
+                    }
+                    if (data.friends && Array.isArray(data.friends)) {
+                        if (!db.friends[activeUserId]) db.friends[activeUserId] = [];
+                        data.friends.forEach(id => { if (id && !db.friends[activeUserId].includes(id)) db.friends[activeUserId].push(id); });
+                    }
+                    if (data.groups && typeof data.groups === 'object') {
+                        Object.keys(data.groups).forEach(gid => {
+                            if (!db.groups[gid]) db.groups[gid] = data.groups[gid];
+                        });
+                    }
+                    if (data.syncLinks && typeof data.syncLinks === 'object') {
+                        db.syncLinks = Object.assign({}, data.syncLinks, db.syncLinks || {});
+                    }
+                    if (data.pinnedMessages && typeof data.pinnedMessages === 'object') {
+                        db.pinnedMessages = Object.assign({}, data.pinnedMessages, db.pinnedMessages || {});
+                    }
+                    if (typeof YMPersist !== 'undefined') YMPersist.writeSnapshot(db);
+                    if (typeof window.saveDataNow === 'function') window.saveDataNow(); else saveData();
+                    this.render();
+                },
+                bind() {
+                    const btn = document.getElementById('btn-open-ym-sync-hub');
+                    if (btn) btn.onclick = () => { this.render(); showModal('ym-sync-hub-modal'); };
+                    const push = document.getElementById('btn-ym-sync-now');
+                    if (push) push.onclick = () => this.pushAll();
+                }
+            };
+            window.YMSyncHub = YMSyncHub;
+
             const FocusBoard = {
                 key: 'YM_FOCUS_BOARD',
                 data: { focus: false, replies: ['今は返信できません。あとで連絡します。', '了解です。', 'ありがとう。'] },
@@ -6581,6 +7044,37 @@
                 db.notifications.unshift({ id: 'nt_' + Date.now(), kind: kind || 'system', title: title || '', body: body || '', ts: Date.now(), read: false });
                 db.notifications = db.notifications.slice(0, 200);
             }
+            function ymAnnouncementFingerprint(text, style, id) {
+                return [String(id || ''), String(style || 'normal'), String(text || '')].join('\n');
+            }
+            function ymAnnouncementIsDismissed(text, style, id) {
+                const fp = ymAnnouncementFingerprint(text, style, id);
+                if (!String(text || '').trim()) return true;
+                try {
+                    const rawText = String(text || '');
+                    const ls = localStorage.getItem('YM_DISMISSED_ANNOUNCEMENT') || '';
+                    const lsFp = localStorage.getItem('YM_DISMISSED_ANNOUNCEMENT_FP') || '';
+                    const dbFp = (db && db.announcementDismissedFp) || '';
+                    const dbText = (db && db.announcementDismissedText) || '';
+                    // 同じ本文ならIDが変わってもリロードで再表示しない
+                    return lsFp === fp || dbFp === fp || ls === rawText || dbText === rawText;
+                } catch (e) { return false; }
+            }
+            function ymMarkAnnouncementDismissed() {
+                if (!db) return;
+                const text = String(db.systemAnnouncement || '');
+                const style = db.systemAnnouncementStyle || 'normal';
+                const fp = ymAnnouncementFingerprint(text, style, db.announcementId);
+                try {
+                    localStorage.setItem('YM_DISMISSED_ANNOUNCEMENT', text);
+                    localStorage.setItem('YM_DISMISSED_ANNOUNCEMENT_FP', fp);
+                } catch (e) {}
+                db.announcementDismissedFp = fp;
+                db.announcementDismissedText = text;
+                db.announcementDismissedAt = Date.now();
+                try { if (typeof YMPersist !== 'undefined') YMPersist.writeAnnouncement(db); } catch (e) {}
+                try { if (typeof window.saveDataNow === 'function') window.saveDataNow(); else if (typeof saveData === 'function') saveData(); } catch (e) {}
+            }
             function showSystemAnnouncementPopup(force) {
                 const text = (db && db.systemAnnouncement) ? String(db.systemAnnouncement) : '';
                 const style = (db && db.systemAnnouncementStyle) ? db.systemAnnouncementStyle : 'normal';
@@ -6592,8 +7086,11 @@
                     modal.classList.add('hidden');
                     return;
                 }
-                const dismissed = localStorage.getItem('YM_DISMISSED_ANNOUNCEMENT') || '';
-                if (!force && dismissed === text) return;
+                const dismissed = ymAnnouncementIsDismissed(text, style, db && db.announcementId);
+                if (dismissed) {
+                    modal.classList.add('hidden');
+                    return;
+                }
                 if (content) {
                     content.textContent = text;
                     const titleMap = { notice:'📢 お知らせ', emergency:'🚨 緊急通知', maintenance:'🔧 メンテナンス', feature:'✨ 新機能', campaign:'🎁 キャンペーン', danger:'🚨 重要警告', success:'🎉 成功・イベント', normal:'📢 全体アナウンス' };
@@ -6625,6 +7122,8 @@
                     title.textContent = titleMap[style] || '📢 全体アナウンス';
                 }
                 modal.classList.remove('hidden');
+                // 一度表示したらリロード後は出さない（新しい本文のときだけ再表示）
+                ymMarkAnnouncementDismissed();
             }
             function renderNotificationCenter() {
                 const list = document.getElementById('notif-center-list');
@@ -10530,6 +11029,10 @@
                 if (!db.transactions) db.transactions = [];
                 if (!db.devices) db.devices = {};
                 if (!db.notifications) db.notifications = [];
+                if (!db.calendarEvents) db.calendarEvents = [];
+                if (!db.syncLinks) db.syncLinks = {};
+                if (!db.scheduledMessages) db.scheduledMessages = [];
+                try { db = ymMergePersistSnapshot(db); } catch (e) {}
                 AdminGuard.load();
                 DeviceRegistry.ensure();
                 const richInit = document.getElementById('chat-rich-menu');
@@ -10747,6 +11250,7 @@
                 initPeer();
                 renderApp();
                 try { ymBindUpgradeUi(); ymUpdateNetBanner(); ymUpdateSyncChip(); } catch (e) { console.warn(e); }
+                try { YMCalendar.bind(); YMSyncHub.bind(); YMPersist.writeSnapshot(db); } catch (e) { console.warn(e); }
 
 
                 // ピン留め解除イベントボタン
@@ -11082,7 +11586,7 @@
                 const btnCloseAnnounce = document.getElementById('btn-close-announcement-popup');
                 if (btnCloseAnnounce) {
                     btnCloseAnnounce.onclick = () => {
-                        localStorage.setItem('YM_DISMISSED_ANNOUNCEMENT', db.systemAnnouncement || '');
+                        ymMarkAnnouncementDismissed();
                         hideModal('announcement-popup-modal');
                     };
                 }
@@ -12153,14 +12657,29 @@
                     if (!AdminGuard.require()) return;
                     const text = document.getElementById('dev-announcement-text').value;
                     const style = document.getElementById('dev-announcement-style').value;
+                    const prevText = String(db.systemAnnouncement || '');
+                    const prevFp = ymAnnouncementFingerprint(db.systemAnnouncement, db.systemAnnouncementStyle, db.announcementId);
                     db.systemAnnouncement = text;
                     db.systemAnnouncementStyle = style;
-                    if (text) localStorage.removeItem('YM_DISMISSED_ANNOUNCEMENT');
-                    saveData();
-                    broadcastData({ type: 'UPDATE_ANNOUNCEMENT', text: text, style: style });
+                    if (text !== prevText) {
+                        db.announcementId = text ? ('ann_' + Date.now()) : '';
+                    } else if (text && !db.announcementId) {
+                        db.announcementId = 'ann_' + Date.now();
+                    }
+                    const nextFp = ymAnnouncementFingerprint(text, style, db.announcementId);
+                    if (text && text !== prevText) {
+                        localStorage.removeItem('YM_DISMISSED_ANNOUNCEMENT');
+                        localStorage.removeItem('YM_DISMISSED_ANNOUNCEMENT_FP');
+                        db.announcementDismissedFp = '';
+                        db.announcementDismissedText = '';
+                    }
+                    if (!text) ymMarkAnnouncementDismissed();
+                    YMPersist.writeAnnouncement(db);
+                    if (typeof window.saveDataNow === 'function') window.saveDataNow(); else saveData();
+                    broadcastData({ type: 'UPDATE_ANNOUNCEMENT', text: text, style: style, announcementId: db.announcementId });
                     renderApp();
-                    showSystemAnnouncementPopup(true);
-                    showToast(text ? '全体アナウンスをポップアップで配信しました。' : '全体アナウンスを解除しました。');
+                    if (text && text !== prevText) showSystemAnnouncementPopup(true);
+                    showToast(text ? '全体アナウンスを保存・配信しました。閉じたあとはリロードしても再表示しません。' : '全体アナウンスを解除しました。');
                 };
 
 
@@ -12231,6 +12750,7 @@
                 document.querySelectorAll('.closeModalBtn').forEach(btn => {
                     btn.onclick = (e) => {
                         const modal = e.target.closest('.modal');
+                        if (modal && modal.id === 'announcement-popup-modal') ymMarkAnnouncementDismissed();
                         if (modal) modal.classList.add('hidden');
                     };
                 });
@@ -12416,6 +12936,48 @@
         <button type="button" id="nav-settings" aria-label="設定">⚙️ 設定</button>
     </nav>
 
+    <div id="ym-calendar-modal" class="modal hidden">
+        <div class="modal-box">
+            <h3>📅 カレンダー同期</h3>
+            <p class="text-sub">予定は端末内に保存され、リロード後も残ります。ICS取り込み・公開カレンダーURL・P2P同期に対応します。</p>
+            <div class="ym-cal-wrap">
+                <div class="ym-cal-head">
+                    <button class="menu-btn" id="ym-cal-prev" style="width:auto;margin:0;padding:4px 10px;">←</button>
+                    <strong id="ym-cal-label">カレンダー</strong>
+                    <button class="menu-btn" id="ym-cal-next" style="width:auto;margin:0;padding:4px 10px;">→</button>
+                </div>
+                <div class="ym-cal-grid" id="ym-cal-grid"></div>
+                <div id="ym-cal-list"></div>
+                <label>タイトル</label>
+                <input type="text" id="ym-cal-title" placeholder="予定の名前">
+                <label>日付</label>
+                <input type="date" id="ym-cal-date">
+                <label>時刻（任意）</label>
+                <input type="time" id="ym-cal-time">
+                <label>メモ</label>
+                <textarea id="ym-cal-note" rows="2" placeholder="詳細"></textarea>
+                <button class="menu-btn btn-success" id="btn-ym-cal-add">予定を保存</button>
+                <label>ICSファイル取り込み</label>
+                <input type="file" id="ym-cal-ics-file" accept=".ics,text/calendar">
+                <label>公開カレンダーURL（ICS）</label>
+                <input type="text" id="ym-cal-ics-url" placeholder="https://.../basic.ics">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="menu-btn" id="btn-ym-cal-pull" style="margin:0;background:#0ea5e9;">URLから同期</button>
+                    <button class="menu-btn" id="btn-ym-cal-export" style="margin:0;background:#334155;">ICS出力</button>
+                </div>
+            </div>
+            <button class="menu-btn btn-danger closeModalBtn" style="margin-top:12px;">閉じる</button>
+        </div>
+    </div>
+    <div id="ym-sync-hub-modal" class="modal hidden">
+        <div class="modal-box">
+            <h3>🔄 情報同期ハブ</h3>
+            <p class="text-sub">保存済みのアナウンス・カレンダー・予約送信・友達などを端末内保存し、開いている相手へ同期します。</p>
+            <div id="ym-sync-hub-list"></div>
+            <button class="menu-btn btn-success" id="btn-ym-sync-now">今すぐ保存して同期</button>
+            <button class="menu-btn btn-danger closeModalBtn">閉じる</button>
+        </div>
+    </div>
     <div id="vault-unlock-screen" class="app-lock-screen hidden">
         <h2 id="vault-unlock-title">🔐 Y.M Ultimate 保護</h2>
         <p id="vault-unlock-help" style="font-size:13px;color:#94a3b8;text-align:center;max-width:320px;">普段は端末キーで自動解除します。別端末や復元時だけ復旧コードを使います。</p>
