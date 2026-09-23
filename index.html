@@ -16,8 +16,8 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- DOMPurify: XSS対策サニタイズライブラリ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
-    <!-- QRCode.js: QRコード生成ライブラリ（招待リンク・友達追加用） -->
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <!-- QRCode.js: 招待QR用（unpkg。jsdelivrがブロックされても動く） -->
+    <script src="https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js"></script>
     <!-- Supabase JS: ログイン・保管・コイン確定用（既存P2Pは維持） -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/dist/umd/supabase.js"></script>
     <style>
@@ -12148,21 +12148,7 @@
                 let _swRegistration = null;
 
 
-                // Service Worker登録（プログレッシブ・エラー時は黙殺）
-                if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-                    try {
-                        navigator.serviceWorker.register('ym-sw.js').then((reg) => { _swRegistration = reg; }).catch(() => {});
-                        const vapid = (localStorage.getItem('YM_VAPID_KEY') || '').trim();
-                        if (vapid && 'PushManager' in window) {
-                            navigator.serviceWorker.ready.then(async (reg) => {
-                                try {
-                                    await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: vapid });
-                                } catch (e) {}
-                            });
-                        }
-                        // Blob SW は ym-sw.js と二重登録になるため使わない
-                    } catch (e) {}
-                }
+                // ym-sw.js はサーバーに無いため登録しない（404防止）。通知は Notification API を使う。
 
 
                 // 通知許可の要求（ユーザーアクション後）
