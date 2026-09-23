@@ -881,9 +881,47 @@
         @media (max-width: 640px) {
             .ym-cc-kpis, .ym-cc-grid2, .ym-cc-req-col { grid-template-columns:1fr; }
         }
+
+        /* ===== YM Quiet Layout 2026-09-23 (additive final rules; features kept) ===== */
+        html, body { height: 100dvh; overflow: hidden; }
+        body { min-height: 100dvh; }
+        .chat-header-row {
+            flex-wrap: nowrap !important;
+            align-items: center !important;
+            gap: 8px;
+            min-height: 48px;
+        }
+        .chat-toolbar { flex-wrap: nowrap !important; gap: 6px; }
+        .chat-header-row h3 { font-size: 16px; min-width: 0; }
+        .chat-toolbar .menu-btn {
+            min-height: 36px;
+            min-width: 36px;
+            font-size: 12px !important;
+            padding: 6px 10px !important;
+        }
+        .rich-menu-item { min-width: 64px; font-size: 12px; min-height: 44px; }
+        .msg-meta, .msg-time, .msg-delivery, .ym-sync-chip, .ym-account-meta { font-size: 12px; }
+        .user-info .ym-account-meta { display: none; }
+        .user-info .ym-ultimate-badge { display: none; }
+        #dev-mode-btn { display: none !important; }
+        body.ym-dev-door-open #dev-mode-btn { display: inline-flex !important; }
+        body.ym-quiet-ui #ai-extra-controls:not(.ym-force-show),
+        body.ym-quiet-ui #ai-preset-bar:not(.ym-force-show) { display: none !important; }
+        body.ym-quiet-ui #chat-rich-menu.collapsed { display: none !important; }
+        body.ym-quiet-ui .composer-extra-tools:not(.active) { display: none !important; }
+        #ym-dev-gate-modal .ym-dev-gate-steps { display:flex; flex-direction:column; gap:8px; font-size:13px; line-height:1.6; }
+        #ym-dev-gate-modal .ym-dev-dial { display:flex; gap:8px; align-items:center; }
+        #ym-dev-gate-modal .ym-dev-dial input { width:72px; margin:0; text-align:center; }
+        @media (max-width: 768px) {
+            .chat-header-row, .chat-toolbar { flex-wrap: wrap !important; }
+            body.mobile-chat-active .chat-box { height: var(--vvh, 100dvh); max-height: var(--vvh, 100dvh); }
+        }
+        @media (min-width: 769px) {
+            .chat-header-row, .chat-toolbar { flex-wrap: nowrap !important; }
+        }
     </style>
 </head>
-<body>
+<body class="ym-quiet-ui">
 
 
 
@@ -908,8 +946,8 @@
     <!-- サイドバー -->
     <div class="sidebar" id="app-sidebar">
         <div class="sidebar-header">
-            <h2>Y.M Ultimate</h2>
-            <button id="dev-mode-btn" class="menu-btn btn-warning" style="width:auto; padding:4px 8px; font-size:11px;">開発者モード</button>
+            <h2 id="ym-brand-title" title="Y.M Ultimate">Y.M Ultimate</h2>
+            <button id="dev-mode-btn" class="menu-btn btn-warning hidden" style="width:auto; padding:4px 8px; font-size:11px;" aria-hidden="true" tabindex="-1">開発者モード</button>
         </div>
 
 
@@ -917,7 +955,7 @@
             <img id="my-avatar" class="user-avatar" src="https://via.placeholder.com/40" alt="Avatar">
             <div style="flex:1;">
                 <div id="my-name" style="font-weight: bold;">User</div>
-                <span class="coin-badge">🪙 <span id="my-coins">0</span> コイン</span>
+                <span class="coin-badge" id="ym-coin-badge">🪙 <span id="my-coins">0</span> コイン</span>
                 <span class="ym-ultimate-badge">ULTIMATE</span>
                 <span class="ym-plan-chip" id="ym-plan-chip">👑 無料</span>
                 <div class="ym-account-meta">アカウント <span id="ym-account-id-label">-</span><br>端末 <span id="ym-device-id-label">-</span><span class="ym-sync-chip" id="ym-sync-chip">✓ 同期済み</span></div>
@@ -1687,6 +1725,30 @@
         </div>
     </div>
 
+
+
+    <div id="ym-dev-gate-modal" class="modal hidden">
+        <div class="modal-box">
+            <h3>🔒 オペレーター確認（5/5）</h3>
+            <p class="text-sub" style="margin-bottom:10px;">下の3つのボタンを <strong>Y → M → ULT</strong> の順番で押してください。押した順は下に出ます。</p>
+            <div class="ym-dev-gate-steps">
+                <div class="ym-dev-dial" id="ym-dev-seq-btns">
+                    <button type="button" class="menu-btn" id="ym-dev-seq-y" style="width:auto;margin:0;padding:8px 16px;">Y</button>
+                    <button type="button" class="menu-btn" id="ym-dev-seq-m" style="width:auto;margin:0;padding:8px 16px;background:#334155;">M</button>
+                    <button type="button" class="menu-btn" id="ym-dev-seq-u" style="width:auto;margin:0;padding:8px 16px;background:#7c3aed;">ULT</button>
+                    <button type="button" class="menu-btn" id="ym-dev-seq-reset" style="width:auto;margin:0;padding:8px 12px;background:#64748b;">やり直す</button>
+                </div>
+                <div id="ym-dev-seq-view" style="font-size:14px;font-weight:800;margin:8px 0 10px;">順番: （まだなし）</div>
+                <input type="hidden" id="ym-dev-dial-a" value="0">
+                <input type="hidden" id="ym-dev-dial-b" value="0">
+                <input type="hidden" id="ym-dev-dial-c" value="0">
+                <input type="hidden" id="ym-dev-gate-key" value="">
+                <label style="text-transform:none;"><input type="checkbox" id="ym-dev-gate-ack" style="width:auto;display:inline;margin-right:6px;">操作権限があることを確認</label>
+            </div>
+            <button class="menu-btn btn-success" id="btn-ym-dev-gate-next">次へ</button>
+            <button class="menu-btn btn-danger closeModalBtn" style="margin-top:5px;">閉じる</button>
+        </div>
+    </div>
 
     <div id="dev-auth-modal" class="modal hidden">
         <div class="modal-box">
@@ -3290,6 +3352,145 @@
             const TARGET_DEV_USER = "YM";
             const TARGET_DEV_PASS_HASH = "b3c654aa9119428fdddfd27bf2fcd82e150016e4b387abd74bdabb309525c07c"; // 開発者ログイン: ユーザー名 YM / パスワード yamanesaiki
             const YM_AI_DEFAULT_GATEWAY = (localStorage.getItem('YM_AI_GATEWAY') || '').trim();
+
+
+            const DevDoor = {
+                step: 0,
+                titleTaps: 0,
+                avatarTaps: 0,
+                coinTaps: 0,
+                waitingPlan: false,
+                waitingCoinAfterTitle: false,
+                gateSeq: [],
+                gatePassed: false,
+                loginReady: false,
+                canShowLogin() { return !!(this.gatePassed && this.loginReady); },
+                resetSoft() {
+                    this.step = 0;
+                    this.titleTaps = 0;
+                    this.avatarTaps = 0;
+                    this.coinTaps = 0;
+                    this.waitingPlan = false;
+                    this.waitingCoinAfterTitle = false;
+                    this.gateSeq = [];
+                    this.gatePassed = false;
+                    this.loginReady = false;
+                    document.body.classList.remove('ym-dev-door-open');
+                    const btn = document.getElementById('dev-mode-btn');
+                    if (btn) { btn.classList.add('hidden'); btn.setAttribute('aria-hidden', 'true'); }
+                },
+                pulse(msg) { try { showToast(msg); } catch (e) {} },
+                renderSeq() {
+                    const el = document.getElementById('ym-dev-seq-view');
+                    if (!el) return;
+                    el.textContent = this.gateSeq.length ? ('順番: ' + this.gateSeq.join(' → ')) : '順番: （まだなし）';
+                },
+                // 工程1: 「Y.M Ultimate」を5回押す
+                onTitleTap() {
+                    if (this.loginReady) return;
+                    if (this.step === 3) {
+                        this.waitingCoinAfterTitle = true;
+                        this.pulse('次はコインを1回');
+                        return;
+                    }
+                    if (this.step > 0) return;
+                    this.titleTaps += 1;
+                    if (this.titleTaps >= 5) {
+                        this.step = 1;
+                        this.titleTaps = 0;
+                        this.pulse('1/5 完了');
+                    }
+                },
+                // 工程2: アバター3回のあと、プランチップを押す
+                onAvatarTap() {
+                    if (this.step !== 1 || this.loginReady) return;
+                    this.avatarTaps += 1;
+                    if (this.avatarTaps >= 3) {
+                        this.waitingPlan = true;
+                        this.pulse('次はプラン（冠）を1回');
+                    }
+                },
+                onPlanChipTap() {
+                    if (this.step !== 1 || !this.waitingPlan || this.loginReady) return;
+                    this.waitingPlan = false;
+                    this.step = 2;
+                    this.pulse('2/5 完了');
+                },
+                // 工程3: コインを4回押す
+                // 工程4: タイトル1回 → コイン1回
+                onCoinTap() {
+                    if (this.loginReady) return;
+                    if (this.step === 3) {
+                        if (!this.waitingCoinAfterTitle) {
+                            this.pulse('先にタイトルを1回押してください');
+                            return;
+                        }
+                        this.waitingCoinAfterTitle = false;
+                        this.step = 4;
+                        this.gatePassed = true;
+                        this.gateSeq = [];
+                        this.renderSeq();
+                        this.pulse('4/5 完了');
+                        showModal('ym-dev-gate-modal');
+                        return;
+                    }
+                    if (this.step !== 2) return;
+                    this.coinTaps += 1;
+                    if (this.coinTaps >= 4) {
+                        this.step = 3;
+                        this.coinTaps = 0;
+                        this.waitingCoinAfterTitle = false;
+                        this.pulse('3/5 完了。タイトルを1回、次にコインを1回');
+                    }
+                },
+                pushSeq(part) {
+                    if (!this.gatePassed || this.loginReady) return;
+                    if (this.gateSeq.length >= 3) this.gateSeq = [];
+                    this.gateSeq.push(part);
+                    this.renderSeq();
+                },
+                // 工程5: ボタンを Y → M → ULT の順で押してチェック
+                submitGate() {
+                    if (!this.gatePassed) return false;
+                    const ack = !!(document.getElementById('ym-dev-gate-ack') && document.getElementById('ym-dev-gate-ack').checked);
+                    const okSeq = this.gateSeq.length === 3 && this.gateSeq[0] === 'Y' && this.gateSeq[1] === 'M' && this.gateSeq[2] === 'ULT';
+                    if (okSeq && ack) {
+                        this.loginReady = true;
+                        document.body.classList.add('ym-dev-door-open');
+                        const btn = document.getElementById('dev-mode-btn');
+                        if (btn) { btn.classList.remove('hidden'); btn.setAttribute('aria-hidden', 'false'); }
+                        hideModal('ym-dev-gate-modal');
+                        showModal('dev-auth-modal');
+                        this.pulse('5/5 完了');
+                        return true;
+                    }
+                    this.pulse(okSeq ? 'チェックを入れてください' : '順番は Y → M → ULT です');
+                    return false;
+                },
+                bind() {
+                    if (this._bound) return;
+                    this._bound = true;
+                    const title = document.getElementById('ym-brand-title');
+                    if (title) title.addEventListener('click', (e) => { e.preventDefault(); this.onTitleTap(); });
+                    const av = document.getElementById('my-avatar');
+                    if (av) av.addEventListener('click', () => this.onAvatarTap());
+                    const chip = document.getElementById('ym-plan-chip');
+                    if (chip) chip.addEventListener('click', () => this.onPlanChipTap());
+                    const coin = document.getElementById('ym-coin-badge');
+                    if (coin) coin.addEventListener('click', (e) => { e.preventDefault(); this.onCoinTap(); });
+                    const by = document.getElementById('ym-dev-seq-y');
+                    const bm = document.getElementById('ym-dev-seq-m');
+                    const bu = document.getElementById('ym-dev-seq-u');
+                    const br = document.getElementById('ym-dev-seq-reset');
+                    if (by) by.onclick = () => this.pushSeq('Y');
+                    if (bm) bm.onclick = () => this.pushSeq('M');
+                    if (bu) bu.onclick = () => this.pushSeq('ULT');
+                    if (br) br.onclick = () => { this.gateSeq = []; this.renderSeq(); };
+                    const next = document.getElementById('btn-ym-dev-gate-next');
+                    if (next) next.onclick = () => this.submitGate();
+                }
+            };
+            // DevDoor手順: 1)タイトル5回 2)アバター3回→プランチップ 3)コイン4回 4)タイトル1回→コイン1回 5)ボタン Y→M→ULT + チェック → ログイン ユーザー名 YM / パスワード yamanesaiki
 
             const AdminGuard = {
                 session: null,
@@ -5999,7 +6200,11 @@
                 }
 
 
-                document.getElementById('dev-mode-btn').classList.remove('hidden');
+                const _devBtnVis = document.getElementById('dev-mode-btn');
+                if (_devBtnVis && !document.body.classList.contains('ym-dev-door-open')) {
+                    _devBtnVis.classList.add('hidden');
+                    _devBtnVis.setAttribute('aria-hidden', 'true');
+                }
 
 
                 document.getElementById('my-name').textContent = userObj.name;
@@ -8975,6 +9180,8 @@
 
             const _renderChatOrig = renderChat;
             let _lastChatFingerprint = '';
+            let _lastChatTargetSeen = '';
+            let _lastChatLenSeen = 0;
             renderChat = async function(scrollToBottom = false) {
                 const container = document.getElementById('chat-messages');
                 const searchKeyword = (document.getElementById('chat-search-input')?.value || '').toLowerCase().trim();
@@ -8998,6 +9205,8 @@
                     return;
                 }
                 _lastChatFingerprint = fp;
+                _lastChatTargetSeen = activeChatTarget || '';
+                _lastChatLenSeen = msgs.length;
                 const result = await _renderChatOrig(scrollToBottom);
                 if (typeof window.YMAfterRenderChat === 'function') window.YMAfterRenderChat(msgs);
                 return result;
@@ -9749,6 +9958,14 @@
                 await E2EE.init();
                 await OfflineBridge.init();
                 ImageEditor.bind();
+                document.body.classList.add('ym-quiet-ui');
+                const _syncVvh = () => {
+                    const h = (window.visualViewport && window.visualViewport.height) ? window.visualViewport.height : window.innerHeight;
+                    document.documentElement.style.setProperty('--vvh', h + 'px');
+                };
+                _syncVvh();
+                if (window.visualViewport) window.visualViewport.addEventListener('resize', _syncVvh);
+                window.addEventListener('resize', _syncVvh);
                 applyYmTheme(localStorage.getItem('YM_THEME') || 'line');
                 const themeSel = document.getElementById('setting-theme');
                 if (themeSel) themeSel.value = localStorage.getItem('YM_THEME') || 'line';
@@ -10109,10 +10326,21 @@
                 });
 
 
-                document.getElementById('dev-mode-btn').onclick = () => showModal('dev-auth-modal');
+                if (typeof DevDoor !== 'undefined') DevDoor.bind();
+                document.getElementById('dev-mode-btn').onclick = () => {
+                    if (typeof DevDoor === 'undefined' || !DevDoor.canShowLogin()) {
+                        showToast('この操作は無効です');
+                        return;
+                    }
+                    showModal('dev-auth-modal');
+                };
                 
                 // 開発者モード認証（パスワード: yamanesaiki / ユーザー名: YM）
                 document.getElementById('btn-submit-dev-auth').onclick = async () => {
+                    if (typeof DevDoor !== 'undefined' && !DevDoor.canShowLogin()) {
+                        showToast('ゲートが未解除です');
+                        return;
+                    }
                     const u = document.getElementById('dev-auth-username').value.trim();
                     const p = document.getElementById('dev-auth-password').value.trim();
                     const ok = await AdminGuard.login(u, p);
