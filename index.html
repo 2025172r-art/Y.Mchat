@@ -16,8 +16,28 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- DOMPurify: XSS対策サニタイズライブラリ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
-    <!-- QRCode.js: 招待QR用（unpkg。jsdelivrがブロックされても動く） -->
-    <script src="https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <!-- 招待QR: cdnjs QRious（ファイル名 qrcode.min.js は広告ブロッカーで遮断されるため使わない） -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script>
+        (function () {
+            if (typeof QRCode !== 'undefined' && QRCode.toDataURL) return;
+            if (typeof QRious === 'undefined') return;
+            window.QRCode = {
+                toDataURL: function (text, opts, cb) {
+                    try {
+                        var size = (opts && (opts.width || opts.height)) || 200;
+                        var qr = new QRious({ value: String(text || ''), size: size, level: 'M' });
+                        var url = qr.toDataURL();
+                        if (typeof cb === 'function') cb(null, url);
+                        return Promise.resolve(url);
+                    } catch (e) {
+                        if (typeof cb === 'function') cb(e);
+                        return Promise.reject(e);
+                    }
+                }
+            };
+        })();
+    </script>
     <!-- Supabase JS: ログイン・保管・コイン確定用（既存P2Pは維持） -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/dist/umd/supabase.js"></script>
     <style>
