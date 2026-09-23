@@ -5,13 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content, maximum-scale=5.0, user-scalable=yes">
     <title id="app-title">Y.M Ultimate Chat</title>
     <link id="app-favicon" rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%2306C755'/%3E%3Ctext x='96' y='124' text-anchor='middle' font-size='72' font-family='sans-serif' font-weight='800' fill='white'%3EYM%3C/text%3E%3C/svg%3E">
-    <link id="app-manifest" rel="manifest" href="ym-manifest.json">
-    <script>
-        if (location.protocol === 'file:') {
-            var _ymMan = document.getElementById('app-manifest');
-            if (_ymMan) _ymMan.remove();
-        }
-    </script>
+    <!-- app-manifest removed: file:// では CORS になるため使わない -->
     <meta name="theme-color" content="#06C755">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
