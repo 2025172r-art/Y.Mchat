@@ -72,6 +72,8 @@
         .header-overflow-menu { display: none; position: absolute; right: 0; top: 36px; z-index: 80; min-width: 180px; background: #fff; border: 1px solid var(--border-color); border-radius: 10px; box-shadow: var(--shadow-md); padding: 6px; flex-direction: column; }
         .header-overflow-menu.active { display: flex; }
         .header-overflow-menu button { width: 100%; margin: 0 0 4px 0; }
+        .ym-sidebar-header-actions { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+        #sidebar-overflow-menu { z-index: 220; min-width: 220px; max-height: min(70vh, 520px); overflow-y: auto; }
         .unread-divider { display:flex; align-items:center; text-align:center; margin: 10px 0; color:#dc2626; font-size:12px; font-weight:800; }
         .unread-divider::before, .unread-divider::after { content:''; flex:1; border-bottom:1px solid rgba(220,38,38,0.35); }
         .unread-divider span { padding: 0 10px; background: rgba(254,226,226,0.92); border-radius: 12px; }
@@ -1026,7 +1028,24 @@
     <div class="sidebar" id="app-sidebar">
         <div class="sidebar-header">
             <h2 id="ym-brand-title" title="Y.M Ultimate">Y.M Ultimate</h2>
-            <button id="dev-mode-btn" class="menu-btn btn-warning hidden" style="width:auto; padding:4px 8px; font-size:11px;" aria-hidden="true" tabindex="-1">開発者モード</button>
+            <div class="ym-sidebar-header-actions">
+                <div class="header-overflow" id="ym-sidebar-more-wrap">
+                    <button type="button" class="menu-btn" id="btn-sidebar-more" style="width:auto; padding:4px 10px; font-size:16px; background:#334155; line-height:1;" aria-label="その他のメニュー" title="メニュー">⋯</button>
+                    <div class="header-overflow-menu" id="sidebar-overflow-menu">
+                        <button class="menu-btn" style="background:#0ea5e9;" id="btn-open-plan-shop">👑 AIプラン</button>
+                        <button class="menu-btn" style="background:#0369a1;" id="btn-open-message-requests">📥 メッセージリクエスト</button>
+                        <button class="menu-btn" style="background:#7c3aed;" id="btn-open-focus-board">🎯 フォーカスボード</button>
+                        <button class="menu-btn" style="background:#28a745;" id="btn-open-shop">🎨 スタンプショップ</button>
+                        <button class="menu-btn" style="background:#eab308;" id="btn-open-collection">⭐ スタリアコレクション</button>
+                        <button class="menu-btn" style="background:#17a2b8;" id="btn-open-add-friend">🔑 合言葉で友達追加</button>
+                        <button class="menu-btn" style="background:#8b5cf6;" id="btn-open-create-group">👥 グループ作成</button>
+                        <button class="menu-btn" style="background:#111827;" id="btn-open-vault-security">🔐 端末セキュリティ</button>
+                        <button class="menu-btn" style="background:#6f42c1;" id="btn-open-settings">⚙️ 設定 / バックアップ</button>
+                        <button class="menu-btn" style="background:#334155;" id="btn-open-ym-sync-hub">🔄 情報同期ハブ</button>
+                    </div>
+                </div>
+                <button id="dev-mode-btn" class="menu-btn btn-warning hidden" style="width:auto; padding:4px 8px; font-size:11px;" aria-hidden="true" tabindex="-1">開発者モード</button>
+            </div>
         </div>
 
 
@@ -1042,19 +1061,8 @@
         </div>
 
 
-        <details class="ym-side-more" id="ym-sidebar-extras">
+        <details class="ym-side-more hidden" id="ym-sidebar-extras" hidden>
             <summary>その他の機能</summary>
-        <button class="menu-btn" style="background:#0ea5e9;" id="btn-open-plan-shop">👑 プランショップ</button>
-
-        <button class="menu-btn" style="background:#fb7185;" id="btn-open-pet-home">🐾 Y.Mペット</button>
-        <button class="menu-btn" style="background:#0369a1;" id="btn-open-message-requests">📥 メッセージリクエスト</button>
-
-        <button class="menu-btn" style="background:#7c3aed;" id="btn-open-focus-board">🎯 フォーカスボード</button>
-        <button class="menu-btn" style="background:#0ea5e9;" id="btn-open-ym-calendar">📅 カレンダー同期</button>
-        <button class="menu-btn" style="background:#334155;" id="btn-open-ym-sync-hub">🔄 情報同期ハブ</button>
-        <button class="menu-btn" style="background:#28a745;" id="btn-open-shop">🎨 スタンプショップ</button>
-        <button class="menu-btn" style="background:#eab308;" id="btn-open-collection">⭐ スタリアコレクション</button>
-        <button class="menu-btn" style="background:#4f46e5;" id="btn-backup-data">💾 データバックアップ/復元</button>
         </details>
         
         <!-- サイドバー「トーク」項目（友達・グループをトークの中に設置） -->
@@ -1071,12 +1079,7 @@
             <div id="talk-mode-friend-list" class="friend-list"></div>
             
             <div id="sidebar-default-items" style="margin-top:10px;">
-                <button class="menu-btn" style="background:#17a2b8;" id="btn-open-add-friend">🔑 合言葉で友達追加</button>
-                <button class="menu-btn" style="background:#8b5cf6;" id="btn-open-create-group">👥 グループ作成</button>
-                <button class="menu-btn" style="background:#6f42c1;" id="btn-open-settings">⚙️ 設定 (表示/アイコン)</button>
                 <button class="menu-btn" style="background:#111827;" id="btn-open-notif-center-side">🔔 通知センター</button>
-                <button class="menu-btn" style="background:#0f766e;" id="btn-open-devices">📱 接続端末</button>
-                <button class="menu-btn" style="background:#111827;" id="btn-open-vault-security">🔐 端末セキュリティ</button>
 
 
                 <div class="section-title">システム・公式</div>
@@ -1896,9 +1899,9 @@
             <label>Y.M AIゲートウェイURL（推奨・サーバー経由 / サーバー未設定時の互換）</label>
             <input type="text" id="setting-ai-gateway" placeholder="https://your-ym-server.example/ai">
             <p style="font-size:11px; color:#666; margin:-8px 0 12px;">本番ではサーバーだけがAI APIキーを保持します。未設定時は公開プロキシを利用します。</p>
-            <label>短時間セッショントークン（任意・タブ閉じで破棄）</label>
+            <label>短時間セッショントークン（任意・この端末に保存）</label>
             <input type="password" id="setting-ai-api-key" placeholder="サーバーから発行された一時トークン" autocomplete="off">
-            <p style="font-size:11px; color:#666; margin:-8px 0 12px;">クライアントへ本番APIキーは保存しません。トークンは sessionStorage のみです。</p>
+            <p style="font-size:11px; color:#666; margin:-8px 0 12px;">クライアントへ本番APIキーは保存しません。保存したトークン・AI設定はこの端末のリロード後も残します。</p>
             <label>オフライン配送 Firebase設定JSON（任意）</label>
             <textarea id="setting-firebase-config" rows="3" placeholder='{"apiKey":"...","databaseURL":"...","projectId":"..."}'></textarea>
             <p style="font-size:11px; color:#666; margin:-8px 0 12px;">未設定時は端末内キューのみ。設定時は相手オフラインでもRealtime Database経由で後届けします。</p>
@@ -1936,10 +1939,12 @@
             <div class="section-title">その他の機能</div>
             <div class="ym-settings-extras">
                 <button type="button" class="menu-btn" id="btn-settings-plan" style="background:#0ea5e9;margin:0;">👑 プラン</button>
-                <button type="button" class="menu-btn" id="btn-settings-pet" style="background:#fb7185;margin:0;">🐾 ペット</button>
                 <button type="button" class="menu-btn" id="btn-settings-focus" style="background:#7c3aed;margin:0;">🎯 フォーカス</button>
                 <button type="button" class="menu-btn" id="btn-settings-collection" style="background:#eab308;margin:0;">⭐ コレクション</button>
             </div>
+            <div class="section-title">データバックアップ / 復元</div>
+            <p style="font-size:12px; color:#666; margin:0 0 8px;">設定とバックアップをまとめて管理します。出力したJSONはこの端末の金庫で暗号化されます。</p>
+            <button class="menu-btn btn-success" id="btn-backup-data" style="margin-bottom:8px;">💾 バックアップ画面を開く</button>
             <button class="menu-btn btn-success" id="btn-save-settings">設定を保存</button>
             <button class="menu-btn btn-danger closeModalBtn" style="margin-top:5px;">キャンセル</button>
         </div>
@@ -4254,6 +4259,61 @@
             }
 
 
+            function ymSaveAiPrefs() {
+                try {
+                    const modelEl = document.getElementById('aiModelSelect');
+                    const rateEl = document.getElementById('speechRate');
+                    const ttsEl = document.getElementById('autoTTS');
+                    const prefs = {
+                        model: modelEl ? modelEl.value : 'openai',
+                        rate: rateEl ? String(rateEl.value) : '1.0',
+                        autoTTS: !!(ttsEl && ttsEl.checked),
+                        gateway: String(localStorage.getItem('YM_AI_GATEWAY') || '').trim(),
+                        savedAt: Date.now()
+                    };
+                    localStorage.setItem('YM_AI_PREFS', JSON.stringify(prefs));
+                    if (typeof db !== 'undefined' && db && db.users && typeof activeUserId !== 'undefined' && db.users[activeUserId]) {
+                        db.users[activeUserId].aiModel = prefs.model;
+                        db.users[activeUserId].aiPrefs = prefs;
+                    }
+                } catch (e) {}
+            }
+            function ymLoadAiPrefs() {
+                try {
+                    let prefs = null;
+                    try { prefs = JSON.parse(localStorage.getItem('YM_AI_PREFS') || 'null'); } catch (e) { prefs = null; }
+                    if ((!prefs || typeof prefs !== 'object') && typeof db !== 'undefined' && db && db.users && typeof activeUserId !== 'undefined' && db.users[activeUserId] && db.users[activeUserId].aiPrefs) {
+                        prefs = db.users[activeUserId].aiPrefs;
+                    }
+                    if (!prefs || typeof prefs !== 'object') prefs = {};
+                    const modelEl = document.getElementById('aiModelSelect');
+                    if (modelEl && prefs.model) {
+                        const has = Array.from(modelEl.options || []).some(o => o.value === prefs.model);
+                        if (has) modelEl.value = prefs.model;
+                    } else if (modelEl && typeof db !== 'undefined' && db && db.users && db.users[activeUserId] && db.users[activeUserId].aiModel) {
+                        const m = db.users[activeUserId].aiModel;
+                        const has = Array.from(modelEl.options || []).some(o => o.value === m);
+                        if (has) modelEl.value = m;
+                    }
+                    const rateEl = document.getElementById('speechRate');
+                    if (rateEl && prefs.rate) rateEl.value = prefs.rate;
+                    const rateVal = document.getElementById('rateValue');
+                    if (rateVal && (prefs.rate || (rateEl && rateEl.value))) rateVal.textContent = String(prefs.rate || rateEl.value);
+                    const ttsEl = document.getElementById('autoTTS');
+                    if (ttsEl && typeof prefs.autoTTS === 'boolean') ttsEl.checked = prefs.autoTTS;
+                    if (prefs.gateway) localStorage.setItem('YM_AI_GATEWAY', prefs.gateway);
+                    const savedTok = String(localStorage.getItem('YM_AI_SESSION_SAVED') || '').trim();
+                    if (savedTok && !sessionStorage.getItem('YM_AI_SESSION')) {
+                        sessionStorage.setItem('YM_AI_SESSION', savedTok);
+                        sessionStorage.setItem('YM_SESSION_TOKEN', savedTok);
+                    }
+                    const gwEl = document.getElementById('setting-ai-gateway');
+                    if (gwEl && !gwEl.value) gwEl.value = localStorage.getItem('YM_AI_GATEWAY') || prefs.gateway || '';
+                } catch (e) {}
+            }
+            window.ymSaveAiPrefs = ymSaveAiPrefs;
+            window.ymLoadAiPrefs = ymLoadAiPrefs;
+
             // -------------------------------------------------------------
             // AI会話エンジン (DOMPurifyによるサニタイズ処理を適用)
             // -------------------------------------------------------------
@@ -4278,7 +4338,7 @@
                 }
                 function ymIsTimeQuestion(text) {
                     const t = String(text || '');
-                    return /(今(の)?(時間|時刻|日時)|現在(の)?(時刻|時間|日時)|今何時|いま何時|今何分|いま何分|what time|current time|今日(の日付|は何日|の曜日)|何曜日|何日|日付を|時刻を|時間を教えて|いまの時間)/i.test(t);
+                    return /(今(の)?(時間|時刻|日時)|いま(の)?(時間|時刻|日時)|現在(の)?(時刻|時間|日時)|今何時|いま何時|今何分|いま何分|何時ですか|いま何時何分|今何時何分|what time|current time|what(?:'s| is) the time|今日(の日付|は何日|の曜日)|何曜日|何日|日付を|時刻を|時間を(教えて|知りたい|答えて)|いまの時間|今の時間|時間は[？?]?$|時刻は[？?]?$|日時は|date today|what date)/i.test(t);
                 }
                 function ymLocalTimeAnswer(text) {
                     const now = ymFormatNowJst();
@@ -6306,6 +6366,7 @@
                         const box = document.getElementById('ym-plan-limit-banner');
                         if (box && this.canUseAi()) box.classList.remove('active');
                     }
+                    try { if (typeof ymSaveAiPrefs === 'function') ymSaveAiPrefs(); } catch (e) {}
                 },
                 yen(n) { return '¥' + Number(n).toLocaleString('ja-JP'); },
                 updateStatusWidgets() {
@@ -6473,7 +6534,7 @@
                     try {
                         Object.keys(src.users || {}).slice(0, 80).forEach(k => {
                             const u = src.users[k] || {};
-                            slimUsers[k] = { name: u.name, coins: u.coins, planId: u.planId, secretWord: u.secretWord, lastLogin: u.lastLogin, createdAt: u.createdAt, isBlocked: u.isBlocked, myStamps: (u.myStamps||[]).slice(-30), myReactions: (u.myReactions||[]).slice(-30) };
+                            slimUsers[k] = { name: u.name, coins: u.coins, planId: u.planId, secretWord: u.secretWord, lastLogin: u.lastLogin, createdAt: u.createdAt, isBlocked: u.isBlocked, aiModel: u.aiModel, aiPrefs: u.aiPrefs || null, myStamps: (u.myStamps||[]).slice(-30), myReactions: (u.myReactions||[]).slice(-30) };
                         });
                     } catch (e) {}
                     const snap = {
@@ -10868,6 +10929,7 @@
                 opt0.textContent = 'Y.M AI（おすすめ）';
                 sel.insertBefore(opt0, sel.firstChild);
                 if (!sel.value) sel.value = 'ym-auto';
+                try { if (typeof ymLoadAiPrefs === 'function') ymLoadAiPrefs(); } catch (e) {}
             }
 
             function ymRenderMessageRequests() {
@@ -11076,11 +11138,25 @@
                         e.stopPropagation();
                         const menu = document.getElementById('header-overflow-menu');
                         if (menu) menu.classList.toggle('active');
+                        const side = document.getElementById('sidebar-overflow-menu');
+                        if (side) side.classList.remove('active');
+                    };
+                }
+                const btnSidebarMore = document.getElementById('btn-sidebar-more');
+                if (btnSidebarMore) {
+                    btnSidebarMore.onclick = (e) => {
+                        e.stopPropagation();
+                        const menu = document.getElementById('sidebar-overflow-menu');
+                        if (menu) menu.classList.toggle('active');
+                        const chatMore = document.getElementById('header-overflow-menu');
+                        if (chatMore) chatMore.classList.remove('active');
                     };
                 }
                 document.addEventListener('click', () => {
                     const menu = document.getElementById('header-overflow-menu');
                     if (menu) menu.classList.remove('active');
+                    const side = document.getElementById('sidebar-overflow-menu');
+                    if (side) side.classList.remove('active');
                 });
                 const openNotif = () => { renderNotificationCenter(); showModal('notif-center-modal'); };
                 const btnNotif = document.getElementById('btn-open-notif-center');
@@ -11540,7 +11616,15 @@
                     speechRateInput.oninput = () => {
                         const rateVal = document.getElementById("rateValue");
                         if (rateVal) rateVal.textContent = speechRateInput.value;
+                        try { if (typeof ymSaveAiPrefs === 'function') ymSaveAiPrefs(); } catch (e) {}
                     };
+                }
+                const autoTtsEl = document.getElementById('autoTTS');
+                if (autoTtsEl && !autoTtsEl.dataset.ymPersistBound) {
+                    autoTtsEl.dataset.ymPersistBound = '1';
+                    autoTtsEl.addEventListener('change', () => {
+                        try { if (typeof ymSaveAiPrefs === 'function') ymSaveAiPrefs(); } catch (e) {}
+                    });
                 }
 
 
@@ -11564,6 +11648,7 @@
                     });
                 }
                 if (typeof PlanShop !== 'undefined') PlanShop.init();
+                try { if (typeof ymLoadAiPrefs === 'function') ymLoadAiPrefs(); } catch (e) {}
                 if (typeof FocusBoard !== 'undefined') {
                     FocusBoard.load();
                     const btnFocus = document.getElementById('btn-open-focus-board');
@@ -11805,12 +11890,14 @@
                         if (keyVal) {
                             sessionStorage.setItem('YM_AI_SESSION', keyVal);
                             sessionStorage.setItem('YM_SESSION_TOKEN', keyVal);
+                            localStorage.setItem('YM_AI_SESSION_SAVED', keyVal);
                         }
                         apiKeyInput.value = '';
                         localStorage.removeItem('YM_AI_API_KEY');
                         localStorage.removeItem('OPENAI_API_KEY');
                         localStorage.removeItem('AI_API_KEY');
                     }
+                    try { if (typeof ymSaveAiPrefs === 'function') ymSaveAiPrefs(); } catch (e) {}
                     const fbEl = document.getElementById('setting-firebase-config');
                     if (fbEl) localStorage.setItem('YM_FIREBASE_CONFIG', fbEl.value.trim());
                     const vapidEl = document.getElementById('setting-vapid-key');
@@ -12719,7 +12806,12 @@
                         if (srcRv && r) srcRv.textContent = r.value;
                         if (t && srcT) srcT.checked = t.checked;
                         if (g) localStorage.setItem('YM_AI_GATEWAY', g.value.trim());
-                        if (k) sessionStorage.setItem('YM_AI_SESSION', k.value.trim());
+                        if (k && k.value.trim()) {
+                            sessionStorage.setItem('YM_AI_SESSION', k.value.trim());
+                            sessionStorage.setItem('YM_SESSION_TOKEN', k.value.trim());
+                            localStorage.setItem('YM_AI_SESSION_SAVED', k.value.trim());
+                        }
+                        try { if (typeof ymSaveAiPrefs === 'function') ymSaveAiPrefs(); } catch (e) {}
                         hideModal('ai-chat-settings-modal');
                         showToast('AI設定を保存しました');
                     };
