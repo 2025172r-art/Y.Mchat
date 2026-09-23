@@ -4,12 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content, maximum-scale=5.0, user-scalable=yes">
     <title id="app-title">Y.M Ultimate Chat</title>
-    <link id="app-favicon" rel="icon" href="https://via.placeholder.com/192/007bff/ffffff?text=YM">
+    <link id="app-favicon" rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%2306C755'/%3E%3Ctext x='96' y='124' text-anchor='middle' font-size='72' font-family='sans-serif' font-weight='800' fill='white'%3EYM%3C/text%3E%3C/svg%3E">
     <link id="app-manifest" rel="manifest" href="ym-manifest.json">
+    <script>
+        if (location.protocol === 'file:') {
+            var _ymMan = document.getElementById('app-manifest');
+            if (_ymMan) _ymMan.remove();
+        }
+    </script>
     <meta name="theme-color" content="#06C755">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="apple-touch-icon" href="https://via.placeholder.com/192/06C755/ffffff?text=YM">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%2306C755'/%3E%3Ctext x='96' y='124' text-anchor='middle' font-size='72' font-family='sans-serif' font-weight='800' fill='white'%3EYM%3C/text%3E%3C/svg%3E">
     <!-- PeerJS CDN: P2P通信ライブラリ -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <!-- Marked.js: AIの回答用Markdownレンダラー -->
@@ -18,6 +24,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
     <!-- QRCode.js: QRコード生成ライブラリ（招待リンク・友達追加用） -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <!-- Supabase JS: ログイン・保管・コイン確定用（既存P2Pは維持） -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/dist/umd/supabase.js"></script>
     <style>
         :root {
             --primary: #06C755;
@@ -919,6 +927,48 @@
         @media (min-width: 769px) {
             .chat-header-row, .chat-toolbar { flex-wrap: nowrap !important; }
         }
+
+        /* ===== YM honesty / quality 2026-09-23 (additive; features kept) ===== */
+        .ym-demo-banner {
+            flex-shrink: 0;
+            background: #fff7ed;
+            color: #9a3412;
+            border-bottom: 1px solid #fdba74;
+            font-size: 12px;
+            font-weight: 800;
+            text-align: center;
+            padding: 6px 10px;
+            z-index: 60;
+        }
+        .ym-local-chip {
+            display: inline-block;
+            margin-left: 6px;
+            background: #fff7ed;
+            color: #9a3412;
+            border: 1px solid #fdba74;
+            border-radius: 999px;
+            padding: 1px 7px;
+            font-size: 10px;
+            font-weight: 800;
+        }
+        .ym-sync-chip.local { color: #9a3412; }
+        .ym-sync-chip.ok { color: #065f46; }
+        .ym-honesty-box {
+            margin-top: 12px;
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 12px;
+            line-height: 1.7;
+            color: #065f46;
+        }
+        .msg-wrapper .msg img,
+        .msg-wrapper .stamp-msg img { max-width: 240px; height: auto; }
+        .ym-safety-prompt { font-size: 12px; line-height: 1.6; }
+        #dev-auth-modal .ym-dev-local-note { font-size: 12px; color: #92400e; background: #fffbeb; border: 1px solid #f59e0b; border-radius: 8px; padding: 8px; margin: 0 0 10px; }
+        body.ym-quiet-ui .user-info .ym-account-meta,
+        body.ym-quiet-ui .user-info .ym-ultimate-badge { display: none; }
     </style>
 </head>
 <body class="ym-quiet-ui">
@@ -926,6 +976,7 @@
 
 
     <a class="skip-link" href="#chat-messages">メッセージへスキップ</a>
+    <!-- ym-demo-banner removed by request -->
     <div id="ym-net-banner" class="ym-net-banner" role="status" aria-live="polite"></div>
 
     <!-- お知らせ案内バナー -->
@@ -952,13 +1003,13 @@
 
 
         <div class="user-info">
-            <img id="my-avatar" class="user-avatar" src="https://via.placeholder.com/40" alt="Avatar">
+            <img id="my-avatar" class="user-avatar" onerror="this.onerror=null;this.src=window.YM_DEFAULT_AVATAR||this.src;" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%2306C755'/%3E%3Ccircle cx='40' cy='30' r='14' fill='white'/%3E%3Cpath d='M16 68c4-16 14-24 24-24s20 8 24 24' fill='white'/%3E%3C/svg%3E" alt="Avatar">
             <div style="flex:1;">
                 <div id="my-name" style="font-weight: bold;">User</div>
                 <span class="coin-badge" id="ym-coin-badge">🪙 <span id="my-coins">0</span> コイン</span>
                 <span class="ym-ultimate-badge">ULTIMATE</span>
                 <span class="ym-plan-chip" id="ym-plan-chip">👑 無料</span>
-                <div class="ym-account-meta">アカウント <span id="ym-account-id-label">-</span><br>端末 <span id="ym-device-id-label">-</span><span class="ym-sync-chip" id="ym-sync-chip">✓ 同期済み</span></div>
+                <div class="ym-account-meta">アカウント <span id="ym-account-id-label">-</span><br>端末 <span id="ym-device-id-label">-</span><span class="ym-sync-chip local" id="ym-sync-chip">端末内保存</span></div>
             </div>
         </div>
 
@@ -1009,9 +1060,13 @@
         <!-- ホーム画面 -->
         <div id="home-view" class="page-view card">
             <h1>Y.M へようこそ</h1>
-            <p style="margin-top:10px; color:#666;">左側のメニューから友達とのチャットやスタンプの売買が可能です。</p>
+            <p style="margin-top:10px; color:#666;">左側のトーク一覧から友達とのチャットを始められます。スタンプやプランは設定・その他から開けます。</p>
+            <div class="ym-honesty-box">
+                <strong>表示について</strong><br>
+                いま動いているのはこの端末のブラウザ内データです。コイン残高・プラン変更・管理者停止はローカルデモです。相手端末の中身は見えません。「同期済み」は、相手Peerまたは設定したサーバーと実際に通じたときだけ変わります。
+            </div>
             <div style="margin-top:15px; background:#e9ecef; padding:10px; border-radius:6px; font-size:12px;">
-                🌐 <strong>通信ステータス (P2P リアルタイム同期中):</strong><br>
+                🌐 <strong>通信ステータス (PeerJS / 相手が同じページを開いているとき):</strong><br>
                 自端末のPeerID: <span id="my-peer-id" style="font-weight:bold; color:#007bff;">接続準備中...</span><br>
                 🔒 <strong>E2EE (エンドツーエンド暗号化):</strong> <span id="e2ee-status" style="font-weight:bold; color:#f59e0b;">未確認</span>
                 <div id="ym-retry-banner" class="ym-retry-banner">接続できません。再試行できます。<button type="button" class="menu-btn" id="btn-ym-retry-conn" style="width:auto;margin:0;padding:4px 8px;">再接続</button></div>
@@ -1250,8 +1305,8 @@
                     <p>あなたに最適なプランを選んで、<br>AIの可能性を最大限に引き出しましょう！</p>
                 </div>
                 <div class="ym-payment-gate" id="ym-payment-gate" role="status">
-                <strong>💳 有料プランは先払い</strong>
-                コイン支払い後に有効。払えなければ無料のまま使えます。
+                <strong>💳 有料プランは先払い（ローカルデモ）</strong>
+                この画面のコイン引き落としは端末内データです。サーバーが最終決定するまでは本番課金ではありません。払えなければ無料のまま使えます。
                 <div class="ym-payment-status" id="ym-payment-status">支払い待ちではありません。</div>
                 <button type="button" class="menu-btn btn-warning" id="btn-plan-cannot-pay" style="width:auto;margin:8px 0 0;padding:6px 10px;">払えなくなったので無料に戻す</button>
             </div>
@@ -1753,6 +1808,7 @@
     <div id="dev-auth-modal" class="modal hidden">
         <div class="modal-box">
             <h3>🔒 開発者モード認証</h3>
+            <p class="ym-dev-local-note">ローカルデモ用です。ユーザー名は YM、パスワードは yamanesaiki です。本番ではサーバーセッションだけを使ってください。この画面の操作は自分の端末データにだけ効きます。</p>
             <label>ユーザーネーム</label>
             <input type="text" id="dev-auth-username" placeholder="ユーザーネームを入力">
             <label>パスワード</label>
@@ -1800,6 +1856,15 @@
             <label>Y.MサーバーURL（推奨・コイン/管理者/AI中継）</label>
             <input type="text" id="setting-ym-server-url" placeholder="https://your-ym-server.example">
             <p style="font-size:11px; color:#666; margin:-8px 0 12px;">APIキーはサーバーだけが持ちます。ブラウザには短時間セッショントークンだけを置きます。</p>
+            <div id="ym-supabase-settings" style="margin:0 0 14px; padding:10px; border:1px dashed #a7f3d0; border-radius:10px; background:#ecfdf5;">
+                <strong style="font-size:12px;">Supabase（この端末の保管サーバー）</strong>
+                <p id="ym-supabase-status" style="font-size:11px; color:#065f46; margin:6px 0 8px;">未接続</p>
+                <label>メール（任意・匿名でも使えます）</label>
+                <input type="email" id="setting-supabase-email" placeholder="you@example.com" autocomplete="username">
+                <label>パスワード（任意）</label>
+                <input type="password" id="setting-supabase-pass" placeholder="8文字以上" autocomplete="current-password">
+                <button type="button" class="menu-btn btn-success" id="btn-supabase-login" style="margin:0;">Supabaseに接続 / ログイン</button>
+            </div>
             <label>Y.M AIゲートウェイURL（推奨・サーバー経由 / サーバー未設定時の互換）</label>
             <input type="text" id="setting-ai-gateway" placeholder="https://your-ym-server.example/ai">
             <p style="font-size:11px; color:#666; margin:-8px 0 12px;">本番ではサーバーだけがAI APIキーを保持します。未設定時は公開プロキシを利用します。</p>
@@ -2703,6 +2768,26 @@
             // 接続時に ECDH(P-256) で共通鍵を1回交換し、以降は AES-GCM のみ。
             // 旧端末向けフォールバック: RSA-OAEP でAES鍵を包むハイブリッド暗号。
             // 注意: P2P通信路のみ暗号化し、受信後に復号してDB保存する。
+            function ymCryptoKeyBuf(raw) {
+                try {
+                    if (!raw) return null;
+                    if (raw instanceof ArrayBuffer) return raw;
+                    if (ArrayBuffer.isView(raw)) return raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength);
+                    if (Array.isArray(raw)) return new Uint8Array(raw).buffer;
+                    if (typeof raw === 'string') {
+                        const bin = atob(raw);
+                        const out = new Uint8Array(bin.length);
+                        for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+                        return out.buffer;
+                    }
+                    if (raw && typeof raw === 'object') {
+                        if (Array.isArray(raw.data)) return new Uint8Array(raw.data).buffer;
+                        const vals = Object.keys(raw).filter(function(k) { return /^\d+$/.test(k); }).sort(function(a,b){ return Number(a)-Number(b); }).map(function(k){ return raw[k] & 255; });
+                        if (vals.length) return new Uint8Array(vals).buffer;
+                    }
+                } catch (e) {}
+                return null;
+            }
             const E2EE = {
                 keyPair: null,
                 sharedSecrets: {}, // 各相手のRSA公開鍵（旧互換）
@@ -2715,11 +2800,21 @@
                         // IndexedDBから鍵ペアを読み込み
                         const stored = await IDB.get('e2ee_keys');
                         if (stored && stored.privateKey) {
-                            this.keyPair = {
-                                privateKey: await crypto.subtle.importKey('pkcs8', stored.privateKey, { name: 'RSA-OAEP', hash: 'SHA-256' }, false, ['decrypt', 'sign']),
-                                publicKey: await crypto.subtle.importKey('spki', stored.publicKey, { name: 'RSA-OAEP', hash: 'SHA-256' }, true, ['encrypt', 'verify'])
-                            };
-                        } else {
+                            try {
+                                const privBuf = ymCryptoKeyBuf(stored.privateKey);
+                                const pubBuf = ymCryptoKeyBuf(stored.publicKey);
+                                if (!privBuf || !pubBuf) throw new Error('bad_stored_key');
+                                this.keyPair = {
+                                    privateKey: await crypto.subtle.importKey('pkcs8', privBuf, { name: 'RSA-OAEP', hash: 'SHA-256' }, false, ['decrypt']),
+                                    publicKey: await crypto.subtle.importKey('spki', pubBuf, { name: 'RSA-OAEP', hash: 'SHA-256' }, true, ['encrypt'])
+                                };
+                                this._reusedStoredRsa = true;
+                            } catch (impErr) {
+                                this.keyPair = null;
+                                this._reusedStoredRsa = false;
+                            }
+                        }
+                        if (!this.keyPair) {
                             // 新規鍵ペア生成（暗号化+署名用）
                             this.keyPair = await crypto.subtle.generateKey(
                                 { name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
@@ -2735,14 +2830,26 @@
                             const pubKeyData = await crypto.subtle.exportKey('spki', this.keyPair.publicKey);
                             const signPrivData = await crypto.subtle.exportKey('pkcs8', this.signKeys.privateKey);
                             const signPubData = await crypto.subtle.exportKey('spki', this.signKeys.publicKey);
-                            await IDB.set('e2ee_keys', { privateKey: privKeyData, publicKey: pubKeyData, signPrivateKey: signPrivData, signPublicKey: signPubData });
+                            await IDB.set('e2ee_keys', {
+                                privateKey: btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(privKeyData)))),
+                                publicKey: btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(pubKeyData)))),
+                                signPrivateKey: btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(signPrivData)))),
+                                signPublicKey: btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(signPubData))))
+                            });
                         }
                         // 署名鍵ペアもIndexedDBから読み込み
-                        if (stored && stored.signPrivateKey) {
-                            this.signKeys = {
-                                privateKey: await crypto.subtle.importKey('pkcs8', stored.signPrivateKey, { name: 'RSA-PSS', hash: 'SHA-256' }, false, ['sign']),
-                                publicKey: await crypto.subtle.importKey('spki', stored.signPublicKey, { name: 'RSA-PSS', hash: 'SHA-256' }, true, ['verify'])
-                            };
+                        if (this._reusedStoredRsa && stored && stored.signPrivateKey) {
+                            try {
+                                const sPriv = ymCryptoKeyBuf(stored.signPrivateKey);
+                                const sPub = ymCryptoKeyBuf(stored.signPublicKey);
+                                if (!sPriv || !sPub) throw new Error('bad_sign_key');
+                                this.signKeys = {
+                                    privateKey: await crypto.subtle.importKey('pkcs8', sPriv, { name: 'RSA-PSS', hash: 'SHA-256' }, false, ['sign']),
+                                    publicKey: await crypto.subtle.importKey('spki', sPub, { name: 'RSA-PSS', hash: 'SHA-256' }, true, ['verify'])
+                                };
+                            } catch (e) {
+                                this.signKeys = null;
+                            }
                         }
                         // 公開鍵をbase64でキャッシュ（同期アクセス用）
                         const pubKeyBuf = await crypto.subtle.exportKey('spki', this.keyPair.publicKey);
@@ -2752,29 +2859,44 @@
                             const signPubBuf = await crypto.subtle.exportKey('spki', this.signKeys.publicKey);
                             this.signPublicKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(signPubBuf)));
                         }
-                        if (stored && stored.ecdhPrivateKey) {
-                            this.ecdhKeyPair = {
-                                privateKey: await crypto.subtle.importKey('pkcs8', stored.ecdhPrivateKey, { name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveBits']),
-                                publicKey: await crypto.subtle.importKey('spki', stored.ecdhPublicKey, { name: 'ECDH', namedCurve: 'P-256' }, true, [])
-                            };
-                        } else {
+                        if (!this.signKeys) {
+                            this.signKeys = await crypto.subtle.generateKey(
+                                { name: 'RSA-PSS', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
+                                true, ['sign', 'verify']
+                            );
+                        }
+                        if (this._reusedStoredRsa && stored && stored.ecdhPrivateKey) {
+                            try {
+                                const ePriv = ymCryptoKeyBuf(stored.ecdhPrivateKey);
+                                const ePub = ymCryptoKeyBuf(stored.ecdhPublicKey);
+                                this.ecdhKeyPair = {
+                                    privateKey: await crypto.subtle.importKey('pkcs8', ePriv, { name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveBits']),
+                                    publicKey: await crypto.subtle.importKey('spki', ePub, { name: 'ECDH', namedCurve: 'P-256' }, true, [])
+                                };
+                            } catch (e) {
+                                this.ecdhKeyPair = null;
+                            }
+                        }
+                        if (!this.ecdhKeyPair) {
                             this.ecdhKeyPair = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
                             const ecdhPriv = await crypto.subtle.exportKey('pkcs8', this.ecdhKeyPair.privateKey);
                             const ecdhPub = await crypto.subtle.exportKey('spki', this.ecdhKeyPair.publicKey);
-                            const merged = Object.assign({}, stored || {}, { ecdhPrivateKey: ecdhPriv, ecdhPublicKey: ecdhPub });
-                            if (this.keyPair) {
-                                try {
-                                    merged.privateKey = merged.privateKey || await crypto.subtle.exportKey('pkcs8', this.keyPair.privateKey);
-                                    merged.publicKey = merged.publicKey || await crypto.subtle.exportKey('spki', this.keyPair.publicKey);
-                                } catch (e) {}
-                            }
+                            const toB64 = function(buf) { return btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(buf)))); };
+                            const merged = { ecdhPrivateKey: toB64(ecdhPriv), ecdhPublicKey: toB64(ecdhPub) };
+                            try {
+                                merged.privateKey = toB64(await crypto.subtle.exportKey('pkcs8', this.keyPair.privateKey));
+                                merged.publicKey = toB64(await crypto.subtle.exportKey('spki', this.keyPair.publicKey));
+                                if (this.signKeys) {
+                                    merged.signPrivateKey = toB64(await crypto.subtle.exportKey('pkcs8', this.signKeys.privateKey));
+                                    merged.signPublicKey = toB64(await crypto.subtle.exportKey('spki', this.signKeys.publicKey));
+                                }
+                            } catch (e) {}
                             await IDB.set('e2ee_keys', merged);
                         }
                         if (this.ecdhKeyPair && this.ecdhKeyPair.publicKey) {
                             const ecdhPubBuf = await crypto.subtle.exportKey('spki', this.ecdhKeyPair.publicKey);
                             this.ecdhPublicKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(ecdhPubBuf)));
                         }
-                        console.log('[E2EE] 鍵ペア初期化完了');
                         return true;
                     } catch (e) {
                         console.error('[E2EE] 初期化エラー:', e);
@@ -2858,7 +2980,7 @@
                     try {
                         const payload = (typeof text === 'string') ? text : JSON.stringify(text || {});
                         if (payload.length > 200000) {
-                            return { encrypted: false, text: (typeof text === 'string' ? text : '') };
+                            return { encrypted: false, error: 'too_large' };
                         }
                         const sessionKey = (peerId && this.sessionKeys[peerId]) || null;
                         if (sessionKey) {
@@ -2872,7 +2994,7 @@
                                 text: btoa(String.fromCharCode(...new Uint8Array(encMsg)))
                             };
                         }
-                        if (!recipientPubKey) return { encrypted: false, text: text };
+                        if (!recipientPubKey) return { encrypted: false, error: 'no_key' };
                         const aesKey = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
                         const iv = crypto.getRandomValues(new Uint8Array(12));
                         const encMsg = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, aesKey, new TextEncoder().encode(payload));
@@ -2887,7 +3009,7 @@
                         };
                     } catch (e) {
                         console.error('[E2EE] 暗号化エラー:', e);
-                        return { encrypted: false, text: text };
+                        return { encrypted: false, error: 'encrypt_failed' };
                     }
                 },
                 async decryptMessage(encData, senderPeerId) {
@@ -3674,9 +3796,275 @@
             };
 
 
+            const YM_SUPABASE_DEFAULTS = {
+                url: 'https://piyyumufwygvrilnpxes.supabase.co',
+                anon: 'sb_publishable_kmUbpTyHdihIA8SayGH6kA_uABXF3UL'
+            };
+            const YMSupabase = {
+                client: null,
+                user: null,
+                ready: false,
+                _syncTimer: null,
+                _peerCache: {},
+                projectUrl() {
+                    const raw = String(localStorage.getItem('YM_SUPABASE_URL') || YM_SUPABASE_DEFAULTS.url || '').trim();
+                    return raw.replace(/\/+$/, '').replace(/\/rest\/v1$/i, '');
+                },
+                anonKey() {
+                    return String(localStorage.getItem('YM_SUPABASE_ANON') || YM_SUPABASE_DEFAULTS.anon || '').trim();
+                },
+                isReady() {
+                    return !!(this.ready && this.client && this.user);
+                },
+                setStatus(text) {
+                    const el = document.getElementById('ym-supabase-status');
+                    if (el) el.textContent = text;
+                    try { if (typeof ymUpdateSyncChip === 'function') ymUpdateSyncChip(); } catch (e) {}
+                },
+                async init() {
+                    try {
+                        if (!localStorage.getItem('YM_SUPABASE_URL')) localStorage.setItem('YM_SUPABASE_URL', YM_SUPABASE_DEFAULTS.url);
+                        if (!localStorage.getItem('YM_SUPABASE_ANON')) localStorage.setItem('YM_SUPABASE_ANON', YM_SUPABASE_DEFAULTS.anon);
+                        const url = this.projectUrl();
+                        const key = this.anonKey();
+                        if (!url || !key || typeof supabase === 'undefined' || !supabase.createClient) {
+                            this.setStatus('ライブラリ未読込。ローカル動作のままです。');
+                            return false;
+                        }
+                        this.client = supabase.createClient(url, key, {
+                            auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+                        });
+                        const existing = await this.client.auth.getSession();
+                        if (existing && existing.data && existing.data.session) {
+                            this.user = existing.data.session.user;
+                        } else {
+                            const email = String(localStorage.getItem('YM_SUPABASE_EMAIL') || '').trim();
+                            const pass = String(sessionStorage.getItem('YM_SUPABASE_PASS') || '').trim();
+                            if (email && pass) {
+                                let authRes = await this.client.auth.signInWithPassword({ email: email, password: pass });
+                                if (authRes.error) authRes = await this.client.auth.signUp({ email: email, password: pass });
+                                if (!authRes.error && authRes.data && authRes.data.user) this.user = authRes.data.user;
+                            }
+                        }
+                        if (!this.user) {
+                            this.setStatus('未ログイン。設定のメールとパスワードで接続できます。ローカル/P2Pは継続します。');
+                            return false;
+                        }
+                        this.ready = true;
+                        await this.upsertProfile();
+                        await this.pullFriends();
+                        this.setStatus('接続済み / ユーザー ' + String(this.user.id).slice(0, 8) + '…');
+                        this.subscribeInbox();
+                        return true;
+                    } catch (e) {
+                        this.ready = false;
+                        this.setStatus('接続失敗。既存のローカル/P2P動作は継続します。');
+                        console.warn('[YMSupabase.init]', e);
+                        return false;
+                    }
+                },
+                async upsertProfile() {
+                    if (!this.isReady() || typeof activeUserId === 'undefined' || !activeUserId) return;
+                    const name = (db && db.users && db.users[activeUserId] && db.users[activeUserId].name) || 'ユーザー';
+                    const planId = (db && db.users && db.users[activeUserId] && (db.users[activeUserId].plan || db.users[activeUserId].planId)) || 'free';
+                    const { error } = await this.client.from('profiles').upsert({
+                        id: this.user.id,
+                        display_name: String(name).slice(0, 40) || 'ユーザー',
+                        peer_id: String(activeUserId),
+                        plan_id: String(planId || 'free'),
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'id' });
+                    if (error) console.warn('[YMSupabase.profile]', error.message || error);
+                    this._peerCache[String(activeUserId)] = this.user.id;
+                },
+                async uuidOfPeer(peerId) {
+                    if (!peerId || !this.isReady()) return null;
+                    const key = String(peerId);
+                    if (this._peerCache[key]) return this._peerCache[key];
+                    const { data, error } = await this.client.from('profiles').select('id, peer_id').eq('peer_id', key).maybeSingle();
+                    if (error || !data) return null;
+                    this._peerCache[key] = data.id;
+                    return data.id;
+                },
+                roomId(a, b, isGroup) {
+                    if (isGroup) return 'group:' + String(b || a || '');
+                    const x = String(a || '');
+                    const y = String(b || '');
+                    return [x, y].sort().join(':');
+                },
+                async ingestOutgoing(msgObj, sendMsg) {
+                    try {
+                        if (!this.isReady() || !msgObj) return;
+                        if (msgObj.to === 'chappy' || msgObj.to === 'official' || msgObj.to === 'keep') return;
+                        const packed = sendMsg || msgObj;
+                        const recipientUuid = packed.isGroup ? this.user.id : await this.uuidOfPeer(packed.to);
+                        if (!packed.isGroup && !recipientUuid) return;
+                        const encrypted = !!(packed.encrypted || packed.e2ee);
+                        const row = {
+                            room_id: this.roomId(packed.from, packed.to, packed.isGroup),
+                            sender_id: this.user.id,
+                            recipient_id: recipientUuid || this.user.id,
+                            group_id: null,
+                            msg_type: String(packed.type || 'text').slice(0, 20),
+                            ciphertext: packed.e2ee ? JSON.stringify(packed.e2ee) : null,
+                            payload: {
+                                msgId: packed.msgId,
+                                clientMessageId: packed.clientMessageId,
+                                peerFrom: packed.from,
+                                peerTo: packed.to,
+                                isGroup: !!packed.isGroup,
+                                encrypted: encrypted,
+                                fileName: packed.fileName || null,
+                                text: encrypted ? null : (packed.text || msgObj.text || null)
+                            }
+                        };
+                        const { error } = await this.client.from('messages').insert(row);
+                        if (error) console.warn('[YMSupabase.ingest]', error.message || error);
+                        else {
+                            msgObj.syncState = 'server';
+                            msgObj.serverTimestamp = Date.now();
+                        }
+                    } catch (e) {
+                        console.warn('[YMSupabase.ingest]', e);
+                    }
+                },
+                async pullMessages(targetKey) {
+                    try {
+                        if (!this.isReady() || !targetKey || !db) return;
+                        if (targetKey === 'chappy' || targetKey === 'official' || targetKey === 'keep') return;
+                        const isGroup = !!(db.groups && db.groups[targetKey]);
+                        const room = this.roomId(activeUserId, targetKey, isGroup);
+                        const { data, error } = await this.client.from('messages').select('*').eq('room_id', room).order('created_at', { ascending: true }).limit(200);
+                        if (error || !data) return;
+                        let added = 0;
+                        if (!Array.isArray(db.messages)) db.messages = [];
+                        data.forEach((row) => {
+                            const payload = row.payload || {};
+                            const mid = payload.msgId || payload.clientMessageId || row.id;
+                            if (db.messages.some(m => m.msgId === mid || (payload.clientMessageId && m.clientMessageId === payload.clientMessageId))) return;
+                            const fromPeer = payload.peerFrom || targetKey;
+                            const toPeer = payload.peerTo || activeUserId;
+                            db.messages.push({
+                                msgId: mid,
+                                clientMessageId: payload.clientMessageId || row.id,
+                                from: fromPeer,
+                                to: toPeer,
+                                isGroup: !!payload.isGroup,
+                                text: payload.encrypted ? '' : (payload.text || ''),
+                                type: row.msg_type || 'text',
+                                fileName: payload.fileName || null,
+                                encrypted: !!payload.encrypted,
+                                e2ee: row.ciphertext ? (function() { try { return JSON.parse(row.ciphertext); } catch (e) { return row.ciphertext; } })() : null,
+                                readBy: [],
+                                reactions: {},
+                                unsent: false,
+                                deliveryStatus: 'sent',
+                                syncState: 'server',
+                                timestamp: row.created_at ? Date.parse(row.created_at) : Date.now()
+                            });
+                            added += 1;
+                        });
+                        if (added) {
+                            saveData();
+                            if (typeof renderChat === 'function' && activeChatTarget === targetKey) renderChat(false);
+                            if (typeof renderApp === 'function') renderApp();
+                        }
+                    } catch (e) {
+                        console.warn('[YMSupabase.pull]', e);
+                    }
+                },
+                async pullFriends() {
+                    try {
+                        if (!this.isReady() || !db || !activeUserId) return;
+                        const { data, error } = await this.client.from('friendships').select('user_id, friend_id');
+                        if (error || !data) return;
+                        const ids = new Set();
+                        data.forEach((row) => {
+                            ids.add(row.user_id);
+                            ids.add(row.friend_id);
+                        });
+                        ids.delete(this.user.id);
+                        if (!ids.size) return;
+                        const { data: profs } = await this.client.from('profiles').select('id, peer_id, display_name').in('id', Array.from(ids));
+                        if (!profs) return;
+                        if (!db.friends[activeUserId]) db.friends[activeUserId] = [];
+                        profs.forEach((pr) => {
+                            if (!pr.peer_id || pr.peer_id === activeUserId) return;
+                            this._peerCache[pr.peer_id] = pr.id;
+                            if (!db.users[pr.peer_id]) db.users[pr.peer_id] = { name: pr.display_name || pr.peer_id, coins: 0 };
+                            else if (pr.display_name && !db.users[pr.peer_id].name) db.users[pr.peer_id].name = pr.display_name;
+                            if (!db.friends[activeUserId].includes(pr.peer_id)) db.friends[activeUserId].push(pr.peer_id);
+                        });
+                    } catch (e) {
+                        console.warn('[YMSupabase.friends]', e);
+                    }
+                },
+                async pushFriend(peerId) {
+                    try {
+                        if (!this.isReady() || !peerId) return;
+                        const other = await this.uuidOfPeer(peerId);
+                        if (!other) return;
+                        await this.client.from('friendships').upsert({ user_id: this.user.id, friend_id: other }, { onConflict: 'user_id,friend_id' });
+                    } catch (e) {
+                        console.warn('[YMSupabase.pushFriend]', e);
+                    }
+                },
+                async transferCoins(toPeerId, amount, memo) {
+                    try {
+                        if (!this.isReady() || !toPeerId) return { ok: false, reason: 'not-ready' };
+                        const toUuid = await this.uuidOfPeer(toPeerId);
+                        if (!toUuid) return { ok: false, reason: 'unknown-peer' };
+                        const n = Number(String(amount).replace(/,/g, ''));
+                        if (!(n > 0)) return { ok: false, reason: 'bad-amount' };
+                        const { data, error } = await this.client.rpc('transfer_coins', { to_user: toUuid, amount: n, memo: memo || null });
+                        if (error) return { ok: false, reason: error.message || 'rpc' };
+                        return Object.assign({ ok: true }, data || {});
+                    } catch (e) {
+                        return { ok: false, reason: String(e && e.message || e) };
+                    }
+                },
+                async buyPlan(planId) {
+                    try {
+                        if (!this.isReady() || !planId) return { ok: false };
+                        const { data, error } = await this.client.rpc('buy_plan', { plan: String(planId) });
+                        if (error) return { ok: false, reason: error.message || 'rpc' };
+                        return Object.assign({ ok: true }, data || {});
+                    } catch (e) {
+                        return { ok: false, reason: String(e && e.message || e) };
+                    }
+                },
+                scheduleSync() {
+                    if (this._syncTimer) clearTimeout(this._syncTimer);
+                    this._syncTimer = setTimeout(() => {
+                        this.upsertProfile().catch(() => {});
+                        try {
+                            const list = (db && db.friends && db.friends[activeUserId]) || [];
+                            list.slice(0, 40).forEach((id) => { this.pushFriend(id).catch(() => {}); });
+                        } catch (e) {}
+                    }, 1200);
+                },
+                subscribeInbox() {
+                    try {
+                        if (!this.isReady()) return;
+                        this.client.channel('ym-inbox-' + this.user.id)
+                            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+                                const row = payload && payload.new;
+                                if (!row) return;
+                                const p = row.payload || {};
+                                const target = (p.peerFrom === activeUserId) ? p.peerTo : p.peerFrom;
+                                if (target) this.pullMessages(target);
+                            })
+                            .subscribe();
+                    } catch (e) {}
+                }
+            };
+            window.YMSupabase = YMSupabase;
+
             const YmServer = {
                 url() {
-                    return String(localStorage.getItem('YM_SERVER_URL') || '').trim().replace(/\/+$/, '');
+                    const raw = String(localStorage.getItem('YM_SERVER_URL') || '').trim().replace(/\/+$/, '');
+                    if (/supabase\.co/i.test(raw) || /\/rest\/v1/i.test(raw)) return '';
+                    return raw;
                 },
                 token() {
                     return String(sessionStorage.getItem('YM_SESSION_TOKEN') || sessionStorage.getItem('YM_AI_SESSION') || '').trim();
@@ -3725,6 +4113,17 @@
                 const local = _coinApplyOrig(payload);
                 if (!local.ok) return local;
                 const base = YmServer.url();
+                try {
+                    if (typeof YMSupabase !== 'undefined' && YMSupabase.isReady()) {
+                        const kind = String(payload && payload.type || '');
+                        if (kind === 'transfer' && payload.to) {
+                            YMSupabase.transferCoins(payload.to, payload.amount, payload.memo).catch(() => {});
+                        } else if ((kind === 'plan-pay' || kind === 'buy-plan' || kind === 'plan_purchase') && payload.memo) {
+                            const planGuess = String(payload.memo).split(':').pop();
+                            if (planGuess && planGuess !== String(payload.memo)) YMSupabase.buyPlan(planGuess).catch(() => {});
+                        }
+                    }
+                } catch (e) {}
                 if (base) {
                     local.pendingServer = true;
                     YmServer.ledgerApply({
@@ -4451,6 +4850,94 @@
             // -------------------------------------------------------------
             // ユーティリティ関数 (サニタイズ処理)
             // -------------------------------------------------------------
+            const YM_DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%2306C755'/%3E%3Ccircle cx='40' cy='30' r='14' fill='white'/%3E%3Cpath d='M16 68c4-16 14-24 24-24s20 8 24 24' fill='white'/%3E%3C/svg%3E";
+            window.YM_DEFAULT_AVATAR = YM_DEFAULT_AVATAR;
+            function ymIsDeadMediaUrl(u) {
+                const s = String(u || '');
+                if (!s) return false;
+                return /via\.placeholder\.com|placehold\.co|placehold\.it|dummyimage\.com|text=LIKE|ffffff\?text=/i.test(s);
+            }
+            function ymSafeIconUrl(u) {
+                const s = String(u || '');
+                if (!s || ymIsDeadMediaUrl(s)) return YM_DEFAULT_AVATAR;
+                return s;
+            }
+            function ymScrubDeadMedia(data) {
+                try {
+                    if (!data || typeof data !== 'object') return data;
+                    const users = data.users || {};
+                    Object.keys(users).forEach(function(k) {
+                        const u = users[k];
+                        if (!u) return;
+                        if (ymIsDeadMediaUrl(u.icon)) u.icon = YM_DEFAULT_AVATAR;
+                        if (ymIsDeadMediaUrl(u.tabIcon)) u.tabIcon = YM_DEFAULT_TAB_ICON;
+                        if (Array.isArray(u.myStamps)) u.myStamps = u.myStamps.filter(function(s) { return !ymIsDeadMediaUrl(s); });
+                        if (Array.isArray(u.myReactions)) u.myReactions = u.myReactions.filter(function(s) { return !ymIsDeadMediaUrl(s); });
+                    });
+                    if (Array.isArray(data.stamps)) data.stamps = data.stamps.filter(function(s) {
+                        const url = (s && (s.url || s)) || '';
+                        return !ymIsDeadMediaUrl(url);
+                    });
+                    if (Array.isArray(data.messages)) {
+                        data.messages.forEach(function(m) {
+                            if (!m) return;
+                            if (ymIsDeadMediaUrl(m.text)) m.text = '';
+                            if (ymIsDeadMediaUrl(m.fileData)) m.fileData = '';
+                        });
+                    }
+                } catch (e) {}
+                return data;
+            }
+            const YM_DEFAULT_AI_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'%3E%3Crect width='80' height='80' rx='16' fill='%2310b981'/%3E%3Ctext x='40' y='50' text-anchor='middle' font-size='22' font-family='sans-serif' font-weight='800' fill='white'%3EAI%3C/text%3E%3C/svg%3E";
+            const YM_DEFAULT_TAB_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%2306C755'/%3E%3Ctext x='96' y='124' text-anchor='middle' font-size='72' font-family='sans-serif' font-weight='800' fill='white'%3EYM%3C/text%3E%3C/svg%3E";
+            function ymStripSecretsFromBackup(obj) {
+                try {
+                    const cloned = JSON.parse(JSON.stringify(obj || {}));
+                    if (cloned.db) {
+                        delete cloned.db.adminSession;
+                    }
+                    cloned.stripped = ['YM_AI_SESSION', 'YM_SESSION_TOKEN', 'YM_TURN_PASS', 'OPENAI_API_KEY', 'AI_API_KEY', 'YM_AI_API_KEY'];
+                    return cloned;
+                } catch (e) { return obj; }
+            }
+            function ymUpdateSyncChip() {
+                const el = document.getElementById('ym-sync-chip');
+                if (!el) return;
+                const serverUrl = (localStorage.getItem('YM_SERVER_URL') || '').trim();
+                const openPeers = Object.keys(peerConnections || {}).filter(function(k) {
+                    return peerConnections[k] && peerConnections[k].open;
+                });
+                const sbOn = (typeof YMSupabase !== 'undefined' && YMSupabase.isReady());
+                if (sbOn && openPeers.length) {
+                    el.className = 'ym-sync-chip ok';
+                    el.textContent = '✓ Supabase+P2P';
+                } else if (sbOn) {
+                    el.className = 'ym-sync-chip ok';
+                    el.textContent = '✓ Supabase接続';
+                } else if (serverUrl && navigator.onLine && openPeers.length) {
+                    el.className = 'ym-sync-chip ok';
+                    el.textContent = '✓ 相手と接続中';
+                } else if (openPeers.length) {
+                    el.className = 'ym-sync-chip ok';
+                    el.textContent = '✓ 相手Peer接続中';
+                } else {
+                    el.className = 'ym-sync-chip local';
+                    el.textContent = '端末内保存';
+                }
+            }
+            async function ymMaybePromptSafetyNumber(peerId) {
+                try {
+                    if (!peerId || !E2EE || !E2EE.getPublicKey) return;
+                    E2EE.loadVerified && E2EE.loadVerified();
+                    if (E2EE.verifiedPeers && E2EE.verifiedPeers[peerId]) return;
+                    const raw = String(E2EE.getPublicKey() || '') + '|' + String((E2EE.sharedSecrets && E2EE.sharedSecrets[peerId]) ? peerId : peerId);
+                    let hex = peerId;
+                    if (LocalVault && LocalVault._sha256Hex) hex = await LocalVault._sha256Hex('ym-safety:' + raw);
+                    const pretty = (hex.slice(0, 4) + ' ' + hex.slice(4, 8) + ' ' + hex.slice(8, 12) + ' ' + hex.slice(12, 16)).toUpperCase();
+                    const ok = window.confirm('Safety Number を相手と見比べてください\n' + pretty + '\n\n一致したらOK。違う場合はキャンセル（未検証のまま）。');
+                    if (ok && E2EE.markPeerVerified) E2EE.markPeerVerified(peerId, true);
+                } catch (e) {}
+            }
             function escapeHTML(str) {
                 if (typeof str !== 'string') return str;
                 return str.replace(/[&<>'"]/g, function(tag) {
@@ -4472,6 +4959,7 @@
             // URLの安全な検証ヘルパー
             function sanitizeURL(url) {
                 if (typeof url !== 'string') return '';
+                if (ymIsDeadMediaUrl(url)) return '';
                 if (url.startsWith('data:image/') || url.startsWith('https://') || url.startsWith('http://') || url.startsWith('blob:')) {
                     if (typeof DOMPurify !== 'undefined') return DOMPurify.sanitize(url);
                     return url;
@@ -4645,7 +5133,7 @@
                 try {
                     const idbData = await IDB.get('app_db', 'appData');
                     if (idbData && typeof idbData === 'object' && !idbData.__ymenc) {
-                        return Object.assign({}, defaultDb, idbData, {
+                        return ymScrubDeadMedia(Object.assign({}, defaultDb, idbData, {
                             users: idbData.users || {},
                             friends: idbData.friends || {},
                             groups: idbData.groups || {},
@@ -4656,7 +5144,7 @@
                             transactions: idbData.transactions || [],
                             devices: idbData.devices || {},
                             notifications: idbData.notifications || []
-                        });
+                        }));
                     }
 
 
@@ -4666,7 +5154,7 @@
                         if (!LocalVault.ready) throw new Error('Vault locked during migration');
                         await IDB.set('app_db', parsed, 'appData');
                         localStorage.removeItem('YM_DB');
-                        return Object.assign({}, defaultDb, parsed);
+                        return ymScrubDeadMedia(Object.assign({}, defaultDb, parsed));
                     }
                     return defaultDb;
                 } catch (e) {
@@ -4689,6 +5177,7 @@
                         return;
                     }
                     await IDB.set('app_db', db, 'appData');
+                    try { if (typeof YMSupabase !== 'undefined') YMSupabase.scheduleSync(); } catch (e2) {}
                 } catch (e) {
                     console.error("IndexedDB Save Error:", e);
                     const name = (e && (e.name || e.code)) || '';
@@ -5080,7 +5569,6 @@
 
 
                 peer.on('disconnected', () => {
-                    console.warn("PeerJS connection lost. Reconnecting...");
                     schedulePeerReconnect();
                 });
 
@@ -5088,8 +5576,14 @@
                 peer.on('connection', (conn) => setupPeerConnection(conn));
                 peer.on('call', (call) => handleCall(call));
                 peer.on('error', (err) => {
-                    console.warn("PeerJS Main Status:", err && err.type);
-                    if (err && (err.type === 'network' || err.type === 'disconnected' || err.type === 'socket-closed' || err.type === 'server-error')) {
+                    const typ = err && err.type;
+                    if (typ === 'unavailable-id') {
+                        try { if (peer) peer.destroy(); } catch (e) {}
+                        peer = null;
+                        schedulePeerReconnect();
+                        return;
+                    }
+                    if (typ === 'network' || typ === 'disconnected' || typ === 'socket-closed' || typ === 'server-error') {
                         schedulePeerReconnect();
                     }
                 });
@@ -5117,7 +5611,7 @@
                     peerReconnectAttempt = Math.min(peerReconnectAttempt + 1, 5);
                     const friends = (db && db.friends && db.friends[activeUserId]) || [];
                     friends.forEach(fId => connectToRemotePeer(fId));
-                    schedulePeerReconnect();
+                    if (!peer || !peer.open) schedulePeerReconnect();
                 }, delay);
             }
 
@@ -5226,6 +5720,13 @@
 
             async function handleIncomingPeerData(data, senderPeerId) {
                 if (!data || !data.type) return;
+                const incomingFrom = (data.message && data.message.from) || data.userKey || data.from || senderPeerId;
+                if (incomingFrom && typeof isPeerBlocked === 'function' && isPeerBlocked(incomingFrom)) {
+                    return;
+                }
+                if (senderPeerId && typeof isPeerBlocked === 'function' && isPeerBlocked(senderPeerId)) {
+                    return;
+                }
 
 
                 if (data.type === 'SYNC_USER_INFO') {
@@ -5233,6 +5734,7 @@
                     // E2EE公開鍵を保存（暗号化用+署名用）
                     if (data.publicKey || data.ecdhPublicKey) {
                         await E2EE.setPeerPublicKey(data.userKey, data.publicKey, data.signPublicKey, data.ecdhPublicKey);
+                        if (typeof ymMaybePromptSafetyNumber === 'function') ymMaybePromptSafetyNumber(data.userKey);
                     }
                     if (!db.friends[activeUserId]) db.friends[activeUserId] = [];
                     if (!db.friends[activeUserId].includes(data.userKey)) {
@@ -6208,7 +6710,7 @@
 
 
                 document.getElementById('my-name').textContent = userObj.name;
-                document.getElementById('my-avatar').src = userObj.icon || 'https://via.placeholder.com/40';
+                document.getElementById('my-avatar').src = ymSafeIconUrl(userObj && userObj.icon);
                 document.getElementById('my-coins').textContent = (typeof CoinMath !== 'undefined') ? CoinMath.format(userObj.coins) : userObj.coins;
 
                 // E2EEステータス表示更新（検証済みのときだけ緑）
@@ -6286,7 +6788,7 @@
                             const hiddenList = (db.hiddenChats && db.hiddenChats[activeUserId]) || [];
                             if (hiddenList.includes(fId)) return;
                             itemCount++;
-                            const fIcon = (fUser && fUser.icon) ? fUser.icon : 'https://via.placeholder.com/40';
+                            const fIcon = ymSafeIconUrl(fUser && fUser.icon);
                             const isOnline = onlineStatusMap[fId] || (peerConnections[fId] && peerConnections[fId].open);
                             const unreadCount = getUnreadCount(fId);
 
@@ -6715,6 +7217,7 @@
             }
 
             function sendToPeerOrQueue(targetId, payload, queuedMsg) {
+                if (typeof isPeerBlocked === 'function' && isPeerBlocked(targetId)) return false;
                 if (peerConnections[targetId] && peerConnections[targetId].open) {
                     try { peerConnections[targetId].send(payload); return true; } catch (e) { console.warn('P2P送信失敗', e); }
                 }
@@ -6794,6 +7297,7 @@
                     showToast('送信先のチャットが選択されていません。');
                     return;
                 }
+                if (!confirm('現在地をこのトークの相手に送ります。相手に位置が分かります。送ってよいですか？')) return;
                 if (activeChatTarget === 'chappy' || activeChatTarget === 'official' || activeChatTarget === 'keep') {
                     showToast('このトークでは位置情報を送信できません。');
                     return;
@@ -6911,7 +7415,28 @@
                 const _signature = await E2EE.signMessage(msgObj);
                 if (_signature) msgObj.signature = _signature;
 
-                // キューイング & P2P送信制御（E2EE暗号化付き）
+                const ymNeedE2ee = function(tid) {
+                    return tid && tid !== 'chappy' && tid !== 'official' && tid !== 'keep';
+                };
+                const ymEncryptForPeer = async function(peerId, baseMsg) {
+                    const recipientPubKey = E2EE.sharedSecrets[peerId] || E2EE.sessionKeys[peerId];
+                    if (!recipientPubKey && !E2EE.sessionKeys[peerId]) {
+                        return { ok: false, reason: 'no_key' };
+                    }
+                    const encPayload = JSON.stringify({
+                        text: baseMsg.text || '',
+                        type: baseMsg.type,
+                        fileName: baseMsg.fileName || '',
+                        fileData: (typeof baseMsg.fileData === 'string' && String(baseMsg.fileData).length < 120000) ? baseMsg.fileData : '',
+                        location: baseMsg.location || null
+                    });
+                    const encResult = await E2EE.encryptMessage(encPayload, recipientPubKey, peerId);
+                    if (!encResult || !encResult.encrypted) return { ok: false, reason: (encResult && encResult.error) || 'encrypt_failed' };
+                    const sendMsg = { ...baseMsg, e2ee: encResult, encrypted: true };
+                    delete sendMsg.text;
+                    return { ok: true, sendMsg: sendMsg };
+                };
+                // キューイング & P2P送信制御（E2EE暗号化付き・平文フォールバックなし）
                 if (isGroup) {
                     const grp = db.groups[activeChatTarget];
                     if (grp && grp.members) {
@@ -6925,19 +7450,16 @@
                         }
                         for (const memId of grp.members) {
                             if (memId !== activeUserId) {
-                                // E2EE暗号化: テキストメッセージのみ暗号化
+                                if (typeof isPeerBlocked === 'function' && isPeerBlocked(memId)) continue;
                                 let sendMsg = msgObj;
-                                const recipientPubKey = E2EE.sharedSecrets[memId] || E2EE.sessionKeys[memId];
-                                if (recipientPubKey && (msgObj.type === 'text' || msgObj.type === 'location')) {
-                                    const encResult = await E2EE.encryptMessage(JSON.stringify({
-                                        text: msgObj.text || '',
-                                        type: msgObj.type,
-                                        fileName: msgObj.fileName || ''
-                                    }), recipientPubKey, memId);
-                                    if (encResult.encrypted) {
-                                        sendMsg = { ...msgObj, e2ee: encResult, encrypted: true };
-                                        delete sendMsg.text; // 暗号化された本文はe2ee envelopeに格納
+                                if (ymNeedE2ee(memId)) {
+                                    const encWrap = await ymEncryptForPeer(memId, msgObj);
+                                    if (!encWrap.ok) {
+                                        msgObj.deliveryStatus = 'failed';
+                                        showToast('暗号化できないため送信しません（平文では送りません）');
+                                        continue;
                                     }
+                                    sendMsg = encWrap.sendMsg;
                                 }
                                 if (peerConnections[memId] && peerConnections[memId].open) {
                                     peerConnections[memId].send({ type: 'CHAT_MSG', message: sendMsg });
@@ -6962,19 +7484,24 @@
                         }
                     }
                 } else {
-                    // E2EE暗号化: テキストメッセージのみ暗号化
+                    if (typeof isPeerBlocked === 'function' && isPeerBlocked(activeChatTarget)) {
+                        showToast('ブロック中の相手には送信しません');
+                        msgObj.deliveryStatus = 'failed';
+                        renderChat(true);
+                        return;
+                    }
                     let sendMsg = msgObj;
-                    const recipientPubKey = E2EE.sharedSecrets[activeChatTarget] || E2EE.sessionKeys[activeChatTarget];
-                    if (recipientPubKey && (msgObj.type === 'text' || msgObj.type === 'location')) {
-                        const encResult = await E2EE.encryptMessage(JSON.stringify({
-                            text: msgObj.text || '',
-                            type: msgObj.type,
-                            fileName: msgObj.fileName || ''
-                        }), recipientPubKey, activeChatTarget);
-                        if (encResult.encrypted) {
-                            sendMsg = { ...msgObj, e2ee: encResult, encrypted: true };
-                            delete sendMsg.text; // 暗号化された本文はe2ee envelopeに格納
+                    if (ymNeedE2ee(activeChatTarget)) {
+                        const encWrap = await ymEncryptForPeer(activeChatTarget, msgObj);
+                        if (!encWrap.ok) {
+                            msgObj.deliveryStatus = 'failed';
+                            const sendBtn = document.getElementById('btn-chat-send');
+                            if (sendBtn) sendBtn.disabled = false;
+                            showToast('暗号化できないため送信しません。相手と接続し、Safety Numberを確認してください。');
+                            renderChat(true);
+                            return;
                         }
+                        sendMsg = encWrap.sendMsg;
                     }
                     if (peerConnections[activeChatTarget] && peerConnections[activeChatTarget].open) {
                         peerConnections[activeChatTarget].send({ type: 'CHAT_MSG', message: sendMsg });
@@ -6997,6 +7524,7 @@
                         OfflineBridge.enqueue(activeChatTarget, { type: 'CHAT_MSG', message: sendMsg });
                     }
                 }
+                try { if (typeof YMSupabase !== 'undefined') YMSupabase.ingestOutgoing(msgObj, (typeof sendMsg !== 'undefined') ? sendMsg : msgObj); } catch (e) {}
                 renderChat(true);
             }
 
@@ -9561,12 +10089,13 @@
                 if (!el) return;
                 if (navigator.onLine) {
                     el.className = 'ym-net-banner online';
-                    el.textContent = '接続しました';
+                    el.textContent = 'ブラウザはオンラインです（サーバー同期とは限りません）';
                     setTimeout(() => { if (navigator.onLine) { el.className = 'ym-net-banner'; el.textContent = ''; } }, 1800);
                 } else {
                     el.className = 'ym-net-banner offline';
                     el.textContent = 'オフラインです。復帰後に自動で再送します。';
                 }
+                if (typeof ymUpdateSyncChip === 'function') ymUpdateSyncChip();
             }
             window.addEventListener('online', ymUpdateNetBanner);
             window.addEventListener('offline', ymUpdateNetBanner);
@@ -9939,6 +10468,7 @@
                     showToast('端末内金庫を開けませんでした。PINを確認するか、端末セキュリティから作り直してください。');
                 }
                 db = await loadAppDatabase();
+                try { await YMSupabase.init(); } catch (e) { console.warn(e); }
                 if (Array.isArray(db.messages)) {
                     for (const m of db.messages.slice(-500)) persistMessageRecord(m);
                 }
@@ -10077,6 +10607,17 @@
                 };
                 const srvEl = document.getElementById('setting-ym-server-url');
                 if (srvEl) srvEl.value = localStorage.getItem('YM_SERVER_URL') || '';
+                const sbMailEl = document.getElementById('setting-supabase-email');
+                if (sbMailEl) sbMailEl.value = localStorage.getItem('YM_SUPABASE_EMAIL') || '';
+                const sbLoginBtn = document.getElementById('btn-supabase-login');
+                if (sbLoginBtn) sbLoginBtn.onclick = async () => {
+                    const em = ((document.getElementById('setting-supabase-email') || {}).value || '').trim();
+                    const pw = ((document.getElementById('setting-supabase-pass') || {}).value || '').trim();
+                    if (em) localStorage.setItem('YM_SUPABASE_EMAIL', em);
+                    if (pw) sessionStorage.setItem('YM_SUPABASE_PASS', pw);
+                    const ok = await YMSupabase.init();
+                    showToast(ok ? 'Supabaseに接続しました。' : 'Supabase接続に失敗しました。ローカル機能はそのまま使えます。');
+                };
                 const btnMedia = document.getElementById('btn-open-media-center');
                 if (btnMedia) btnMedia.onclick = () => { renderMediaCenter('photo'); showModal('media-center-modal'); };
                 const mediaPhoto = document.getElementById('media-tab-photo');
@@ -10103,12 +10644,12 @@
                 if (!db.users['chappy']) {
                     db.users['chappy'] = {
                         name: 'チャッピー (AI)',
-                        icon: 'https://via.placeholder.com/40/10b981/ffffff?text=AI',
+                        icon: YM_DEFAULT_AI_ICON,
                         coins: 9999,
                         chatBg: '#8cabd9',
                         chatBgImg: '',
                         tabTitle: 'Y.M',
-                        tabIcon: 'https://via.placeholder.com/192/007bff/ffffff?text=YM',
+                        tabIcon: YM_DEFAULT_TAB_ICON,
                         usageTime: 0,
                         secretWord: '',
                         myStamps: [],
@@ -10123,12 +10664,12 @@
                 if (!db.users[activeUserId]) {
                     db.users[activeUserId] = {
                         name: 'User-' + activeUserId.slice(-4),
-                        icon: 'https://via.placeholder.com/40',
+                        icon: YM_DEFAULT_AVATAR,
                         coins: 100,
                         chatBg: '#8cabd9',
                         chatBgImg: '',
                         tabTitle: 'Y.M',
-                        tabIcon: 'https://via.placeholder.com/192/007bff/ffffff?text=YM',
+                        tabIcon: YM_DEFAULT_TAB_ICON,
                         usageTime: 0,
                         secretWord: '',
                         myStamps: [],
@@ -10146,12 +10687,14 @@
                     const me = db.users[activeUserId];
                     if (!me.createdAt) me.createdAt = Date.now();
                     me.lastLogin = Date.now();
+                    if (ymIsDeadMediaUrl(me.icon)) me.icon = YM_DEFAULT_AVATAR;
                 }
+                try { ymScrubDeadMedia(db); } catch (e) {}
 
 
                 initPeer();
                 renderApp();
-                try { ymBindUpgradeUi(); ymUpdateNetBanner(); } catch (e) { console.warn(e); }
+                try { ymBindUpgradeUi(); ymUpdateNetBanner(); ymUpdateSyncChip(); } catch (e) { console.warn(e); }
 
 
                 // ピン留め解除イベントボタン
@@ -10228,17 +10771,19 @@
 
                 const chatSearchInput = document.getElementById('chat-search-input');
                 if (chatSearchInput) {
+                    let _ymSearchTimer = null;
                     chatSearchInput.addEventListener('input', () => {
-                        renderChat(false);
+                        clearTimeout(_ymSearchTimer);
+                        _ymSearchTimer = setTimeout(() => renderChat(false), 250);
                     });
                 }
 
 
                 setInterval(() => {
                     if (db && db.users && db.users[activeUserId]) {
-                        db.users[activeUserId].usageTime = (db.users[activeUserId].usageTime || 0) + 1;
+                        db.users[activeUserId].usageTime = (db.users[activeUserId].usageTime || 0) + 30;
                     }
-                }, 1000);
+                }, 30000);
                 setInterval(() => {
                     if (db && db.users && db.users[activeUserId]) {
                         saveData();
@@ -10394,7 +10939,7 @@
                     for (const k of mediaKeys) {
                         mediaStore[k] = await IDB.get(k);
                     }
-                    const fullData = { db: db, media: mediaStore, exportedAt: Date.now(), device: LocalVault.deviceId() };
+                    const fullData = ymStripSecretsFromBackup({ db: db, media: mediaStore, exportedAt: Date.now(), device: LocalVault.deviceId() });
                     const enc = await LocalVault.encryptValue(fullData);
                     const blob = new Blob([JSON.stringify({ __ymBackup: 1, payload: enc }, null, 2)], { type: 'application/json' });
                     const a = document.createElement('a');
@@ -10414,7 +10959,9 @@
                             if (imported && imported.__ymBackup && imported.payload) {
                                 imported = await LocalVault.decryptValue(imported.payload);
                             }
-                            if (imported.db) db = imported.db;
+                            if (!confirm('現在の端末データを上書きして復元しますか？この操作は取り消せません。')) return;
+                            if (imported.db && typeof imported.db === 'object') db = imported.db;
+                            else { showToast('バックアップの形式が正しくありません'); return; }
                             if (imported.media) {
                                 for (const k of Object.keys(imported.media)) {
                                     await IDB.set(k, imported.media[k]);
@@ -10686,6 +11233,11 @@
 
                     const serverInput = document.getElementById('setting-ym-server-url');
                     if (serverInput) localStorage.setItem('YM_SERVER_URL', serverInput.value.trim());
+                    const sbEmailSave = document.getElementById('setting-supabase-email');
+                    if (sbEmailSave) localStorage.setItem('YM_SUPABASE_EMAIL', sbEmailSave.value.trim());
+                    const sbPassSave = document.getElementById('setting-supabase-pass');
+                    if (sbPassSave && sbPassSave.value.trim()) sessionStorage.setItem('YM_SUPABASE_PASS', sbPassSave.value.trim());
+                    try { YMSupabase.init(); } catch (e) {}
                     const gwInput = document.getElementById('setting-ai-gateway');
                     if (gwInput) {
                         localStorage.setItem('YM_AI_GATEWAY', gwInput.value.trim());
@@ -11603,7 +12155,7 @@
 
 
                 // Service Worker登録（プログレッシブ・エラー時は黙殺）
-                if ('serviceWorker' in navigator) {
+                if ('serviceWorker' in navigator && location.protocol !== 'file:') {
                     try {
                         navigator.serviceWorker.register('ym-sw.js').then((reg) => { _swRegistration = reg; }).catch(() => {});
                         const vapid = (localStorage.getItem('YM_VAPID_KEY') || '').trim();
@@ -11614,27 +12166,7 @@
                                 } catch (e) {}
                             });
                         }
-                        const swCode = `
-                            self.addEventListener('install', (e) => self.skipWaiting());
-                            self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
-                            self.addEventListener('notificationclick', (event) => {
-                                event.notification.close();
-                                event.waitUntil(
-                                    self.clients.matchAll({ type: 'window' }).then((clients) => {
-                                        if (clients.length > 0) {
-                                            clients[0].focus();
-                                        } else {
-                            self.clients.openWindow('/');
-                                        }
-                                    })
-                                );
-                            });
-                        `;
-                        const swBlob = new Blob([swCode], { type: 'application/javascript' });
-                        const swUrl = URL.createObjectURL(swBlob);
-                        navigator.serviceWorker.register(swUrl).then((reg) => {
-                            _swRegistration = reg;
-                        }).catch(() => {});
+                        // Blob SW は ym-sw.js と二重登録になるため使わない
                     } catch (e) {}
                 }
 
@@ -11654,11 +12186,11 @@
                     if (!('Notification' in window) || Notification.permission !== 'granted') return;
                     const defaultOptions = {
                         body: '',
-                        icon: 'https://via.placeholder.com/192/007bff/ffffff?text=YM',
-                        badge: 'https://via.placeholder.com/72/007bff/ffffff?text=YM',
+                        icon: YM_DEFAULT_TAB_ICON,
+                        badge: YM_DEFAULT_TAB_ICON,
                         tag: 'ym-default', // 同じタグの通知は上書き（集約）
                         requireInteraction: false,
-                        silent: true // 無音仕様
+                        silent: false
                     };
                     const mergedOptions = Object.assign({}, defaultOptions, options);
                     try {
@@ -11725,6 +12257,7 @@
                 openChat = function(targetKey) {
                     _originalOpenChat(targetKey);
                     clearChatNotifications(targetKey);
+                    try { if (typeof YMSupabase !== 'undefined') YMSupabase.pullMessages(targetKey); } catch (e) {}
                 };
 
 
