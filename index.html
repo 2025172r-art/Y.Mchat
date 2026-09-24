@@ -1035,7 +1035,164 @@
         .ym-cal-day.mute { opacity:.45; }
         .ym-cal-event { font-size:12px; padding:8px; border:1px solid var(--border-color); border-radius:8px; background:#f9fafb; }
         .ym-sync-row { display:flex; justify-content:space-between; gap:8px; align-items:center; padding:8px 0; border-bottom:1px solid var(--border-color); font-size:12px; }
+
+        /* ===== YM component canon + monitor (additive last-wins) ===== */
+        :root {
+            --space-1: 4px;
+            --space-2: 8px;
+            --space-3: 12px;
+            --space-4: 16px;
+            --space-6: 24px;
+            --color-surface: var(--bg-card);
+            --color-background: var(--bg-main);
+            --color-text: var(--text-main);
+            --color-muted: var(--text-muted);
+        }
+        .chat-header-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: nowrap;
+            gap: var(--space-2);
+            min-height: 44px;
+        }
+        .chat-toolbar {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 6px;
+            overflow: visible;
+        }
+        .rich-menu-container {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: stretch;
+            max-height: 72px;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+        .ym-monitor-id {
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: .04em;
+        }
+        .ym-cc-log .err { color: #fecaca; }
+        @media (max-width: 768px) {
+            .chat-header-row h3 { font-size: 15px; }
+            .chat-toolbar .menu-btn { min-width: 36px; }
+        }
+
+        /* YM layout canon last-wins: do not delete older rules */
+        #chat-view > .chat-header-row,
+        .chat-box > .chat-header-row {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            align-items: center !important;
+            gap: 8px;
+            flex-shrink: 0;
+            background: #0f172a;
+            color: #fff;
+            min-height: 48px;
+            padding: 6px 8px;
+            border-radius: 10px;
+        }
+        .chat-header-ident {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+        .chat-header-titleline {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 800;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .chat-header-titleline #chat-target-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .chat-conn-status { font-size: 11px; color: #cbd5e1; font-weight: 700; }
+        #chat-view > .chat-header-row .chat-toolbar,
+        .chat-box > .chat-header-row .chat-toolbar {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+            overflow: visible;
+        }
+        body.mobile-chat-active .chat-box > .chat-header-row {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            margin: -10px -10px 8px;
+            border-radius: 0;
+        }
+        #chat-rich-menu {
+            display: flex;
+            flex-wrap: nowrap;
+            max-height: 72px;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+        #chat-rich-menu.is-expanded {
+            flex-wrap: wrap;
+            max-height: 160px;
+            overflow-y: auto;
+        }
+        #chat-rich-menu:not(.is-expanded) .rich-menu-extra { display: none; }
+        .ym-empty-state { text-align: center; padding: 18px 10px; color: #64748b; font-size: 13px; }
+        .ym-empty-state strong { display: block; color: #0f172a; font-size: 14px; margin-bottom: 6px; }
+        .ym-home-tech { margin-top: 15px; }
+        .ym-home-tech > summary { cursor: pointer; font-weight: 800; font-size: 13px; color: #334155; }
+        .msg-fail-actions { display: flex; gap: 4px; margin-top: 2px; }
+        .msg-fail-actions button { font-size: 10px; padding: 2px 6px; margin: 0; width: auto; }
+        @media (max-width: 768px) {
+            #chat-view > .chat-header-row,
+            .chat-box > .chat-header-row,
+            #chat-view > .chat-header-row .chat-toolbar,
+            .chat-box > .chat-header-row .chat-toolbar {
+                flex-wrap: nowrap !important;
+            }
+        }
+
+        #chat-input {
+            flex: 1;
+            min-width: 0;
+            min-height: 36px;
+            max-height: 72px;
+            resize: none;
+            line-height: 1.4;
+            padding: 8px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 14px;
+        }
+        .composer-row { align-items: flex-end; }
+        body.mobile-chat-active .ym-bottom-nav { display: none !important; }
+        body.mobile-chat-active .composer {
+            padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+        }
+
+        .chat-header-row {
+            display: flex !important;
+            align-items: center !important;
+            flex-wrap: nowrap !important;
+            gap: 8px;
+            min-height: 48px;
+        }
+        .friend-list { max-height: none !important; flex: 1; min-height: 0; }
+        #chat-input { max-height: 7.5em; }
     </style>
+
 </head>
 <body class="ym-quiet-ui">
 
@@ -1131,12 +1288,14 @@
             <h1>Y.M へようこそ</h1>
             <p style="margin-top:10px; color:#666;">左側のトーク一覧から友達とのチャットを始められます。スタンプやプランは設定・その他から開けます。</p>
             <div class="ym-honesty-box hidden" hidden></div>
-            <div style="margin-top:15px; background:#e9ecef; padding:10px; border-radius:6px; font-size:12px;">
+            <p class="text-sub" style="margin-top:12px;">まずは左のトーク一覧を開くか、友だちを追加してください。</p>
+            <details class="ym-home-tech" style="margin-top:15px; background:#e9ecef; padding:10px; border-radius:6px; font-size:12px;">
+                <summary>通信の詳細（必要なときだけ開く）</summary>
                 🌐 <strong>通信ステータス (PeerJS / 相手が同じページを開いているとき):</strong><br>
                 自端末のPeerID: <span id="my-peer-id" style="font-weight:bold; color:#007bff;">接続準備中...</span><br>
                 🔒 <strong>E2EE (エンドツーエンド暗号化):</strong> <span id="e2ee-status" style="font-weight:bold; color:#f59e0b;">未確認</span>
                 <div id="ym-retry-banner" class="ym-retry-banner">接続できません。再試行できます。<button type="button" class="menu-btn" id="btn-ym-retry-conn" style="width:auto;margin:0;padding:4px 8px;">再接続</button></div>
-            </div>
+            </details>
         </div>
 
 
@@ -1155,14 +1314,17 @@
 
 
             <div class="chat-header-row">
-                <h3 id="chat-target-name" style="color:white;">チャット <span id="ym-e2ee-chip" class="ym-e2ee-chip warn">未確認</span></h3>
+                <button class="menu-btn mobile-only chat-back-btn" style="width:auto; padding:6px 10px; background:#334155; margin:0;" id="btn-mobile-show-sidebar" aria-label="トーク一覧へ戻る">←</button>
+                <div class="chat-header-ident">
+                    <h3 class="chat-header-titleline"><span id="chat-target-name">チャット</span> <span id="ym-e2ee-chip" class="ym-e2ee-chip warn">未確認</span></h3>
+                    <div id="chat-conn-status" class="chat-conn-status">接続を確認中</div>
+                </div>
                 <div class="chat-toolbar">
-                    <button class="menu-btn mobile-only" style="width:auto; padding:5px 10px; background:#334155;" id="btn-mobile-show-sidebar" aria-label="トーク一覧へ戻る">☰ 一覧</button>
-                    <button class="menu-btn hidden" style="width:auto; padding:5px 10px; background:#0f766e;" id="btn-ai-chat-settings" aria-label="AI設定">⚙️ AI設定</button>
-                    <button class="menu-btn btn-success" style="width:auto; padding:5px 12px;" id="btn-start-call" aria-label="音声通話">📞 通話</button>
+                    <button class="menu-btn hidden" style="width:auto; padding:5px 10px; background:#0f766e;" id="btn-ai-chat-settings" aria-label="AIの詳細設定">⚙️</button>
+                    <button class="menu-btn btn-success" style="width:auto; padding:5px 12px;" id="btn-start-call" aria-label="音声通話">📞</button>
                     <button class="menu-btn btn-danger hidden" style="width:auto; padding:5px 12px;" id="btn-end-call" aria-label="通話切断">📵 切断</button>
                     <div class="header-overflow">
-                        <button class="menu-btn" style="width:auto; padding:5px 12px; background:#334155;" id="btn-header-more" aria-label="その他の操作">…</button>
+                        <button class="menu-btn" style="width:auto; padding:5px 12px; background:#334155;" id="btn-header-more" aria-label="その他の操作">⋮</button>
                         <div class="header-overflow-menu" id="header-overflow-menu">
                             <button class="menu-btn" style="background:#64748b;" id="btn-open-chat-search">🔍 検索</button>
                             <button class="menu-btn" style="background:#0ea5e9;" id="btn-open-plan-shop-header">👑 プランショップ</button>
@@ -1253,11 +1415,12 @@
                 <div id="file-transfer-label">ファイル転送中...</div>
                 <div class="file-transfer-track"><div id="file-transfer-fill" class="file-transfer-fill"></div></div>
             </div>
+            <div class="composer" id="chat-composer">
             <div class="composer-row">
                 <button class="menu-btn" style="width:auto; background:#334155; font-size:18px; padding:6px 12px;" id="btn-composer-plus" title="添付・録音・位置情報">＋</button>
                 <button class="menu-btn" style="width:auto; background:#ffc107; color:#000; font-size:18px; padding:6px 12px;" id="btn-chat-stamp">🎨</button>
                 <input type="file" id="chat-file-input" class="hidden" accept="image/*,video/*,audio/*,.pdf,.txt,.zip" multiple>
-                <input type="text" id="chat-input" placeholder="メッセージを入力...">
+                <textarea id="chat-input" rows="1" placeholder="メッセージを入力..."></textarea>
                 <button class="menu-btn" style="width:auto;" id="btn-chat-send">送信</button>
             </div>
             <div id="composer-extra-tools" class="composer-extra-tools">
@@ -1265,34 +1428,41 @@
                 <button class="menu-btn" style="width:auto; background:#ef4444; font-size:14px; padding:6px 12px; margin:0;" id="btn-chat-voice-msg" title="ボイスメッセージ録音">🎙️ 録音</button>
                 <button class="menu-btn" style="width:auto; background:#0ea5e9; font-size:14px; padding:6px 12px; margin:0;" id="btn-chat-location" title="現在地を共有">📍 位置情報</button>
             </div>
+            </div>
 
 
             <!-- リッチメニュー (大型ビジュアルアクションメニュー) -->
             <button type="button" class="rich-menu-toggle" id="btn-toggle-rich-menu">メニューを開く ▼</button>
             <div class="rich-menu-container" id="chat-rich-menu">
-                <div class="rich-menu-item" onclick="document.getElementById('btn-open-shop').click()">
-                    <span style="font-size:18px;">🎨</span> SHOP
-                </div>
-                <div class="rich-menu-item" onclick="document.getElementById('btn-open-transfer-modal').click()">
-                    <span style="font-size:18px;">🪙</span> 送金
-                </div>
-                <div class="rich-menu-item" onclick="document.getElementById('btn-chat-camera-call').click()">
-                    <span style="font-size:18px;">📹</span> ビデオ通話
-                </div>
-                <div class="rich-menu-item" onclick="document.getElementById('btn-chat-location').click()">
-                    <span style="font-size:18px;">📍</span> 位置情報
-                </div>
-                <div class="rich-menu-item" onclick="document.getElementById('btn-open-room-album').click()">
-                    <span style="font-size:18px;">📷</span> アルバム
-                </div>
-                <div class="rich-menu-item" onclick="document.getElementById('btn-group-call').click()">
-                    <span style="font-size:18px;">👥</span> グループ通話
-                </div>
-                <div class="rich-menu-item" onclick="document.getElementById('btn-theme-cycle').click()">
-                    <span style="font-size:18px;">🎨</span> テーマ
+                <div class="rich-menu-item" onclick="document.getElementById('btn-chat-stamp').click()">
+                    <span style="font-size:18px;">🎨</span> スタンプ
                 </div>
                 <div class="rich-menu-item" onclick="document.getElementById('btn-chat-file').click()">
-                    <span style="font-size:18px;">🖼</span> 画像送信
+                    <span style="font-size:18px;">🖼</span> 画像
+                </div>
+                <div class="rich-menu-item" onclick="document.getElementById('btn-chat-location').click()">
+                    <span style="font-size:18px;">📍</span> 位置
+                </div>
+                <div class="rich-menu-item" id="btn-rich-menu-more" onclick="document.getElementById('chat-rich-menu').classList.toggle('is-expanded')">
+                    <span style="font-size:18px;">＋</span> ほか
+                </div>
+                <div class="rich-menu-item rich-menu-extra" onclick="document.getElementById('btn-open-shop').click()">
+                    <span style="font-size:18px;">🎨</span> SHOP
+                </div>
+                <div class="rich-menu-item rich-menu-extra" onclick="document.getElementById('btn-open-transfer-modal').click()">
+                    <span style="font-size:18px;">🪙</span> 送金
+                </div>
+                <div class="rich-menu-item rich-menu-extra" onclick="document.getElementById('btn-chat-camera-call').click()">
+                    <span style="font-size:18px;">📹</span> ビデオ通話
+                </div>
+                <div class="rich-menu-item rich-menu-extra" onclick="document.getElementById('btn-open-room-album').click()">
+                    <span style="font-size:18px;">📷</span> アルバム
+                </div>
+                <div class="rich-menu-item rich-menu-extra" onclick="document.getElementById('btn-group-call').click()">
+                    <span style="font-size:18px;">👥</span> グループ通話
+                </div>
+                <div class="rich-menu-item rich-menu-extra" onclick="document.getElementById('btn-theme-cycle').click()">
+                    <span style="font-size:18px;">🎨</span> テーマ
                 </div>
             </div>
         </div>
@@ -3896,8 +4066,9 @@
 
 
             const YM_SUPABASE_DEFAULTS = {
-                url: 'https://piyyumufwygvrilnpxes.supabase.co',
-                anon: 'sb_publishable_kmUbpTyHdihIA8SayGH6kA_uABXF3UL'
+                url: 'https://aodjdwpikacqyyyppvzr.supabase.co',
+                anon: 'sb_publishable_BTPtiUpJUThX2S-yqtX4Vw_yBEfpdVU',
+                cfg: 'aodj-20260925'
             };
             const YMSupabase = {
                 client: null,
@@ -3922,6 +4093,11 @@
                 },
                 async init() {
                     try {
+                        if (localStorage.getItem('YM_SUPABASE_CFG') !== YM_SUPABASE_DEFAULTS.cfg) {
+                            localStorage.setItem('YM_SUPABASE_URL', YM_SUPABASE_DEFAULTS.url);
+                            localStorage.setItem('YM_SUPABASE_ANON', YM_SUPABASE_DEFAULTS.anon);
+                            localStorage.setItem('YM_SUPABASE_CFG', YM_SUPABASE_DEFAULTS.cfg);
+                        }
                         if (!localStorage.getItem('YM_SUPABASE_URL')) localStorage.setItem('YM_SUPABASE_URL', YM_SUPABASE_DEFAULTS.url);
                         if (!localStorage.getItem('YM_SUPABASE_ANON')) localStorage.setItem('YM_SUPABASE_ANON', YM_SUPABASE_DEFAULTS.anon);
                         const url = this.projectUrl();
@@ -3993,9 +4169,11 @@
                 },
                 async ingestOutgoing(msgObj, sendMsg) {
                     try {
-                        if (!this.isReady() || !msgObj) return;
+                        if (!msgObj) return;
                         if (msgObj.to === 'chappy' || msgObj.to === 'official' || msgObj.to === 'keep') return;
                         const packed = sendMsg || msgObj;
+                        try { await this.inboxPush(msgObj, packed); } catch (e0) {}
+                        if (!this.isReady()) return;
                         const recipientUuid = packed.isGroup ? this.user.id : await this.uuidOfPeer(packed.to);
                         if (!packed.isGroup && !recipientUuid) return;
                         const encrypted = !!(packed.encrypted || packed.e2ee);
@@ -4027,8 +4205,84 @@
                         console.warn('[YMSupabase.ingest]', e);
                     }
                 },
+                async inboxPush(msgObj, packed) {
+                    try {
+                        if (!this.client || !packed) return;
+                        const toId = String(packed.to || '');
+                        const fromId = String(packed.from || '');
+                        if (!toId || toId === 'chappy' || toId === 'official' || toId === 'keep') return;
+                        const body = {
+                            msgId: packed.msgId,
+                            type: packed.type || 'text',
+                            text: (packed.encrypted || packed.e2ee) ? null : (packed.text || (msgObj && msgObj.text) || ''),
+                            encrypted: !!(packed.encrypted || packed.e2ee),
+                            fileName: packed.fileName || null,
+                            isGroup: !!packed.isGroup
+                        };
+                        const { error } = await this.client.from('ym_inbox').insert({
+                            msg_id: String(packed.msgId || ('m_' + Date.now())),
+                            from_id: fromId,
+                            to_id: toId,
+                            body: body
+                        });
+                        if (error && String(error.message || '').indexOf('duplicate') === -1) {
+                            console.warn('[YMSupabase.inboxPush]', error.message || error);
+                        }
+                    } catch (e) {
+                        console.warn('[YMSupabase.inboxPush]', e);
+                    }
+                },
+                async inboxPull(targetKey) {
+                    try {
+                        if (!this.client || !targetKey || !db || !activeUserId) return;
+                        if (targetKey === 'chappy' || targetKey === 'official' || targetKey === 'keep') return;
+                        const { data, error } = await this.client.from('ym_inbox')
+                            .select('*')
+                            .or('to_id.eq.' + activeUserId + ',from_id.eq.' + activeUserId)
+                            .order('created_at', { ascending: true })
+                            .limit(200);
+                        if (error || !data) return;
+                        if (!Array.isArray(db.messages)) db.messages = [];
+                        let added = 0;
+                        data.forEach((row) => {
+                            const body = row.body || {};
+                            const mid = body.msgId || row.msg_id;
+                            const fromPeer = row.from_id;
+                            const toPeer = row.to_id;
+                            if (fromPeer !== targetKey && toPeer !== targetKey && fromPeer !== activeUserId && toPeer !== activeUserId) return;
+                            if (!(fromPeer === activeUserId || toPeer === activeUserId)) return;
+                            if (!((fromPeer === targetKey && toPeer === activeUserId) || (fromPeer === activeUserId && toPeer === targetKey))) return;
+                            if (db.messages.some(m => m.msgId === mid || m.msgId === row.msg_id)) return;
+                            db.messages.push({
+                                msgId: mid,
+                                from: fromPeer,
+                                to: toPeer,
+                                isGroup: !!body.isGroup,
+                                text: body.encrypted ? '' : (body.text || ''),
+                                type: body.type || 'text',
+                                fileName: body.fileName || null,
+                                encrypted: !!body.encrypted,
+                                readBy: [],
+                                reactions: {},
+                                unsent: false,
+                                deliveryStatus: 'sent',
+                                syncState: 'inbox',
+                                timestamp: row.created_at ? Date.parse(row.created_at) : Date.now()
+                            });
+                            added += 1;
+                        });
+                        if (added) {
+                            saveData();
+                            if (typeof renderChat === 'function' && activeChatTarget === targetKey) renderChat(false);
+                            if (typeof renderApp === 'function') renderApp();
+                        }
+                    } catch (e) {
+                        console.warn('[YMSupabase.inboxPull]', e);
+                    }
+                },
                 async pullMessages(targetKey) {
                     try {
+                        try { await this.inboxPull(targetKey); } catch (e0) {}
                         if (!this.isReady() || !targetKey || !db) return;
                         if (targetKey === 'chappy' || targetKey === 'official' || targetKey === 'keep') return;
                         const isGroup = !!(db.groups && db.groups[targetKey]);
@@ -4985,7 +5239,7 @@
                     if (activeChatTarget === id) {
                         try {
                             const targetDisplay = getFriendDisplayName(id);
-                            document.getElementById('chat-target-name').textContent = targetDisplay + ' とのチャット';
+                            document.getElementById('chat-target-name').textContent = targetDisplay + ' とのチャット'; try { ymRefreshChatConnStatus(); } catch (e) {}
                         } catch (e) {}
                     }
                     renderApp();
@@ -4999,7 +5253,7 @@
                     hideModal('friend-nick-modal');
                     if (activeChatTarget === id) {
                         try {
-                            document.getElementById('chat-target-name').textContent = getFriendDisplayName(id) + ' とのチャット';
+                            document.getElementById('chat-target-name').textContent = getFriendDisplayName(id) + ' とのチャット'; try { ymRefreshChatConnStatus(); } catch (e) {}
                         } catch (e) {}
                     }
                     renderApp();
@@ -5007,6 +5261,33 @@
                 };
             }
 
+            function ymRefreshChatConnStatus() {
+                const el = document.getElementById('chat-conn-status');
+                if (!el) return;
+                const id = activeChatTarget;
+                if (!id) { el.textContent = ''; return; }
+                if (id === 'chappy') { el.textContent = 'AI'; return; }
+                if (id === 'official') { el.textContent = '公式'; return; }
+                if (id === 'keep') { el.textContent = 'この端末'; return; }
+                let open = false, on = false;
+                try { open = !!(peerConnections[id] && peerConnections[id].open); } catch (e) {}
+                try { on = !!(typeof onlineStatusMap !== 'undefined' && onlineStatusMap[id]); } catch (e) {}
+                if (open) { el.textContent = '接続済み'; return; }
+                const label = on ? 'オンライン' : 'オフライン・同期待ち';
+                el.textContent = '';
+                el.appendChild(document.createTextNode(label + ' '));
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'chat-conn-retry';
+                b.textContent = '再接続';
+                b.onclick = function (ev) {
+                    ev.stopPropagation();
+                    try { if (typeof connectToRemotePeer === 'function') connectToRemotePeer(id); } catch (e) {}
+                    const r = document.getElementById('btn-ym-retry-conn');
+                    if (r) r.click();
+                };
+                el.appendChild(b);
+            }
             function startCallToPeer(targetPeerId) {
                 if (targetPeerId === 'official' || activeChatTarget === 'official' || targetPeerId === 'keep' || activeChatTarget === 'keep' || targetPeerId === 'chappy' || activeChatTarget === 'chappy') {
                     showToast('このアカウントとは通話できません。');
@@ -7995,7 +8276,7 @@
 
 
                     if (itemCount === 0) {
-                        talkModeContainer.innerHTML = searchQuery ? '<div style="font-size:11px; color:#888; padding:6px; text-align:center;">該当するユーザーが見つかりません。</div>' : '<div style="font-size:11px; color:#888; padding:6px; text-align:center;">まだ友達やグループが登録されていません。</div>';
+                        talkModeContainer.innerHTML = searchQuery ? '<div class="ym-empty-state"><strong>見つかりません</strong><p>検索条件を変えてみてください。</p></div>' : '<div class="ym-empty-state"><strong>まだチャットがありません</strong><p>友だちを追加して、最初の会話を始めましょう。</p><button type="button" class="menu-btn" id="btn-empty-add-friend" style="width:auto;margin:8px auto 0;">友だちを追加</button></div>';
                     }
                 }
 
@@ -8169,7 +8450,7 @@
                 switchPage('chat-view');
                 const targetName = getFriendDisplayName(targetKey);
                 const targetDisplay = (targetKey === 'chappy') ? `チャッピー (AI)` : targetName;
-                document.getElementById('chat-target-name').textContent = `${targetDisplay} とのチャット`;
+                document.getElementById('chat-target-name').textContent = `${targetDisplay} とのチャット`; try { ymRefreshChatConnStatus(); } catch (e) {}
                 document.getElementById('btn-manage-group-modal').classList.add('hidden');
                 
                 const aiControls = document.getElementById('ai-extra-controls');
@@ -8205,7 +8486,7 @@
                     if (memId !== activeUserId) connectToRemotePeer(memId);
                 });
                 switchPage('chat-view');
-                document.getElementById('chat-target-name').textContent = `👨‍👩‍👧‍👦 ${grp.name}`;
+                document.getElementById('chat-target-name').textContent = `👨‍👩‍👧‍👦 ${grp.name}`; try { ymRefreshChatConnStatus(); } catch (e) {}
                 document.getElementById('btn-manage-group-modal').classList.remove('hidden');
                 
                 const aiControls = document.getElementById('ai-extra-controls');
@@ -9403,14 +9684,36 @@
                             readSpan.textContent = '送信済';
                         } else if (m.deliveryStatus === 'failed') {
                             readSpan.className = 'msg-send-fail';
-                            readSpan.textContent = '⚠ 再送';
-                            readSpan.onclick = () => retryFailedMessage(m.msgId);
+                            readSpan.textContent = '送信失敗';
+                            const failBox = document.createElement('div');
+                            failBox.className = 'msg-fail-actions';
+                            const retryBtn = document.createElement('button');
+                            retryBtn.type = 'button';
+                            retryBtn.className = 'menu-btn';
+                            retryBtn.textContent = '再送信';
+                            retryBtn.onclick = (ev) => { ev.stopPropagation(); retryFailedMessage(m.msgId); };
+                            const copyBtn = document.createElement('button');
+                            copyBtn.type = 'button';
+                            copyBtn.className = 'menu-btn';
+                            copyBtn.style.background = '#64748b';
+                            copyBtn.textContent = 'コピー';
+                            copyBtn.onclick = (ev) => {
+                                ev.stopPropagation();
+                                const t = m.text || '';
+                                if (navigator.clipboard && t) navigator.clipboard.writeText(t).then(() => showToast('コピーしました')).catch(() => {});
+                                else showToast(t ? t : 'コピーできる本文がありません');
+                            };
+                            failBox.appendChild(retryBtn);
+                            failBox.appendChild(copyBtn);
+                            metaDiv.appendChild(readSpan);
+                            metaDiv.appendChild(failBox);
+                            readSpan = null;
                         } else if (m.deliveryStatus === 'queued') {
                             readSpan.textContent = '待機中';
                         } else {
                             readSpan.textContent = '送信中';
                         }
-                        metaDiv.appendChild(readSpan);
+                        if (readSpan) metaDiv.appendChild(readSpan);
                     }
 
 
@@ -10326,12 +10629,28 @@
                     try { localStorage.setItem('YM_CC_LOGS', JSON.stringify(this.logs.slice(-800))); } catch (e) {}
                 },
                 log(type, detail, level) {
-                    const row = { t: Date.now(), type: String(type || 'EVENT'), detail: String(detail || ''), level: level || 'info' };
+                    const row = {
+                        t: Date.now(),
+                        id: 'YM-' + Math.random().toString(36).slice(2, 7).toUpperCase(),
+                        type: String(type || 'EVENT'),
+                        detail: String(detail || ''),
+                        level: level || 'info',
+                        href: (typeof location !== 'undefined') ? String(location.href || '').slice(0, 180) : ''
+                    };
                     this.logs.push(row);
                     if (this.logs.length > 800) this.logs = this.logs.slice(-800);
                     this.saveLogs();
                     this.paintLogs();
                     return row;
+                },
+                capture(err, feature) {
+                    const msg = (err && err.message) ? err.message : String(err || 'error');
+                    const stack = (err && err.stack) ? String(err.stack).slice(0, 400) : '';
+                    const row = this.log(feature || 'APP_ERROR', msg + (stack ? ' | ' + stack : ''), 'error');
+                    try {
+                        if (typeof showToast === 'function') showToast('問題が発生しました。エラーID: ' + row.id);
+                    } catch (e) {}
+                    return row.id;
                 },
                 fmt(ts) {
                     const d = new Date(ts || Date.now());
@@ -10418,7 +10737,7 @@
                     const errOnly = !!(document.getElementById('ym-cc-log-errors-only') && document.getElementById('ym-cc-log-errors-only').checked);
                     const rows = (this.logs || []).slice().reverse().filter(l => !errOnly || l.level === 'error').slice(0, 200);
                     const html = rows.map(l => {
-                        const line = '[' + this.fmt(l.t) + '] ' + l.type + (l.detail ? '  ' + l.detail : '');
+                        const line = '[' + this.fmt(l.t) + '] ' + (l.id ? l.id + ' ' : '') + l.type + (l.detail ? '  ' + l.detail : '');
                         return '<div class="' + (l.level === 'error' ? 'err' : '') + '">' + this.esc(line) + '</div>';
                     }).join('') || '<div>ログはまだありません。</div>';
                     const a = document.getElementById('ym-cc-overview-log');
@@ -10814,6 +11133,18 @@
                 }
             };
             window.YMControlCenter = YMControlCenter;
+            if (!window.__ymMonitorBound) {
+                window.__ymMonitorBound = true;
+                window.addEventListener('error', (ev) => {
+                    try { YMControlCenter.capture(ev.error || ev.message || 'script-error', 'WINDOW_ERROR'); } catch (e) {}
+                });
+                window.addEventListener('unhandledrejection', (ev) => {
+                    try { YMControlCenter.capture(ev.reason || 'unhandledrejection', 'PROMISE_ERROR'); } catch (e) {}
+                });
+                try {
+                    if (window.performance && performance.mark) performance.mark('ym-monitor-ready');
+                } catch (e) {}
+            }
             if (typeof renderDevPanel === 'function') {
                 const _rdp = renderDevPanel;
                 renderDevPanel = function() {
@@ -11219,7 +11550,7 @@
                     { id: 'room', name: 'おへや', face: '🏠', price: 90, kind: 'room' }
                 ],
                 load() {
-                    try { return JSON.parse(localStorage.getItem('YM_PET') || 'null') || { type: 'chick', wear: '', season: '', room: '', name: 'ピヨ' }; }
+                    try { return Object.assign({ type: 'chick', wear: '', season: '', room: '', name: 'ピヨ', xp: 0, stage: 1 }, JSON.parse(localStorage.getItem('YM_PET') || 'null') || {}); }
                     catch (e) { return { type: 'chick', wear: '', season: '', room: '', name: 'ピヨ' }; }
                 },
                 save(st) { localStorage.setItem('YM_PET', JSON.stringify(st)); },
@@ -11235,7 +11566,17 @@
                     const status = document.getElementById('ym-pet-status');
                     if (face) face.textContent = this.faceOf(st);
                     if (name) name.textContent = st.name || 'ピヨ';
-                    if (status) status.textContent = st.room ? 'おへやでくつろいでいます' : 'プロフィールに表示中';
+                    if (status) {
+                        const stage = Math.max(1, Math.min(3, Number(st.stage) || 1));
+                        const labels = { 1: 'たまご期', 2: 'こども期', 3: 'せいちょう' };
+                        status.textContent = (labels[stage] || 'たまご期') + ' / XP ' + (st.xp || 0) + (st.room ? ' / おへや' : '');
+                    }
+                    const stageFace = document.getElementById('ym-pet-face');
+                    if (stageFace && !(st.wear || st.season || st.room)) {
+                        const faces = { 1: '🥚', 2: '🐣', 3: '🐥' };
+                        const stage = Math.max(1, Math.min(3, Number(st.stage) || 1));
+                        if (!st.type || st.type === 'chick') stageFace.textContent = faces[stage];
+                    }
                     const grid = document.getElementById('ym-pet-shop-grid');
                     if (!grid) return;
                     grid.innerHTML = '';
@@ -11253,6 +11594,16 @@
                         card.appendChild(btn);
                         grid.appendChild(card);
                     });
+                },
+                care() {
+                    const st = this.load();
+                    st.xp = (Number(st.xp) || 0) + 1;
+                    if (st.xp >= 12) st.stage = 3;
+                    else if (st.xp >= 5) st.stage = 2;
+                    else st.stage = 1;
+                    this.save(st);
+                    this.render();
+                    try { showToast('ペットの世話をしました'); } catch (e) {}
                 },
                 buyOrEquip(item) {
                     const st = this.load();
@@ -11430,6 +11781,8 @@
                 if (typeof E2EE.loadVerified === 'function') E2EE.loadVerified();
                 const petBtn = document.getElementById('btn-open-pet-home');
                 if (petBtn) petBtn.onclick = () => { YMPetShop.render(); switchPage('ym-pet-home-view'); };
+                const petCare = document.getElementById('btn-pet-care');
+                if (petCare) petCare.onclick = () => YMPetShop.care();
                 const petHome = document.getElementById('btn-pet-to-home');
                 if (petHome) petHome.onclick = () => switchPage('home-view');
                 const reqBtn = document.getElementById('btn-open-message-requests');
@@ -11455,13 +11808,26 @@
                 ymGroupSidebarExtras();
                 ymEnhanceAiSelect();
                 ymStartScheduleTick();
+                window.ymSaveDraft = function(target, text) {
+                    const key = 'YM_DRAFT_' + String(target || '');
+                    if (!target) return;
+                    const v = String(text || '');
+                    try {
+                        if (!v) localStorage.removeItem(key);
+                        else localStorage.setItem(key, v);
+                    } catch (e) {}
+                };
                 ymRestoreDraft();
                 const chatInput = document.getElementById('chat-input');
                 if (chatInput && !chatInput.dataset.ymDraftBound) {
                     chatInput.dataset.ymDraftBound = '1';
+                    let _draftTimer = null;
                     chatInput.addEventListener('input', () => {
-                        const key = 'YM_DRAFT_' + (activeChatTarget || '');
-                        try { localStorage.setItem(key, chatInput.value); } catch (e) {}
+                        if (_draftTimer) clearTimeout(_draftTimer);
+                        _draftTimer = setTimeout(() => {
+                            try { window.ymSaveDraft(activeChatTarget, chatInput.value); } catch (e) {}
+                        }, 300);
+                        try { if (typeof ymFitChatInput === 'function') ymFitChatInput(); } catch (e) {}
                     });
                 }
                 const overflow = document.getElementById('header-overflow-menu');
@@ -11731,6 +12097,12 @@
                     if (!rich.classList.contains('collapsed')) rich.classList.remove('hidden-by-keyboard');
                     syncRichToggleLabel();
                 };
+                document.addEventListener('click', (ev) => {
+                    const t = ev.target && ev.target.closest && ev.target.closest('#btn-empty-add-friend');
+                    if (!t) return;
+                    const add = document.getElementById('btn-open-add-friend') || document.getElementById('nav-plus');
+                    if (add) add.click();
+                });
                 const btnHeaderMore = document.getElementById('btn-header-more');
                 if (btnHeaderMore) {
                     btnHeaderMore.onclick = (e) => {
@@ -12615,15 +12987,37 @@
                         return;
                     }
                     sendMessage('text');
+                    try { if (activeChatTarget) localStorage.removeItem('YM_DRAFT_' + activeChatTarget); } catch (e) {}
                 };
-                document.getElementById('chat-input').onkeypress = (e) => {
-                    if (e.key === 'Enter') {
+                const _chatInputEl = document.getElementById('chat-input');
+                window.ymFitChatInput = function() {
+                    const el = document.getElementById('chat-input');
+                    if (!el) return;
+                    el.style.height = 'auto';
+                    const max = 72;
+                    el.style.height = Math.min(el.scrollHeight, max) + 'px';
+                };
+                if (_chatInputEl && !_chatInputEl.dataset.ymDraftBound) {
+                    _chatInputEl.dataset.ymDraftBound = '1';
+                    _chatInputEl.addEventListener('input', function() {
+                        try {
+                            if (!activeChatTarget) return;
+                            localStorage.setItem('YM_DRAFT_' + activeChatTarget, _chatInputEl.value || '');
+                        } catch (e) {}
+                        try { window.ymFitChatInput(); } catch (e) {}
+                    });
+                }
+                document.getElementById('chat-input').onkeydown = (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
                         if (activeEditTarget) {
                             const input = document.getElementById('chat-input');
                             const newText = input.value.trim();
                             if (newText) MessageEdit.executeEdit(newText);
                         } else {
                             sendMessage('text');
+                            try { if (activeChatTarget) localStorage.removeItem('YM_DRAFT_' + activeChatTarget); } catch (err) {}
+                            try { window.ymFitChatInput(); } catch (err) {}
                         }
                     }
                 };
@@ -12642,7 +13036,8 @@
                     btnComposerPlus.onclick = () => {
                         const extra = document.getElementById('composer-extra-tools');
                         if (!extra) return;
-                        extra.classList.toggle('active');
+                        const open = extra.classList.toggle('active');
+                        if (open && typeof hideComposerPanels === 'function') hideComposerPanels('plus');
                     };
                 }
                 document.getElementById('btn-chat-stamp').onclick = () => {
@@ -13459,6 +13854,7 @@
 
                 let _swRegistration = null;
                 try {
+                    try { setInterval(function(){ try { if (typeof ymRefreshChatConnStatus === 'function') ymRefreshChatConnStatus(); } catch (e) {} }, 30000); } catch (e) {}
                     YMPush.init().then((reg) => { _swRegistration = reg || YMPush.sw || null; }).catch(() => {});
                 } catch (e) {}
 
@@ -13578,6 +13974,14 @@
                     _originalOpenChat(targetKey);
                     clearChatNotifications(targetKey);
                     try { if (typeof YMSupabase !== 'undefined') YMSupabase.pullMessages(targetKey); } catch (e) {}
+                    try {
+                        const input = document.getElementById('chat-input');
+                        if (input && targetKey) {
+                            const raw = localStorage.getItem('YM_DRAFT_' + targetKey);
+                            if (raw && !input.value) input.value = raw;
+                            try { if (typeof ymFitChatInput === 'function') ymFitChatInput(); } catch (e2) {}
+                        }
+                    } catch (e) {}
                 };
 
 
@@ -13625,6 +14029,7 @@
             <div id="ym-pet-name" style="text-align:center;font-weight:800;">ピヨ</div>
             <div id="ym-pet-status" class="text-sub" style="text-align:center;">元気いっぱい</div>
         </div>
+        <button class="menu-btn" id="btn-pet-care" style="margin-top:12px;background:#f59e0b;">世話をする（進化）</button>
         <div id="ym-pet-shop-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:14px;"></div>
         <button class="menu-btn" id="btn-pet-to-home" style="margin-top:12px;">ホームへ戻る</button>
     </div>
