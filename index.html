@@ -3540,6 +3540,8 @@
 
 
             let pendingIncomingCall = null;
+            let ymStoppingCalls = false;
+            let ymAcceptWhenCallArrives = null;
 
 
             let localStream = null;
@@ -4628,13 +4630,44 @@
             // -------------------------------------------------------------
             async function getAudioStream() {
                 if (localStream) return localStream;
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    showToast((location.protocol === 'file:') ? 'この開き方ではマイクを使えません。localhost か HTTPS で開いてください。通話画面は使えます。' : 'このブラウザではマイクを使えません。');
+                    return null;
+                }
                 try {
                     localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                     return localStream;
                 } catch (err) {
-                    showToast('マイクのアクセス許可が必要です: ' + err.message);
+                    const insecure = !window.isSecureContext || location.protocol === 'file:';
+                    showToast(insecure ? 'マイクは HTTPS または localhost で許可できます。今の開き方ではブラウザが止めることがあります。' : ('マイクのアクセス許可が必要です: ' + ((err && err.message) ? err.message : '')));
                     return null;
                 }
+            }
+
+            function ymSavePendingInvite(fromId, kind) {
+                try { localStorage.setItem('YM_PENDING_CALL', JSON.stringify({ from: fromId, kind: kind || 'audio', ts: Date.now() })); } catch (e) {}
+            }
+            function ymClearPendingInvite() {
+                try { localStorage.removeItem('YM_PENDING_CALL'); } catch (e) {}
+            }
+            function ymResumePendingCall() {
+                try {
+                    const raw = localStorage.getItem('YM_PENDING_CALL');
+                    if (!raw) return;
+                    const inv = JSON.parse(raw);
+                    if (!inv || !inv.from) return;
+                    if (Date.now() - (inv.ts || 0) > 15 * 60 * 1000) { ymClearPendingInvite(); return; }
+                    if (typeof ymOnCallInvite === 'function') ymOnCallInvite({ type: 'CALL_INVITE', from: inv.from, kind: inv.kind || 'audio', ts: inv.ts }, inv.from);
+                } catch (e) {}
+            }
+            function ymWakeConnections() {
+                try { if (typeof schedulePeerReconnect === 'function') schedulePeerReconnect(); } catch (e) {}
+                try {
+                    const friends = (db && db.friends && db.friends[activeUserId]) || [];
+                    friends.forEach(function (fId) { try { connectToRemotePeer(fId); } catch (e) {} });
+                } catch (e) {}
+                try { if (typeof OfflineBridge !== 'undefined' && OfflineBridge.listen) OfflineBridge.listen(); } catch (e) {}
+                try { ymResumePendingCall(); } catch (e) {}
             }
 
 
@@ -4644,16 +4677,110 @@
                     audio = document.createElement('audio');
                     audio.id = 'audio-' + peerId;
                     audio.autoplay = true;
-                    document.getElementById('audio-container').appendChild(audio);
+                    audio.playsInline = true;
+                    audio.setAttribute('playsinline', '');
+                    const box = document.getElementById('audio-container');
+                    if (box) box.appendChild(audio);
+                    else document.body.appendChild(audio);
                 }
                 audio.srcObject = stream;
+                const play = () => { try { audio.play().catch(() => {}); } catch (e) {} };
+                play();
+                audio.onloadedmetadata = play;
+            }
+
+            function ymAttachCallStream(call, peerId, kind) {
+                if (!call) return;
+                const apply = (remoteStream) => {
+                    if (!remoteStream) return;
+                    addRemoteAudio(peerId, remoteStream);
+                    if (kind === 'video' || (call.metadata && (call.metadata.type === 'video' || call.metadata.type === 'group-video'))) {
+                        const remoteVideo = document.getElementById('video-remote');
+                        if (remoteVideo) {
+                            remoteVideo.srcObject = remoteStream;
+                            remoteVideo.muted = false;
+                            remoteVideo.playsInline = true;
+                            try { remoteVideo.play().catch(() => {}); } catch (e) {}
+                        }
+                    }
+                    toggleCallUI(true);
+                    try {
+                        ymBindPhoneScreenControls();
+                        showVoiceCallScreen(peerId, 'connected');
+                    } catch (e) {}
+                };
+                call.on('stream', apply);
+                try {
+                    const pc = call.peerConnection;
+                    if (pc && !pc.__ymOnTrack) {
+                        pc.__ymOnTrack = true;
+                        pc.addEventListener('track', (ev) => {
+                            const st = (ev.streams && ev.streams[0]) ? ev.streams[0] : (ev.track ? new MediaStream([ev.track]) : null);
+                            if (st) apply(st);
+                        });
+                    }
+                } catch (e) {}
+                call.on('close', () => { try { stopAllCalls(); } catch (e) {} });
+                call.on('error', (err) => {
+                    console.warn('[YM call error]', err);
+                    try { showToast('通話の接続を再試行しています'); } catch (e) {}
+                });
+            }
+
+            function ymNotifyCall(targetId, kind, action) {
+                const payload = { type: action || 'CALL_INVITE', from: activeUserId, kind: kind || 'audio', ts: Date.now() };
+                try { sendToPeerOrQueue(targetId, payload); } catch (e) {}
+                try { if (typeof connectToRemotePeer === 'function') connectToRemotePeer(targetId); } catch (e) {}
+                try {
+                    const open = peerConnections[targetId] && peerConnections[targetId].open;
+                    if (!open && typeof OfflineBridge !== 'undefined' && OfflineBridge.enqueue) OfflineBridge.enqueue(targetId, payload);
+                } catch (e) {}
+            }
+
+            function ymWhenPeerOpen(cb, waitMs) {
+                if (peer && peer.open && !peer.destroyed) { cb(true); return; }
+                let done = false;
+                const finish = (ok) => { if (done) return; done = true; cb(!!ok); };
+                const timer = setTimeout(() => finish(peer && peer.open && !peer.destroyed), waitMs || 8000);
+                try {
+                    if (peer && typeof peer.once === 'function') {
+                        peer.once('open', () => { clearTimeout(timer); finish(true); });
+                    } else if (peer && typeof peer.on === 'function') {
+                        const h = () => { try { peer.off && peer.off('open', h); } catch (e) {} clearTimeout(timer); finish(true); };
+                        peer.on('open', h);
+                    }
+                } catch (e) {
+                    clearTimeout(timer);
+                    finish(false);
+                }
+            }
+
+            function ymOnCallInvite(data, senderPeerId) {
+                const fromId = (data && data.from) || senderPeerId;
+                if (!fromId || fromId === activeUserId) return;
+                if (typeof isPeerBlocked === 'function' && isPeerBlocked(fromId)) return;
+                if (pendingIncomingCall && pendingIncomingCall.peer === fromId) return;
+                if (mediaCalls[fromId]) return;
+                const kind = (data && data.kind) || 'audio';
+                const fake = { peer: fromId, metadata: { type: kind }, _ymInviteOnly: true, close: function () {} };
+                pendingIncomingCall = fake;
+                const callerUser = db.users[fromId];
+                const callerName = callerUser ? ((typeof getFriendDisplayName === 'function') ? getFriendDisplayName(fromId) : callerUser.name) : fromId;
+                const callTypeLabel = (kind === 'video' || kind === 'group-video') ? 'ビデオ通話' : '通話';
+                try { Ringtone.start(); } catch (e) {}
+                const el = document.getElementById('call-incoming-text');
+                if (el) el.textContent = '「' + callerName + '」からの' + callTypeLabel + 'のリクエストがされました。許可しますか？拒否しますか？';
+                try { ymSavePendingInvite(fromId, kind); } catch (e) {}
+                showModal('call-incoming-modal');
+                try { ymBindPhoneScreenControls(); showVoiceCallScreen(fromId, 'incoming'); } catch (e) {}
             }
 
 
             function handleCall(call) {
-                const isVideo = call.metadata && call.metadata.type === 'video';
+                const metaType = call && call.metadata && call.metadata.type;
+                const isVideo = metaType === 'video' || metaType === 'group-video';
                 const callerUser = db.users[call.peer];
-                const callerName = callerUser ? callerUser.name : call.peer;
+                const callerName = callerUser ? ((typeof getFriendDisplayName === 'function') ? getFriendDisplayName(call.peer) : callerUser.name) : call.peer;
                 const callTypeLabel = isVideo ? 'ビデオ通話' : '通話';
 
 
@@ -4669,6 +4796,26 @@
 
 
                 pendingIncomingCall = call;
+                try { ymAttachCallStream(call, call.peer, isVideo ? 'video' : 'audio'); } catch (e) {}
+                if (ymAcceptWhenCallArrives && ymAcceptWhenCallArrives.peerId === call.peer) {
+                    const info = ymAcceptWhenCallArrives;
+                    ymAcceptWhenCallArrives = null;
+                    hideModal('call-incoming-modal');
+                    Ringtone.stop();
+                    mediaCalls[call.peer] = call;
+                    watchIceConnection(call);
+                    if (isVideo || info.kind === 'video') {
+                        startVideoCall(call.peer, true, call);
+                    } else {
+                        const st = info.stream;
+                        if (st) {
+                            try { call.answer(st); } catch (e) {}
+                        } else {
+                            getAudioStream().then(stream => { if (stream) try { call.answer(stream); } catch (e) {} });
+                        }
+                    }
+                    return;
+                }
                 Ringtone.start();
                 document.getElementById('call-incoming-text').textContent = 
                     `「${callerName}」からの${callTypeLabel}のリクエストがされました。許可しますか？拒否しますか？`;
@@ -4684,35 +4831,31 @@
                 pendingIncomingCall = null;
 
 
-                const isVideo = call.metadata && call.metadata.type === 'video';
+                const isVideo = call.metadata && (call.metadata.type === 'video' || call.metadata.type === 'group-video');
                 if (isVideo) {
-                    startVideoCall(call.peer, true, call);
+                    startVideoCall(call.peer, true, call._ymInviteOnly ? null : call);
                 } else {
                     ymBindPhoneScreenControls();
                     showVoiceCallScreen(call.peer, 'outgoing');
                     getAudioStream().then(stream => {
                         if (!stream) { showVoiceCallScreen(call.peer, 'mic-denied'); return; }
-                        call.answer(stream);
                         mediaCalls[call.peer] = call;
                         watchIceConnection(call);
-
-
-                        call.on('stream', remoteStream => {
-                            addRemoteAudio(call.peer, remoteStream);
-                            toggleCallUI(true);
-                            ymBindPhoneScreenControls();
-                            showVoiceCallScreen(call.peer, 'connected');
-                        });
-
-
-                        call.on('close', () => stopAllCalls());
-                        call.on('error', () => stopAllCalls());
+                        ymAttachCallStream(call, call.peer, 'audio');
+                        if (call._ymInviteOnly) {
+                            ymAcceptWhenCallArrives = { peerId: call.peer, stream: stream, kind: 'audio' };
+                            showToast('相手の通話接続を待っています…');
+                            return;
+                        }
+                        try { call.answer(stream); } catch (e) { console.warn(e); }
                     });
                 }
             };
 
 
             document.getElementById('btn-reject-incoming-call').onclick = () => {
+                const who = pendingIncomingCall && pendingIncomingCall.peer;
+                if (who) { try { ymNotifyCall(who, 'audio', 'CALL_REJECT'); } catch (e) {} }
                 stopAllCalls();
             };
 
@@ -4882,31 +5025,41 @@
                         showVoiceCallScreen(targetPeerId, 'outgoing');
                         return;
                     }
-                    const call = peer.call(targetPeerId, stream, { metadata: { type: 'audio' } });
-                    if (!call) {
-                        showToast('通話の呼び出しに失敗しました。接続先を確認してください。');
-                        showVoiceCallScreen(targetPeerId, 'outgoing');
-                        return;
-                    }
-                    mediaCalls[targetPeerId] = call;
-                    watchIceConnection(call);
-
-
-                    call.on('stream', remoteStream => {
-                        addRemoteAudio(targetPeerId, remoteStream);
-                        toggleCallUI(true);
-                        showVoiceCallScreen(targetPeerId, 'connected');
-                    });
-
-
-                    call.on('close', () => stopAllCalls());
-                    call.on('error', () => stopAllCalls());
+                    ymNotifyCall(targetPeerId, 'audio', 'CALL_INVITE');
+                    try {
+                        const opened = peerConnections[targetPeerId] && peerConnections[targetPeerId].open;
+                        if (!opened) showToast('相手がオフラインのときは着信を予約しました。相手が同じページを開くと通知されます。');
+                    } catch (e) {}
+                    const place = function () {
+                        const call = peer.call(targetPeerId, stream, { metadata: { type: 'audio' } });
+                        if (!call) {
+                            showToast('通話の呼び出しに失敗しました。接続先を確認してください。');
+                            showVoiceCallScreen(targetPeerId, 'outgoing');
+                            return;
+                        }
+                        mediaCalls[targetPeerId] = call;
+                        watchIceConnection(call);
+                        ymAttachCallStream(call, targetPeerId, 'audio');
+                    };
+                    ymWhenPeerOpen(function () { place(); }, 8000);
                 });
             }
 
 
             function stopAllCalls() {
+                if (ymStoppingCalls) return;
+                ymStoppingCalls = true;
+                setTimeout(() => { ymStoppingCalls = false; }, 400);
+                ymAcceptWhenCallArrives = null;
+                try { ymClearPendingInvite(); } catch (e) {}
                 Ringtone.stop();
+                const notifyIds = {};
+                if (pendingIncomingCall && pendingIncomingCall.peer) notifyIds[pendingIncomingCall.peer] = 1;
+                Object.keys(mediaCalls).forEach(pId => { notifyIds[pId] = 1; });
+                if (typeof ymPhonePeerId !== 'undefined' && ymPhonePeerId) notifyIds[ymPhonePeerId] = 1;
+                Object.keys(notifyIds).forEach(pid => {
+                    try { ymNotifyCall(pid, 'audio', 'CALL_END'); } catch (e) {}
+                });
                 if (pendingIncomingCall) {
                     try { pendingIncomingCall.close(); } catch (e) {}
                     pendingIncomingCall = null;
@@ -5015,43 +5168,37 @@
                     renderFrame();
 
 
-                    const canvasStream = canvas.captureStream(25);
-                    const audioTrack = localVideoStream.getAudioTracks()[0];
-                    if (audioTrack) canvasStream.addTrack(audioTrack);
+                    const sendStream = localVideoStream;
+                    try {
+                        const canvasStream = canvas.captureStream(25);
+                        const audioTrack = localVideoStream.getAudioTracks()[0];
+                        if (audioTrack && !canvasStream.getAudioTracks().length) canvasStream.addTrack(audioTrack);
+                    } catch (e) {}
 
 
-                    if (isIncoming && incomingCall) {
-                        incomingCall.answer(canvasStream);
+                    if (isIncoming && incomingCall && !incomingCall._ymInviteOnly) {
                         mediaCalls[incomingCall.peer] = incomingCall;
                         watchIceConnection(incomingCall);
-
-
-                        incomingCall.on('stream', remoteStream => {
-                            remoteVideo.srcObject = remoteStream;
-                        });
-                        incomingCall.on('close', () => stopAllCalls());
-                        incomingCall.on('error', () => stopAllCalls());
+                        ymAttachCallStream(incomingCall, incomingCall.peer, 'video');
+                        incomingCall.answer(sendStream);
                     } else if (targetPeerId) {
                         if (!peer) {
                             showToast('PeerJSが初期化されていません。');
                             stopAllCalls();
                             return;
                         }
-                        const call = peer.call(targetPeerId, canvasStream, { metadata: { type: 'video' } });
-                        if (!call) {
-                            showToast('相手への接続が確立できませんでした。');
-                            stopAllCalls();
-                            return;
-                        }
-                        mediaCalls[targetPeerId] = call;
-                        watchIceConnection(call);
-
-
-                        call.on('stream', remoteStream => {
-                            remoteVideo.srcObject = remoteStream;
-                        });
-                        call.on('close', () => stopAllCalls());
-                        call.on('error', () => stopAllCalls());
+                        ymNotifyCall(targetPeerId, 'video', 'CALL_INVITE');
+                        const placeVid = function () {
+                            const call = peer.call(targetPeerId, sendStream, { metadata: { type: 'video' } });
+                            if (!call) {
+                                showToast('相手への接続が確立できませんでした。');
+                                return;
+                            }
+                            mediaCalls[targetPeerId] = call;
+                            watchIceConnection(call);
+                            ymAttachCallStream(call, targetPeerId, 'video');
+                        };
+                        ymWhenPeerOpen(function () { placeVid(); }, 8000);
                     }
                 } catch (err) {
                     showToast('ビデオ通話処理でエラーが発生しました: ' + err.message);
@@ -5455,6 +5602,9 @@
 
             document.addEventListener('visibilitychange', () => {
                 broadcastPresence();
+                if (document.visibilityState === 'visible') {
+                    try { ymWakeConnections(); } catch (e) {}
+                }
             });
 
 
@@ -5656,9 +5806,15 @@
                 async enqueue(peerId, payload) {
                     const rec = { id: 'mb_' + peerId + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), peerId, payload, from: activeUserId, ts: Date.now() };
                     try { await IDB.putRecord('mailbox', rec); } catch (e) {}
-                    if (!this.ready || !peerId) return;
+                    if (this.ready && peerId) {
+                        try {
+                            firebase.database().ref('ym_mailbox/' + peerId).push({ payload, from: activeUserId, ts: Date.now() });
+                        } catch (e) {}
+                    }
                     try {
-                        firebase.database().ref('ym_mailbox/' + peerId).push({ payload, from: activeUserId, ts: Date.now() });
+                        if (typeof YMPush !== 'undefined' && YMPush.notifyOffline) {
+                            YMPush.notifyOffline(peerId, payload);
+                        }
                     } catch (e) {}
                 },
                 async flushLocal(peerId) {
@@ -5685,6 +5841,148 @@
                             if (val && val.payload) handleIncomingPeerData(val.payload, val.from || 'mailbox');
                             try { snap.ref.remove(); } catch (e) {}
                         });
+                    } catch (e) {}
+                }
+            };
+
+
+            const YMPush = {
+                sw: null,
+                sub: null,
+                async init() {
+                    if (!('serviceWorker' in navigator) || !window.isSecureContext) return null;
+                    try {
+                        const existing = await navigator.serviceWorker.getRegistration();
+                        if (existing) this.sw = existing;
+                        else {
+                            const src = [
+                                "self.addEventListener('push', function(event) {",
+                                "  var data = {};",
+                                "  try { data = event.data ? event.data.json() : {}; } catch (e) { data = { body: event.data ? event.data.text() : '' }; }",
+                                "  var title = data.title || 'Y.M';",
+                                "  var tag = data.tag || (data.chatTarget ? ('chat-' + data.chatTarget) : 'ym-default');",
+                                "  var opts = { body: data.body || '', icon: data.icon || '', badge: data.badge || '', tag: tag, silent: true, renotify: false, data: data };",
+                                "  event.waitUntil(self.registration.showNotification(title, opts));",
+                                "  var n = data.badgeCount;",
+                                "  if (typeof n === 'number' && self.navigator && self.navigator.setAppBadge) { try { self.navigator.setAppBadge(n); } catch (e) {} }",
+                                "});",
+                                "self.addEventListener('notificationclick', function(event) {",
+                                "  event.notification.close();",
+                                "  var data = event.notification.data || {};",
+                                "  event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(list) {",
+                                "    var msg = { type: 'YM_NOTIFY_CLICK', data: data };",
+                                "    if (list && list.length) { list[0].postMessage(msg); return list[0].focus(); }",
+                                "    if (clients.openWindow) return clients.openWindow(self.registration.scope || './');",
+                                "  }));",
+                                "});",
+                                "self.addEventListener('message', function(event) {",
+                                "  var d = event.data || {};",
+                                "  if (d.type === 'YM_CLEAR_TAG' && d.tag && self.registration.getNotifications) {",
+                                "    event.waitUntil(self.registration.getNotifications({ tag: d.tag }).then(function(ns) { ns.forEach(function(n) { n.close(); }); }));",
+                                "  }",
+                                "});"
+                            ].join('\\n');
+                            const blob = new Blob([src.replace(/\\\\n/g, '\n')], { type: 'text/javascript' });
+                            const url = URL.createObjectURL(blob);
+                            try { this.sw = await navigator.serviceWorker.register(url, { scope: './' }); }
+                            catch (e) { console.warn('[YMPush] SW登録をスキップ:', e); }
+                        }
+                        if (navigator.serviceWorker.addEventListener) {
+                            navigator.serviceWorker.addEventListener('message', (ev) => {
+                                const d = ev.data || {};
+                                if (d.type === 'YM_NOTIFY_CLICK') YMPush.onClick(d.data || {});
+                            });
+                        }
+                        await this.subscribe();
+                        return this.sw;
+                    } catch (e) {
+                        console.warn('[YMPush] init', e);
+                        return null;
+                    }
+                },
+                onClick(data) {
+                    const target = data.chatTarget || data.from || data.peerId;
+                    if (data.kind === 'call' && target) {
+                        try {
+                            if (typeof showVoiceCallScreen === 'function') {
+                                ymBindPhoneScreenControls();
+                                showVoiceCallScreen(target, 'incoming');
+                            }
+                            showModal('call-incoming-modal');
+                        } catch (e) {}
+                        return;
+                    }
+                    if (target && typeof openChat === 'function') {
+                        try { openChat(target); } catch (e) {}
+                    }
+                },
+                async subscribe() {
+                    if (!this.sw || !this.sw.pushManager) return null;
+                    const vapid = (localStorage.getItem('YM_VAPID_KEY') || '').trim();
+                    if (!vapid) return null;
+                    try {
+                        const perm = await window.requestNotificationPermission();
+                        if (!perm) return null;
+                        const key = this.urlBase64ToUint8Array(vapid);
+                        this.sub = await this.sw.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+                        const endpoint = this.sub && this.sub.endpoint;
+                        if (endpoint) {
+                            localStorage.setItem('YM_PUSH_ENDPOINT', endpoint);
+                            const body = { type: 'PUSH_SUBSCRIBE', userId: activeUserId, subscription: this.sub.toJSON ? this.sub.toJSON() : { endpoint: endpoint }, device: (typeof LocalVault !== 'undefined' && LocalVault.deviceId) ? LocalVault.deviceId() : '' };
+                            this.postServer('/push/subscribe', body);
+                        }
+                        return this.sub;
+                    } catch (e) {
+                        console.warn('[YMPush] subscribe', e);
+                        return null;
+                    }
+                },
+                urlBase64ToUint8Array(base64String) {
+                    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+                    const raw = atob(base64);
+                    const out = new Uint8Array(raw.length);
+                    for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+                    return out;
+                },
+                serverBase() {
+                    return String(localStorage.getItem('YM_SERVER_URL') || '').trim().replace(/\/+$/, '');
+                },
+                postServer(path, body) {
+                    const base = this.serverBase();
+                    if (!base) return Promise.resolve(false);
+                    return fetch(base + path, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body || {})
+                    }).then(r => r.ok).catch(() => false);
+                },
+                notifyOffline(peerId, payload) {
+                    if (!peerId) return;
+                    const online = peerConnections[peerId] && peerConnections[peerId].open;
+                    if (online) return;
+                    const kind = payload && payload.type === 'CALL_INVITE' ? 'call' : 'chat';
+                    const fromName = (db && db.users && db.users[activeUserId] && db.users[activeUserId].name) ? db.users[activeUserId].name : '友だち';
+                    const title = kind === 'call' ? (fromName + ' さんから着信') : (fromName + ' さんからメッセージ');
+                    const body = kind === 'call' ? 'タップすると通話画面を開きます' : ((payload && payload.message && payload.message.text) ? String(payload.message.text).slice(0, 80) : '新しいメッセージ');
+                    const badgeCount = (typeof AppBadge !== 'undefined') ? AppBadge.getTotalUnread() : 0;
+                    const pack = {
+                        to: peerId,
+                        from: activeUserId,
+                        title: title,
+                        body: body,
+                        tag: kind === 'call' ? ('call-' + activeUserId) : ('chat-' + activeUserId),
+                        silent: true,
+                        kind: kind,
+                        chatTarget: activeUserId,
+                        badgeCount: badgeCount,
+                        payload: payload || null
+                    };
+                    this.postServer('/push/send', pack);
+                    try {
+                        if (typeof OfflineBridge !== 'undefined' && OfflineBridge.ready && window.firebase) {
+                            firebase.database().ref('ym_push/' + peerId).push(pack);
+                        }
                     } catch (e) {}
                 }
             };
@@ -5879,7 +6177,14 @@
                 return servers;
             }
             function getPeerConfig() {
-                return { config: { iceServers: getIceServers() } };
+                return {
+                    secure: (typeof location !== 'undefined' && location.protocol === 'https:'),
+                    config: {
+                        iceServers: getIceServers(),
+                        sdpSemantics: 'unified-plan',
+                        iceCandidatePoolSize: 4
+                    }
+                };
             }
             function watchIceConnection(call) {
                 try {
@@ -5922,6 +6227,7 @@
                     if (db.friends[activeUserId]) {
                         db.friends[activeUserId].forEach(fId => connectToRemotePeer(fId));
                     }
+                    try { ymWakeConnections(); } catch (e) {}
 
 
                     const mySecret = db.users[activeUserId] ? db.users[activeUserId].secretWord : '';
@@ -6092,7 +6398,22 @@
                 }
 
 
-                if (data.type === 'SYNC_USER_INFO') {
+                if (data.type === 'CALL_INVITE') {
+                    ymOnCallInvite(data, senderPeerId);
+                    return;
+                } else if (data.type === 'CALL_END' || data.type === 'CALL_REJECT') {
+                    const pid = data.from || senderPeerId;
+                    Ringtone.stop();
+                    if (pendingIncomingCall && pendingIncomingCall.peer === pid) {
+                        pendingIncomingCall = null;
+                        hideModal('call-incoming-modal');
+                    }
+                    if (mediaCalls[pid] || (typeof ymPhonePeerId !== 'undefined' && ymPhonePeerId === pid)) {
+                        showToast(data.type === 'CALL_REJECT' ? '相手が通話を拒否しました' : '相手が通話を終了しました');
+                        stopAllCalls();
+                    }
+                    return;
+                } else if (data.type === 'SYNC_USER_INFO') {
                     db.users[data.userKey] = data.userData;
                     // E2EE公開鍵を保存（暗号化用+署名用）
                     if (data.publicKey || data.ecdhPublicKey) {
@@ -6159,7 +6480,9 @@
                             const senderName = db.users[data.message.from] ? db.users[data.message.from].name : data.message.from;
                             window.sendLocalNotification(senderName + ' さんからメッセージ', {
                                 body: data.message.type === 'stamp' ? '[スタンプ]' : (data.message.type === 'file' ? '[ファイル]' : String(data.message.text || '').substring(0, 80)),
-                                tag: 'chat-' + incomingRoom
+                                tag: 'chat-' + incomingRoom,
+                                silent: true,
+                                data: { chatTarget: incomingRoom, kind: 'chat' }
                             });
                         }
                         if (isDevMode) renderDevPanel();
@@ -13135,9 +13458,9 @@
 
 
                 let _swRegistration = null;
-
-
-                // ym-sw.js はサーバーに無いため登録しない（404防止）。通知は Notification API を使う。
+                try {
+                    YMPush.init().then((reg) => { _swRegistration = reg || YMPush.sw || null; }).catch(() => {});
+                } catch (e) {}
 
 
                 // 通知許可の要求（ユーザーアクション後）
@@ -13150,21 +13473,25 @@
                 };
 
 
-                // ローカル通知の送信（重複防止機能付き）
+                // ローカル通知の送信（無音・tagで集約）
                 window.sendLocalNotification = function(title, options) {
                     if (!('Notification' in window) || Notification.permission !== 'granted') return;
                     const defaultOptions = {
                         body: '',
                         icon: YM_DEFAULT_TAB_ICON,
                         badge: YM_DEFAULT_TAB_ICON,
-                        tag: 'ym-default', // 同じタグの通知は上書き（集約）
+                        tag: 'ym-default',
                         requireInteraction: false,
-                        silent: false
+                        silent: true,
+                        renotify: false
                     };
-                    const mergedOptions = Object.assign({}, defaultOptions, options);
+                    const mergedOptions = Object.assign({}, defaultOptions, options || {});
+                    if (mergedOptions.silent !== false) mergedOptions.silent = true;
+                    try { AppBadge.setUnread(AppBadge.getTotalUnread()); } catch (e) {}
                     try {
-                        if (_swRegistration && _swRegistration.showNotification) {
-                            _swRegistration.showNotification(title, mergedOptions);
+                        const sw = _swRegistration || (YMPush && YMPush.sw);
+                        if (sw && sw.showNotification) {
+                            sw.showNotification(title, mergedOptions);
                         } else {
                             new Notification(title, mergedOptions);
                         }
@@ -13176,17 +13503,28 @@
 
                 // 表示中の通知を自動消去（チャットを開いた時）
                 window.clearChatNotifications = function(chatTargetId) {
-                    if (!('serviceWorker' in navigator)) return;
-                    const tag = 'chat-' + chatTargetId;
+                    const tags = [];
+                    if (chatTargetId) {
+                        tags.push('chat-' + chatTargetId);
+                        tags.push('call-' + chatTargetId);
+                    }
+                    const closeList = (list) => { (list || []).forEach((n) => { try { n.close(); } catch (e) {} }); };
                     try {
-                        navigator.serviceWorker.getRegistration().then((reg) => {
-                            if (reg && reg.getNotifications) {
-                                reg.getNotifications({ tag: tag }).then((notifications) => {
-                                    notifications.forEach((n) => n.close());
+                        if ('serviceWorker' in navigator) {
+                            navigator.serviceWorker.getRegistration().then((reg) => {
+                                if (!reg || !reg.getNotifications) return;
+                                if (!tags.length) {
+                                    reg.getNotifications().then(closeList);
+                                    return;
+                                }
+                                tags.forEach((tag) => {
+                                    reg.getNotifications({ tag: tag }).then(closeList);
+                                    try { if (reg.active) reg.active.postMessage({ type: 'YM_CLEAR_TAG', tag: tag }); } catch (e) {}
                                 });
-                            }
-                        });
+                            });
+                        }
                     } catch (e) {}
+                    try { AppBadge.setUnread(AppBadge.getTotalUnread()); } catch (e) {}
                 };
 
 
@@ -13196,12 +13534,24 @@
                 const _originalHandleIncomingPeerData = handleIncomingPeerData;
                 handleIncomingPeerData = function(data, senderPeerId) {
                     // チャットメッセージ受信時に通知
+                    if (data && data.type === 'CALL_INVITE') {
+                        const fromId = data.from || senderPeerId;
+                        const callerName = (typeof getFriendDisplayName === 'function') ? getFriendDisplayName(fromId) : (db.users[fromId] ? db.users[fromId].name : fromId);
+                        if (typeof window.sendLocalNotification === 'function') {
+                            window.sendLocalNotification(callerName + ' さんから着信', {
+                                body: 'タップすると通話画面を開きます',
+                                tag: 'call-' + fromId,
+                                silent: true,
+                                requireInteraction: true,
+                                data: { chatTarget: fromId, kind: 'call' }
+                            });
+                        }
+                        try { AppBadge.setUnread(AppBadge.getTotalUnread()); } catch (e) {}
+                    }
                     if (data && data.type === 'CHAT_MSG' && data.message) {
                         const msg = data.message;
-                        const senderName = db.users[msg.from] ? db.users[msg.from].name : msg.from;
-                        // アクティブでないチャットの場合のみ通知
+                        const senderName = (typeof getFriendDisplayName === 'function') ? getFriendDisplayName(msg.from) : (db.users[msg.from] ? db.users[msg.from].name : msg.from);
                         if (activeChatTarget !== msg.from && activeChatTarget !== msg.to) {
-                            // E2EE暗号化メッセージの場合は内容を表示しない
                             let notifBody;
                             if (msg.encrypted) {
                                 notifBody = '[暗号化メッセージ]';
@@ -13211,8 +13561,9 @@
                             if (typeof window.sendLocalNotification === 'function') {
                                 window.sendLocalNotification(senderName + ' さんからメッセージ', {
                                     body: notifBody,
-                                    tag: 'chat-' + msg.from, // 同じ相手からの通知は1つに集約
-                                    data: { chatTarget: msg.from }
+                                    tag: 'chat-' + msg.from,
+                                    silent: true,
+                                    data: { chatTarget: msg.from, kind: 'chat' }
                                 });
                             }
                         }
