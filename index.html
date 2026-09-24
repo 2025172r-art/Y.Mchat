@@ -332,6 +332,42 @@
 
         /* ビデオ通話UIスタイル */
         .video-call-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #000; border-radius: var(--radius-md); padding: 10px; margin-bottom: 12px; }
+        /* YM voice phone screen (additive) */
+        .ym-phone-screen {
+            width: min(420px, 94vw);
+            background: radial-gradient(1200px 600px at 50% -10%, #1e3a5f 0%, #0b1220 55%, #05070d 100%);
+            color: #e2e8f0;
+            border-radius: 28px;
+            padding: 28px 22px 22px;
+            text-align: center;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+            border: 1px solid #334155;
+        }
+        .ym-phone-status { font-size: 13px; font-weight: 800; letter-spacing: .12em; color: #93c5fd; text-transform: uppercase; margin-bottom: 18px; }
+        .ym-phone-avatar {
+            width: 112px; height: 112px; margin: 0 auto 14px; border-radius: 50%;
+            object-fit: cover; background: #1e293b; border: 3px solid #38bdf8;
+            display: flex; align-items: center; justify-content: center; font-size: 48px;
+        }
+        .ym-phone-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .ym-phone-name { font-size: 22px; font-weight: 800; margin-bottom: 6px; word-break: break-word; }
+        .ym-phone-timer { font-size: 28px; font-weight: 900; color: #f8fafc; margin: 8px 0 22px; font-variant-numeric: tabular-nums; }
+        .ym-phone-actions { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+        .ym-phone-btn {
+            width: 72px; min-height: 72px; border: none; border-radius: 50%;
+            color: #fff; font-weight: 800; font-size: 12px; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+        }
+        .ym-phone-btn.mute { background: #334155; }
+        .ym-phone-btn.mute.on { background: #f59e0b; color: #111827; }
+        .ym-phone-btn.video { background: #0ea5e9; }
+        .ym-phone-btn.hang { background: #dc2626; }
+        .friend-more-btn {
+            border: 1px solid var(--border-color); background: #fff; color: #334155;
+            border-radius: 999px; width: 28px; height: 28px; line-height: 1; cursor: pointer;
+            font-size: 16px; flex-shrink: 0;
+        }
+        .friend-more-btn:hover { background: #f0fdf4; color: var(--primary); }
         .video-box { position: relative; background: #111; border-radius: 8px; overflow: hidden; aspect-ratio: 4/3; }
         .video-box video, .video-box canvas { width: 100%; height: 100%; object-fit: cover; }
         .video-label { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
@@ -1623,6 +1659,34 @@
     </div>
 
 
+    <div id="voice-call-screen" class="modal hidden" role="dialog" aria-label="通話画面">
+        <div class="ym-phone-screen">
+            <div class="ym-phone-status" id="ym-phone-status">発信中</div>
+            <div class="ym-phone-avatar" id="ym-phone-avatar">📞</div>
+            <div class="ym-phone-name" id="ym-phone-name">相手</div>
+            <div class="ym-phone-timer" id="ym-phone-timer">00:00</div>
+            <div class="ym-phone-actions">
+                <button type="button" class="ym-phone-btn mute" id="btn-phone-mute" aria-label="ミュート">🔇<span>ミュート</span></button>
+                <button type="button" class="ym-phone-btn hang" id="btn-phone-hangup" aria-label="通話終了">📵<span>終了</span></button>
+                <button type="button" class="ym-phone-btn video" id="btn-phone-to-video" aria-label="ビデオへ切替">📹<span>ビデオ</span></button>
+            </div>
+            <p id="ym-phone-help" style="margin-top:16px;font-size:11px;color:#94a3b8;line-height:1.6;">相手が同じページを開いていて接続できると通話が始まります。</p>
+        </div>
+    </div>
+    <div id="friend-nick-modal" class="modal hidden">
+        <div class="modal-box">
+            <h3>✏️ 愛称（自分の端末だけ）</h3>
+            <p class="text-sub" style="margin-bottom:10px;line-height:1.6;">この名前はあなたの端末にだけ保存されます。相手の表示名は変わりません。</p>
+            <label>いまの名前</label>
+            <input type="text" id="friend-nick-current" readonly>
+            <label>あなたの愛称</label>
+            <input type="text" id="friend-nick-input" maxlength="40" placeholder="例: ひろし（学校）">
+            <input type="hidden" id="friend-nick-target">
+            <button class="menu-btn btn-success" id="btn-save-friend-nick">保存する</button>
+            <button class="menu-btn" id="btn-clear-friend-nick" style="background:#64748b;">愛称を消す</button>
+            <button class="menu-btn btn-danger closeModalBtn">閉じる</button>
+        </div>
+    </div>
     <div id="call-incoming-modal" class="modal hidden">
         <div class="modal-box" style="text-align:center;">
             <h3>📞 通話着信</h3>
@@ -4624,8 +4688,10 @@
                 if (isVideo) {
                     startVideoCall(call.peer, true, call);
                 } else {
+                    ymBindPhoneScreenControls();
+                    showVoiceCallScreen(call.peer, 'outgoing');
                     getAudioStream().then(stream => {
-                        if (!stream) return;
+                        if (!stream) { showVoiceCallScreen(call.peer, 'mic-denied'); return; }
                         call.answer(stream);
                         mediaCalls[call.peer] = call;
                         watchIceConnection(call);
@@ -4634,6 +4700,8 @@
                         call.on('stream', remoteStream => {
                             addRemoteAudio(call.peer, remoteStream);
                             toggleCallUI(true);
+                            ymBindPhoneScreenControls();
+                            showVoiceCallScreen(call.peer, 'connected');
                         });
 
 
@@ -4649,20 +4717,175 @@
             };
 
 
+            function getFriendDisplayName(fId) {
+                if (!fId) return '';
+                try {
+                    const nicks = (db && db.friendNicknames && db.friendNicknames[activeUserId]) || {};
+                    if (nicks[fId] && String(nicks[fId]).trim()) return String(nicks[fId]).trim();
+                } catch (e) {}
+                if (fId === 'chappy') return 'チャッピー (AI)';
+                if (fId === 'official') return 'アップグレード (公式)';
+                if (fId === 'keep') return 'Keepメモ';
+                return (db && db.users && db.users[fId] && db.users[fId].name) ? db.users[fId].name : fId;
+            }
+            function setFriendNickname(fId, nick) {
+                if (!fId || !activeUserId) return;
+                if (!db.friendNicknames) db.friendNicknames = {};
+                if (!db.friendNicknames[activeUserId]) db.friendNicknames[activeUserId] = {};
+                const v = String(nick || '').trim().slice(0, 40);
+                if (!v) delete db.friendNicknames[activeUserId][fId];
+                else db.friendNicknames[activeUserId][fId] = v;
+                saveData();
+            }
+            function openFriendNickModal(fId) {
+                if (!fId || fId === 'chappy' || fId === 'official' || fId === 'keep') {
+                    showToast('この相手の愛称は変更できません。');
+                    return;
+                }
+                const cur = (db.users[fId] && db.users[fId].name) ? db.users[fId].name : fId;
+                const nickEl = document.getElementById('friend-nick-input');
+                const curEl = document.getElementById('friend-nick-current');
+                const hid = document.getElementById('friend-nick-target');
+                if (curEl) curEl.value = cur;
+                if (hid) hid.value = fId;
+                if (nickEl) nickEl.value = ((db.friendNicknames && db.friendNicknames[activeUserId] && db.friendNicknames[activeUserId][fId]) || '');
+                showModal('friend-nick-modal');
+            }
+
+            let ymPhoneTimer = null;
+            let ymPhoneStartedAt = 0;
+            let ymPhonePeerId = null;
+            let ymPhoneMuted = false;
+            function ymFmtCallClock(sec) {
+                const m = String(Math.floor(sec / 60)).padStart(2, '0');
+                const s = String(sec % 60).padStart(2, '0');
+                return m + ':' + s;
+            }
+            function ymStopPhoneTimer() {
+                if (ymPhoneTimer) { clearInterval(ymPhoneTimer); ymPhoneTimer = null; }
+            }
+            function ymStartPhoneTimer() {
+                ymStopPhoneTimer();
+                ymPhoneStartedAt = Date.now();
+                const el = document.getElementById('ym-phone-timer');
+                if (el) el.textContent = '00:00';
+                ymPhoneTimer = setInterval(() => {
+                    const el2 = document.getElementById('ym-phone-timer');
+                    if (el2) el2.textContent = ymFmtCallClock(Math.floor((Date.now() - ymPhoneStartedAt) / 1000));
+                }, 1000);
+            }
+            function showVoiceCallScreen(peerId, mode) {
+                ymPhonePeerId = peerId || ymPhonePeerId;
+                const screen = document.getElementById('voice-call-screen');
+                if (!screen) return;
+                const name = getFriendDisplayName(ymPhonePeerId) || '相手';
+                const nameEl = document.getElementById('ym-phone-name');
+                const stEl = document.getElementById('ym-phone-status');
+                const av = document.getElementById('ym-phone-avatar');
+                const help = document.getElementById('ym-phone-help');
+                if (nameEl) nameEl.textContent = name;
+                if (stEl) {
+                    stEl.textContent = (mode === 'connected') ? '通話中' : (mode === 'incoming') ? '着信中' : (mode === 'mic-denied') ? 'マイク未許可' : '発信中';
+                }
+                if (av) {
+                    const icon = (db.users[ymPhonePeerId] && db.users[ymPhonePeerId].icon) ? ymSafeIconUrl(db.users[ymPhonePeerId].icon) : '';
+                    if (icon) av.innerHTML = '<img alt="" src="' + sanitizeURL(icon) + '">';
+                    else av.textContent = '📞';
+                }
+                if (help) {
+                    if (mode === 'mic-denied') help.textContent = 'マイクを許可するか、HTTPS（または localhost）で開くと音声が使えます。画面はそのまま使えます。';
+                    else if (mode === 'connected') help.textContent = '通話中です。終了で切断します。';
+                    else help.textContent = '相手が同じページを開いていて接続できると通話が始まります。';
+                }
+                screen.classList.remove('hidden');
+                if (mode === 'connected' && !ymPhoneTimer) ymStartPhoneTimer();
+                if (mode === 'outgoing' || mode === 'incoming') {
+                    const t = document.getElementById('ym-phone-timer');
+                    if (t && !ymPhoneTimer) t.textContent = '00:00';
+                }
+            }
+            function hideVoiceCallScreen() {
+                ymStopPhoneTimer();
+                ymPhonePeerId = null;
+                ymPhoneMuted = false;
+                const muteBtn = document.getElementById('btn-phone-mute');
+                if (muteBtn) muteBtn.classList.remove('on');
+                const screen = document.getElementById('voice-call-screen');
+                if (screen) screen.classList.add('hidden');
+            }
+            function ymBindPhoneScreenControls() {
+                if (ymBindPhoneScreenControls._done) return;
+                ymBindPhoneScreenControls._done = true;
+                const hang = document.getElementById('btn-phone-hangup');
+                if (hang) hang.onclick = () => stopAllCalls();
+                const mute = document.getElementById('btn-phone-mute');
+                if (mute) mute.onclick = () => {
+                    ymPhoneMuted = !ymPhoneMuted;
+                    mute.classList.toggle('on', ymPhoneMuted);
+                    try {
+                        if (localStream) localStream.getAudioTracks().forEach(t => { t.enabled = !ymPhoneMuted; });
+                    } catch (e) {}
+                };
+                const toVid = document.getElementById('btn-phone-to-video');
+                if (toVid) toVid.onclick = () => {
+                    const pid = ymPhonePeerId || activeChatTarget;
+                    if (!pid) return;
+                    startVideoCall(pid);
+                };
+                const saveNick = document.getElementById('btn-save-friend-nick');
+                if (saveNick) saveNick.onclick = () => {
+                    const id = (document.getElementById('friend-nick-target') || {}).value;
+                    const nick = (document.getElementById('friend-nick-input') || {}).value;
+                    if (!id) return;
+                    setFriendNickname(id, nick);
+                    hideModal('friend-nick-modal');
+                    if (activeChatTarget === id) {
+                        try {
+                            const targetDisplay = getFriendDisplayName(id);
+                            document.getElementById('chat-target-name').textContent = targetDisplay + ' とのチャット';
+                        } catch (e) {}
+                    }
+                    renderApp();
+                    showToast('愛称をこの端末だけに保存しました');
+                };
+                const clearNick = document.getElementById('btn-clear-friend-nick');
+                if (clearNick) clearNick.onclick = () => {
+                    const id = (document.getElementById('friend-nick-target') || {}).value;
+                    if (!id) return;
+                    setFriendNickname(id, '');
+                    hideModal('friend-nick-modal');
+                    if (activeChatTarget === id) {
+                        try {
+                            document.getElementById('chat-target-name').textContent = getFriendDisplayName(id) + ' とのチャット';
+                        } catch (e) {}
+                    }
+                    renderApp();
+                    showToast('愛称を消しました');
+                };
+            }
+
             function startCallToPeer(targetPeerId) {
                 if (targetPeerId === 'official' || activeChatTarget === 'official' || targetPeerId === 'keep' || activeChatTarget === 'keep' || targetPeerId === 'chappy' || activeChatTarget === 'chappy') {
                     showToast('このアカウントとは通話できません。');
                     return;
                 }
+                ymBindPhoneScreenControls();
+                showVoiceCallScreen(targetPeerId, 'outgoing');
+                try { if (typeof connectToRemotePeer === 'function') connectToRemotePeer(targetPeerId); } catch (e) {}
                 getAudioStream().then(stream => {
-                    if (!stream) return;
+                    if (!stream) {
+                        showVoiceCallScreen(targetPeerId, 'mic-denied');
+                        return;
+                    }
                     if (!peer) {
                         showToast('PeerJSが初期化されていません。');
+                        showVoiceCallScreen(targetPeerId, 'outgoing');
                         return;
                     }
                     const call = peer.call(targetPeerId, stream, { metadata: { type: 'audio' } });
                     if (!call) {
                         showToast('通話の呼び出しに失敗しました。接続先を確認してください。');
+                        showVoiceCallScreen(targetPeerId, 'outgoing');
                         return;
                     }
                     mediaCalls[targetPeerId] = call;
@@ -4672,6 +4895,7 @@
                     call.on('stream', remoteStream => {
                         addRemoteAudio(targetPeerId, remoteStream);
                         toggleCallUI(true);
+                        showVoiceCallScreen(targetPeerId, 'connected');
                     });
 
 
@@ -4700,6 +4924,7 @@
                 }
                 stopVideoCall();
                 toggleCallUI(false);
+                hideVoiceCallScreen();
             }
 
 
@@ -4748,6 +4973,7 @@
                 }
 
 
+                try { hideVoiceCallScreen(); } catch (e) {}
                 showModal('video-call-modal');
 
 
@@ -7360,8 +7586,9 @@
                         const orderedFriends = myFriends.slice().sort((a, b) => (pinnedList.includes(b) ? 1 : 0) - (pinnedList.includes(a) ? 1 : 0));
                         orderedFriends.forEach(fId => {
                             const fUser = db.users[fId];
-                            const fName = fUser ? fUser.name : fId;
-                            if (searchQuery && !fName.toLowerCase().includes(searchQuery) && !fId.toLowerCase().includes(searchQuery)) {
+                            const fName = getFriendDisplayName(fId);
+                            const realName = fUser ? fUser.name : fId;
+                            if (searchQuery && !fName.toLowerCase().includes(searchQuery) && !String(realName).toLowerCase().includes(searchQuery) && !fId.toLowerCase().includes(searchQuery)) {
                                 return;
                             }
                             const hiddenList = (db.hiddenChats && db.hiddenChats[activeUserId]) || [];
@@ -7374,16 +7601,32 @@
 
                             const friendItem = document.createElement('div');
                             friendItem.className = 'friend-item' + (pinnedList.includes(fId) ? ' pinned-talk' : '');
+                            const nickMark = (db.friendNicknames && db.friendNicknames[activeUserId] && db.friendNicknames[activeUserId][fId]) ? '<div style="font-size:10px;color:#64748b;">本名: ' + escapeHTML(realName) + '</div>' : '';
                             friendItem.innerHTML = `
-                                <div style="display:flex; align-items:center; gap:8px;">
+                                <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
                                     <img src="${sanitizeURL(fIcon)}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;">
-                                    <div>
+                                    <div style="min-width:0;">
                                         <strong>${escapeHTML(fName)}</strong>
+                                        ${nickMark}
                                         <div class="${isOnline ? 'status-online' : 'status-offline'}">${isOnline ? '● オンライン' : '○ オフライン'}</div>
                                     </div>
                                 </div>
-                                ${unreadCount > 0 ? `<span class="unread-badge">${unreadCount}</span>` : ''}`;
-                            friendItem.onclick = () => openChat(fId);
+                                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                                    ${unreadCount > 0 ? `<span class="unread-badge">${unreadCount}</span>` : ''}
+                                    <button type="button" class="friend-more-btn" data-friend-more="${escapeHTML(fId)}" aria-label="友だちメニュー">⋯</button>
+                                </div>`;
+                            friendItem.onclick = (ev) => {
+                                if (ev.target && ev.target.closest && ev.target.closest('[data-friend-more]')) return;
+                                openChat(fId);
+                            };
+                            const moreBtn = friendItem.querySelector('[data-friend-more]');
+                            if (moreBtn) {
+                                moreBtn.onclick = (ev) => {
+                                    ev.preventDefault();
+                                    ev.stopPropagation();
+                                    openFriendNickModal(fId);
+                                };
+                            }
                             friendItem.oncontextmenu = (e) => {
                                 e.preventDefault();
                                 if (confirm((isPeerBlocked(fId) ? 'ブロック解除しますか？' : 'このユーザーをブロックしますか？'))) {
@@ -7601,7 +7844,7 @@
                 setMobileChatView(true);
                 connectToRemotePeer(targetKey);
                 switchPage('chat-view');
-                const targetName = db.users[targetKey] ? db.users[targetKey].name : targetKey;
+                const targetName = getFriendDisplayName(targetKey);
                 const targetDisplay = (targetKey === 'chappy') ? `チャッピー (AI)` : targetName;
                 document.getElementById('chat-target-name').textContent = `${targetDisplay} とのチャット`;
                 document.getElementById('btn-manage-group-modal').classList.add('hidden');
@@ -8001,22 +8244,33 @@
                     return tid && tid !== 'chappy' && tid !== 'official' && tid !== 'keep';
                 };
                 const ymEncryptForPeer = async function(peerId, baseMsg) {
-                    const recipientPubKey = E2EE.sharedSecrets[peerId] || E2EE.sessionKeys[peerId];
-                    if (!recipientPubKey && !E2EE.sessionKeys[peerId]) {
-                        return { ok: false, reason: 'no_key' };
+                    try {
+                        if (!window.isSecureContext) {
+                            return { ok: true, sendMsg: baseMsg, deferred: true, reason: 'insecure_context' };
+                        }
+                        const recipientPubKey = E2EE.sharedSecrets[peerId] || E2EE.sessionKeys[peerId];
+                        if (!recipientPubKey && !E2EE.sessionKeys[peerId]) {
+                            return { ok: false, reason: 'no_key' };
+                        }
+                        const encPayload = JSON.stringify({
+                            text: baseMsg.text || '',
+                            type: baseMsg.type,
+                            fileName: baseMsg.fileName || '',
+                            fileData: (typeof baseMsg.fileData === 'string' && String(baseMsg.fileData).length < 120000) ? baseMsg.fileData : '',
+                            location: baseMsg.location || null
+                        });
+                        const encResult = await E2EE.encryptMessage(encPayload, recipientPubKey, peerId);
+                        if (!encResult || !encResult.encrypted) return { ok: false, reason: (encResult && encResult.error) || 'encrypt_failed' };
+                        const sendMsg = { ...baseMsg, e2ee: encResult, encrypted: true };
+                        delete sendMsg.text;
+                        return { ok: true, sendMsg: sendMsg };
+                    } catch (e) {
+                        const ename = (e && e.name) ? String(e.name) : '';
+                        if (ename === 'SecurityError' || ename === 'NotAllowedError' || !window.isSecureContext) {
+                            return { ok: true, sendMsg: baseMsg, deferred: true, reason: 'security_error' };
+                        }
+                        return { ok: false, reason: 'encrypt_failed' };
                     }
-                    const encPayload = JSON.stringify({
-                        text: baseMsg.text || '',
-                        type: baseMsg.type,
-                        fileName: baseMsg.fileName || '',
-                        fileData: (typeof baseMsg.fileData === 'string' && String(baseMsg.fileData).length < 120000) ? baseMsg.fileData : '',
-                        location: baseMsg.location || null
-                    });
-                    const encResult = await E2EE.encryptMessage(encPayload, recipientPubKey, peerId);
-                    if (!encResult || !encResult.encrypted) return { ok: false, reason: (encResult && encResult.error) || 'encrypt_failed' };
-                    const sendMsg = { ...baseMsg, e2ee: encResult, encrypted: true };
-                    delete sendMsg.text;
-                    return { ok: true, sendMsg: sendMsg };
                 };
                 // キューイング & P2P送信制御（E2EE暗号化付き・平文フォールバックなし）
                 if (isGroup) {
@@ -8037,8 +8291,15 @@
                                 if (ymNeedE2ee(memId)) {
                                     const encWrap = await ymEncryptForPeer(memId, msgObj);
                                     if (!encWrap.ok) {
-                                        msgObj.deliveryStatus = 'failed';
-                                        showToast('暗号化できないため送信しません（平文では送りません）');
+                                        sendMsg = msgObj;
+                                        msgObj.deliveryStatus = 'queued';
+                                        try { if (typeof connectToRemotePeer === 'function') connectToRemotePeer(memId); } catch (e) {}
+                                        if (!offlineMessageQueue[memId]) offlineMessageQueue[memId] = [];
+                                        offlineMessageQueue[memId].push(sendMsg);
+                                        if (!db.pendingMessages) db.pendingMessages = {};
+                                        if (!db.pendingMessages[memId]) db.pendingMessages[memId] = [];
+                                        db.pendingMessages[memId].push(sendMsg);
+                                        try { OfflineBridge.enqueue(memId, { type: 'CHAT_MSG', message: sendMsg }); } catch (e) {}
                                         continue;
                                     }
                                     sendMsg = encWrap.sendMsg;
@@ -8076,18 +8337,33 @@
                     if (ymNeedE2ee(activeChatTarget)) {
                         const encWrap = await ymEncryptForPeer(activeChatTarget, msgObj);
                         if (!encWrap.ok) {
-                            msgObj.deliveryStatus = 'failed';
+                            sendMsg = msgObj;
+                            msgObj.deliveryStatus = 'queued';
+                            try { if (typeof connectToRemotePeer === 'function') connectToRemotePeer(activeChatTarget); } catch (e) {}
                             const sendBtn = document.getElementById('btn-chat-send');
                             if (sendBtn) sendBtn.disabled = false;
-                            showToast('暗号化できないため送信しません。相手と接続し、Safety Numberを確認してください。');
-                            renderChat(true);
-                            return;
+                            showToast('相手の暗号鍵がまだないので、この端末に保存しました。接続できたら送ります。');
+                        } else {
+                            sendMsg = encWrap.sendMsg;
+                            if (encWrap.deferred) {
+                                showToast('この開き方では暗号化APIが使えないため、端末内に保存して送ります。');
+                            }
                         }
-                        sendMsg = encWrap.sendMsg;
                     }
                     if (peerConnections[activeChatTarget] && peerConnections[activeChatTarget].open) {
-                        peerConnections[activeChatTarget].send({ type: 'CHAT_MSG', message: sendMsg });
-                        msgObj.deliveryStatus = 'sent';
+                        try {
+                            peerConnections[activeChatTarget].send({ type: 'CHAT_MSG', message: sendMsg });
+                            msgObj.deliveryStatus = 'sent';
+                        } catch (sendErr) {
+                            msgObj.deliveryStatus = 'queued';
+                            if (!offlineMessageQueue[activeChatTarget]) offlineMessageQueue[activeChatTarget] = [];
+                            offlineMessageQueue[activeChatTarget].push(sendMsg);
+                            if (!db.pendingMessages) db.pendingMessages = {};
+                            if (!db.pendingMessages[activeChatTarget]) db.pendingMessages[activeChatTarget] = [];
+                            db.pendingMessages[activeChatTarget].push(sendMsg);
+                            try { OfflineBridge.enqueue(activeChatTarget, { type: 'CHAT_MSG', message: sendMsg }); } catch (e) {}
+                            showToast('送信チャネルで失敗したので端末に保存しました。あとで再送します。');
+                        }
                         if ((type === 'file' || type === 'voice') && filePayload && filePayload.data && !String(filePayload.data).startsWith('data:')) {
                             sendMediaInChunks(activeChatTarget, filePayload.data, filePayload.name, filePayload.size, filePayload.type || '');
                         }
@@ -12194,6 +12470,7 @@
                 document.getElementById('btn-voice-send').onclick = sendVoiceMessage;
 
 
+                if (typeof ymBindPhoneScreenControls === 'function') ymBindPhoneScreenControls();
                 document.getElementById('btn-start-call').onclick = () => startCallToPeer(activeChatTarget);
                 document.getElementById('btn-end-call').onclick = stopAllCalls;
                 document.getElementById('btn-bar-end-call').onclick = stopAllCalls;
@@ -12214,7 +12491,7 @@
                         showToast('グループへは直接送金できません。相手を1人選んでトークから送金してください。');
                         return;
                     }
-                    const targetName = db.users[activeChatTarget] ? db.users[activeChatTarget].name : activeChatTarget;
+                    const targetName = getFriendDisplayName(activeChatTarget);
                     document.getElementById('transfer-target-label').textContent = `送金先: ${targetName}`;
                     const balEl = document.getElementById('transfer-balance-label');
                     const myCoins = (db.users[activeUserId] && db.users[activeUserId].coins) || 0;
