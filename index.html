@@ -1191,10 +1191,90 @@
         }
         .friend-list { max-height: none !important; flex: 1; min-height: 0; }
         #chat-input { max-height: 7.5em; }
+    
+
+        /* ===== YM 公式トップページ（LP）追加：既存UIとは分離 ===== */
+        .ym-official-lp { position:fixed; inset:0; z-index:50000; display:flex; flex-direction:column; overflow-y:auto; background:radial-gradient(900px 520px at 10% 0%, rgba(6,199,85,.16), transparent 60%),radial-gradient(760px 460px at 90% 10%, rgba(59,130,246,.14), transparent 60%),linear-gradient(180deg,#f8fffb 0%,#f3f4f6 48%,#fff 100%); color:#0f172a; -webkit-overflow-scrolling:touch; }
+        .ym-official-lp.hidden { display:none !important; }
+        .ym-lp-nav { width:min(1180px,calc(100% - 32px)); margin:0 auto; padding:18px 0; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+        .ym-lp-brand { display:flex; align-items:center; gap:10px; font-weight:900; font-size:22px; letter-spacing:.02em; }
+        .ym-lp-brand-mark { width:42px; height:42px; border-radius:12px; display:grid; place-items:center; background:#06C755; color:#fff; box-shadow:0 8px 20px rgba(6,199,85,.24); }
+        .ym-lp-nav-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+        .ym-lp-btn { border:none; border-radius:10px; padding:10px 16px; font-weight:800; cursor:pointer; font-size:13px; transition:transform .18s ease,box-shadow .18s ease,background .18s ease; }
+        .ym-lp-btn:hover { transform:translateY(-1px); box-shadow:0 8px 18px rgba(15,23,42,.12); }
+        .ym-lp-btn-primary { background:#06C755; color:#fff; }
+        .ym-lp-btn-primary:hover { background:#05b34c; }
+        .ym-lp-btn-light { background:#fff; color:#0f172a; border:1px solid #dbe3ea; }
+        .ym-lp-btn-dark { background:#0f172a; color:#fff; }
+        .ym-lp-hero { width:min(1180px,calc(100% - 32px)); margin:0 auto; padding:58px 0 44px; display:grid; grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr); gap:34px; align-items:center; }
+        .ym-lp-kicker { display:inline-flex; align-items:center; gap:6px; background:#ecfdf5; color:#047857; border:1px solid #bbf7d0; border-radius:999px; padding:6px 10px; font-size:12px; font-weight:900; margin-bottom:14px; }
+        .ym-lp-hero h1 { font-size:clamp(38px,6vw,68px); line-height:1.02; letter-spacing:-.045em; margin:0 0 16px; font-weight:950; }
+        .ym-lp-hero h1 span { color:#06C755; }
+        .ym-lp-lead { font-size:clamp(17px,2vw,21px); line-height:1.75; color:#475569; max-width:700px; }
+        .ym-lp-hero-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:24px; }
+        .ym-lp-hero-actions .ym-lp-btn { padding:13px 20px; font-size:14px; }
+        .ym-lp-note { margin-top:12px; font-size:11px; color:#64748b; }
+        .ym-lp-preview { border-radius:26px; padding:18px; background:rgba(15,23,42,.94); box-shadow:0 28px 70px rgba(15,23,42,.24); border:1px solid rgba(255,255,255,.1); }
+        .ym-lp-preview-top { display:flex; align-items:center; justify-content:space-between; color:#e2e8f0; font-size:12px; font-weight:800; margin-bottom:14px; }
+        .ym-lp-dot { width:9px; height:9px; border-radius:50%; background:#22c55e; display:inline-block; margin-right:5px; }
+        .ym-lp-chat { background:#8cabd9; border-radius:18px; padding:14px; min-height:290px; display:flex; flex-direction:column; justify-content:flex-end; gap:10px; }
+        .ym-lp-bubble { max-width:78%; padding:10px 13px; border-radius:16px; font-size:12px; line-height:1.5; box-shadow:0 1px 2px rgba(0,0,0,.08); }
+        .ym-lp-bubble-other { align-self:flex-start; background:#fff; color:#1f2937; border-bottom-left-radius:4px; }
+        .ym-lp-bubble-me { align-self:flex-end; background:#85e249; color:#1f2937; border-bottom-right-radius:4px; }
+        .ym-lp-section { width:min(1180px,calc(100% - 32px)); margin:0 auto; padding:34px 0 62px; }
+        .ym-lp-section h2 { text-align:center; font-size:30px; margin-bottom:10px; letter-spacing:-.02em; }
+        .ym-lp-section-lead { text-align:center; color:#64748b; margin:0 auto 26px; max-width:720px; line-height:1.7; font-size:14px; }
+        .ym-lp-features { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+        .ym-lp-feature { background:rgba(255,255,255,.86); border:1px solid #e2e8f0; border-radius:18px; padding:20px; box-shadow:0 8px 24px rgba(15,23,42,.05); }
+        .ym-lp-feature-icon { font-size:28px; margin-bottom:10px; }
+        .ym-lp-feature h3 { font-size:16px; margin-bottom:7px; }
+        .ym-lp-feature p { color:#64748b; font-size:13px; line-height:1.7; }
+        .ym-lp-cta { width:min(1180px,calc(100% - 32px)); margin:0 auto 40px; border-radius:24px; padding:30px; background:#0f172a; color:#fff; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap; }
+        .ym-lp-cta h2 { font-size:26px; margin-bottom:6px; }
+        .ym-lp-cta p { color:#cbd5e1; font-size:13px; line-height:1.6; }
+        .ym-lp-footer { width:min(1180px,calc(100% - 32px)); margin:0 auto; padding:0 0 28px; text-align:center; color:#94a3b8; font-size:11px; }
+        .ym-lp-auth-backdrop { position:fixed; inset:0; z-index:51000; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(15,23,42,.62); backdrop-filter:blur(5px); }
+        .ym-lp-auth-backdrop.hidden { display:none !important; }
+        .ym-lp-auth-box { width:min(430px,100%); background:#fff; color:#0f172a; border-radius:18px; padding:24px; box-shadow:0 24px 70px rgba(0,0,0,.25); }
+        .ym-lp-auth-box h3 { margin-bottom:8px; font-size:20px; }
+        .ym-lp-auth-box p { color:#64748b; font-size:12px; line-height:1.6; margin-bottom:14px; }
+        .ym-lp-auth-box label { display:block; margin:10px 0 4px; font-size:11px; color:#475569; font-weight:800; }
+        .ym-lp-auth-box input { margin:0; }
+        .ym-lp-auth-actions { display:flex; gap:8px; margin-top:14px; }
+        .ym-lp-auth-actions .ym-lp-btn { flex:1; }
+        .ym-lp-auth-status { min-height:18px; margin-top:10px; font-size:12px; color:#dc2626; }
+        @media (max-width:820px) { .ym-lp-hero { grid-template-columns:1fr; padding-top:34px; } .ym-lp-preview { max-width:620px; width:100%; margin:0 auto; } .ym-lp-features { grid-template-columns:1fr; } .ym-lp-nav-actions .ym-lp-btn-light { display:none; } }
+        @media (max-width:520px) { .ym-lp-nav,.ym-lp-hero,.ym-lp-section,.ym-lp-cta,.ym-lp-footer { width:min(100% - 22px,1180px); } .ym-lp-nav { padding:12px 0; } .ym-lp-brand { font-size:18px; } .ym-lp-brand-mark { width:36px; height:36px; border-radius:10px; } .ym-lp-hero h1 { font-size:42px; } .ym-lp-cta { padding:22px; } }
+
     </style>
 
 </head>
 <body class="ym-quiet-ui">
+
+    <!-- YM 公式トップページ（LP）：既存チャットUIとは独立したルート表示 -->
+    <div id="ym-official-lp" class="ym-official-lp hidden" aria-label="YM 公式トップページ">
+        <nav class="ym-lp-nav" aria-label="YM公式ナビゲーション">
+            <div class="ym-lp-brand"><span class="ym-lp-brand-mark">YM</span><span>YM</span></div>
+            <div class="ym-lp-nav-actions"><button type="button" class="ym-lp-btn ym-lp-btn-light" id="ym-lp-login-top">ログイン</button><button type="button" class="ym-lp-btn ym-lp-btn-primary" id="ym-lp-signup-top">新規登録</button></div>
+        </nav>
+        <main>
+            <section class="ym-lp-hero">
+                <div>
+                    <div class="ym-lp-kicker">💬 つながる、話せる、YM</div>
+                    <h1>毎日の会話を、<span>もっと自由に。</span></h1>
+                    <p class="ym-lp-lead">YMは、友だちとのチャットを中心に、AI、スタンプ、通話などをひとつにまとめたコミュニケーションサービスです。</p>
+                    <div class="ym-lp-hero-actions"><button type="button" class="ym-lp-btn ym-lp-btn-primary" id="ym-lp-chat-btn">チャットへ</button><button type="button" class="ym-lp-btn ym-lp-btn-light" id="ym-lp-login-hero">ログイン</button><button type="button" class="ym-lp-btn ym-lp-btn-dark" id="ym-lp-signup-hero">新規登録</button></div>
+                    <div class="ym-lp-note">※ 「チャットへ」は現在のYMチャット画面（/#chat-messages）へ移動します。</div>
+                </div>
+                <div class="ym-lp-preview" aria-hidden="true"><div class="ym-lp-preview-top"><span><span class="ym-lp-dot"></span>YM CHAT</span><span>ONLINE</span></div><div class="ym-lp-chat"><div class="ym-lp-bubble ym-lp-bubble-other">ようこそ！YMでチャットを始めよう 💬</div><div class="ym-lp-bubble ym-lp-bubble-me">すぐに話せるのがいいね！</div><div class="ym-lp-bubble ym-lp-bubble-other">AIやスタンプ、通話も使えます。</div></div></div>
+            </section>
+            <section class="ym-lp-section"><h2>YMでできること</h2><p class="ym-lp-section-lead">現在のYMにあるコミュニケーション機能を、公式トップページから分かりやすく案内します。</p><div class="ym-lp-features"><article class="ym-lp-feature"><div class="ym-lp-feature-icon">💬</div><h3>チャット</h3><p>友だちやグループとメッセージをやり取りできます。現在のチャット画面へそのまま移動できます。</p></article><article class="ym-lp-feature"><div class="ym-lp-feature-icon">🤖</div><h3>AI機能</h3><p>既存のYMに搭載されているAI関連機能を、チャットの流れの中で利用できます。</p></article><article class="ym-lp-feature"><div class="ym-lp-feature-icon">📞</div><h3>通話・コミュニケーション</h3><p>音声通話やビデオ通話、スタンプなど、会話を広げる機能を利用できます。</p></article></div></section>
+            <section class="ym-lp-cta"><div><h2>YMをはじめよう。</h2><p>ログインして続きから使うか、チャット画面へ進んでYMを体験できます。</p></div><button type="button" class="ym-lp-btn ym-lp-btn-primary" id="ym-lp-cta-chat">チャットへ</button></section>
+        </main>
+        <footer class="ym-lp-footer">© YM · Y.M Ultimate Chat</footer>
+    </div>
+    <div id="ym-lp-auth-modal" class="ym-lp-auth-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="ym-lp-auth-title"><div class="ym-lp-auth-box"><h3 id="ym-lp-auth-title">YMにログイン</h3><p id="ym-lp-auth-description">Supabase認証を利用してYMにログインします。既存のローカル/P2Pチャット機能はそのまま利用できます。</p><label for="ym-lp-auth-email">メールアドレス</label><input type="email" id="ym-lp-auth-email" autocomplete="email" placeholder="you@example.com"><label for="ym-lp-auth-password">パスワード</label><input type="password" id="ym-lp-auth-password" autocomplete="current-password" placeholder="パスワード"><div class="ym-lp-auth-status" id="ym-lp-auth-status" aria-live="polite"></div><div class="ym-lp-auth-actions"><button type="button" class="ym-lp-btn ym-lp-btn-light" id="ym-lp-auth-cancel">閉じる</button><button type="button" class="ym-lp-btn ym-lp-btn-primary" id="ym-lp-auth-submit">ログイン</button></div></div></div>
+
 
 
 
@@ -4557,6 +4637,12 @@
             }
 
 
+            // 合言葉PeerのID生成用。既存のP2P仕様を変えず、未定義参照だけを解消する。
+            async function hashSecretWord(secretWord) {
+                return hashStringSHA256('YM-SECRET-PEER:' + String(secretWord || ''));
+            }
+
+
             // -------------------------------------------------------------
             // 音声朗読 (TTS) ヘルパー機能
             // -------------------------------------------------------------
@@ -6136,37 +6222,19 @@
                         const existing = await navigator.serviceWorker.getRegistration();
                         if (existing) this.sw = existing;
                         else {
-                            const src = [
-                                "self.addEventListener('push', function(event) {",
-                                "  var data = {};",
-                                "  try { data = event.data ? event.data.json() : {}; } catch (e) { data = { body: event.data ? event.data.text() : '' }; }",
-                                "  var title = data.title || 'Y.M';",
-                                "  var tag = data.tag || (data.chatTarget ? ('chat-' + data.chatTarget) : 'ym-default');",
-                                "  var opts = { body: data.body || '', icon: data.icon || '', badge: data.badge || '', tag: tag, silent: true, renotify: false, data: data };",
-                                "  event.waitUntil(self.registration.showNotification(title, opts));",
-                                "  var n = data.badgeCount;",
-                                "  if (typeof n === 'number' && self.navigator && self.navigator.setAppBadge) { try { self.navigator.setAppBadge(n); } catch (e) {} }",
-                                "});",
-                                "self.addEventListener('notificationclick', function(event) {",
-                                "  event.notification.close();",
-                                "  var data = event.notification.data || {};",
-                                "  event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(list) {",
-                                "    var msg = { type: 'YM_NOTIFY_CLICK', data: data };",
-                                "    if (list && list.length) { list[0].postMessage(msg); return list[0].focus(); }",
-                                "    if (clients.openWindow) return clients.openWindow(self.registration.scope || './');",
-                                "  }));",
-                                "});",
-                                "self.addEventListener('message', function(event) {",
-                                "  var d = event.data || {};",
-                                "  if (d.type === 'YM_CLEAR_TAG' && d.tag && self.registration.getNotifications) {",
-                                "    event.waitUntil(self.registration.getNotifications({ tag: d.tag }).then(function(ns) { ns.forEach(function(n) { n.close(); }); }));",
-                                "  }",
-                                "});"
-                            ].join('\\n');
-                            const blob = new Blob([src.replace(/\\\\n/g, '\n')], { type: 'text/javascript' });
-                            const url = URL.createObjectURL(blob);
-                            try { this.sw = await navigator.serviceWorker.register(url, { scope: './' }); }
-                            catch (e) { console.warn('[YMPush] SW登録をスキップ:', e); }
+                            // blob: URLはServiceWorker登録対象にできないブラウザがあるため使用しない。
+                            // 同一オリジンの既存登録、または明示設定されたSW URLだけを使用する。
+                            const configuredSwUrl = String(localStorage.getItem('YM_SW_URL') || '/ym-sw.js').trim();
+                            if (configuredSwUrl) {
+                                try {
+                                    const swUrl = new URL(configuredSwUrl, location.href);
+                                    if (swUrl.origin === location.origin) {
+                                        this.sw = await navigator.serviceWorker.register(swUrl.href, { scope: './' });
+                                    }
+                                } catch (e) {
+                                    console.warn('[YMPush] 同一オリジンSWを利用できないため登録をスキップ:', e);
+                                }
+                            }
                         }
                         if (navigator.serviceWorker.addEventListener) {
                             navigator.serviceWorker.addEventListener('message', (ev) => {
@@ -14178,6 +14246,52 @@
         <input type="password" id="app-lock-input" placeholder="PIN" maxlength="8" autocomplete="off" style="max-width:240px;">
         <button class="menu-btn" id="btn-unlock-app" style="width:auto;">解除</button>
     </div>
+
+
+    <script>
+        /* ===== YM 公式LP / ルーティング追加 ===== */
+        (function () {
+            'use strict';
+            function lp(){ return document.getElementById('ym-official-lp'); }
+            function visible(v){ const e=lp(); if(e)e.classList.toggle('hidden',!v); }
+            function goChat(){
+                try { const target=(typeof activeChatTarget!=='undefined')?activeChatTarget:null; if(typeof switchPage==='function') switchPage(target?'chat-view':'home-view'); } catch(e){}
+                visible(false);
+                try { history.pushState({ymLp:false,ymChat:true},'', '#chat-messages'); } catch(e) { location.hash='#chat-messages'; }
+            }
+            function isChat(){ return location.pathname==='/chat'||location.hash==='#chat-messages'||location.hash==='#chat'; }
+            function isRoot(){ return (location.pathname==='/'||location.pathname==='')&&!location.hash; }
+            function route(){
+                if(isChat()){ visible(false); try { if(typeof switchPage==='function'){ const target=(typeof activeChatTarget!=='undefined')?activeChatTarget:null; switchPage(target?'chat-view':'home-view'); } } catch(e){} return; }
+                if(isRoot()){ visible(true); return; }
+                visible(false);
+            }
+            function openAuth(mode){
+                const m=document.getElementById('ym-lp-auth-modal'), t=document.getElementById('ym-lp-auth-title'), d=document.getElementById('ym-lp-auth-description'), b=document.getElementById('ym-lp-auth-submit'), st=document.getElementById('ym-lp-auth-status');
+                if(!m)return; const signup=mode==='signup'; m.dataset.mode=signup?'signup':'login'; if(t)t.textContent=signup?'YMに新規登録':'YMにログイン'; if(d)d.textContent=signup?'Supabase認証でYMアカウントを作成します。登録後はそのままチャットへ進めます。':'Supabase認証を利用してYMにログインします。'; if(b)b.textContent=signup?'新規登録':'ログイン'; if(st)st.textContent=''; m.classList.remove('hidden'); setTimeout(()=>document.getElementById('ym-lp-auth-email')?.focus(),0);
+            }
+            function closeAuth(){ document.getElementById('ym-lp-auth-modal')?.classList.add('hidden'); }
+            async function submitAuth(){
+                const m=document.getElementById('ym-lp-auth-modal'), em=String(document.getElementById('ym-lp-auth-email')?.value||'').trim(), pw=String(document.getElementById('ym-lp-auth-password')?.value||''), st=document.getElementById('ym-lp-auth-status'), b=document.getElementById('ym-lp-auth-submit'), mode=m?.dataset.mode||'login';
+                if(!em||!pw){if(st)st.textContent='メールアドレスとパスワードを入力してください。';return;} if(b)b.disabled=true; if(st)st.textContent='処理しています…';
+                try {
+                    if(typeof YMSupabase==='undefined')throw new Error('認証機能を初期化できませんでした。'); if(!YMSupabase.client)await YMSupabase.init(); if(!YMSupabase.client)throw new Error('Supabaseに接続できません。');
+                    let r; if(mode==='signup'){ r=await YMSupabase.client.auth.signUp({email:em,password:pw}); if(r.error)throw r.error; if(r.data?.session){YMSupabase.user=r.data.user;YMSupabase.ready=true;closeAuth();goChat();}else if(st)st.textContent='登録を受け付けました。メール確認が必要な場合は確認後にログインしてください。'; }
+                    else { r=await YMSupabase.client.auth.signInWithPassword({email:em,password:pw}); if(r.error)throw r.error; YMSupabase.user=r.data.user;YMSupabase.ready=true; localStorage.setItem('YM_SUPABASE_EMAIL',em); sessionStorage.setItem('YM_SUPABASE_PASS',pw); closeAuth(); goChat(); }
+                } catch(e){if(st)st.textContent=String(e?.message||'認証に失敗しました。');} finally {if(b)b.disabled=false;}
+            }
+            function bind(){
+                ['ym-lp-chat-btn','ym-lp-cta-chat'].forEach(id=>document.getElementById(id)?.addEventListener('click',goChat));
+                ['ym-lp-login-top','ym-lp-login-hero'].forEach(id=>document.getElementById(id)?.addEventListener('click',()=>openAuth('login')));
+                ['ym-lp-signup-top','ym-lp-signup-hero'].forEach(id=>document.getElementById(id)?.addEventListener('click',()=>openAuth('signup')));
+                document.getElementById('ym-lp-auth-cancel')?.addEventListener('click',closeAuth); document.getElementById('ym-lp-auth-submit')?.addEventListener('click',submitAuth);
+                document.getElementById('ym-lp-auth-modal')?.addEventListener('click',e=>{if(e.target.id==='ym-lp-auth-modal')closeAuth();}); document.getElementById('ym-lp-auth-password')?.addEventListener('keydown',e=>{if(e.key==='Enter')submitAuth();});
+                window.addEventListener('popstate',route); window.addEventListener('hashchange',route); route(); setTimeout(route,0); setTimeout(route,600);
+            }
+            document.addEventListener('DOMContentLoaded',bind);
+        })();
+    </script>
+
 </body>
 
 </html>
