@@ -1606,7 +1606,7 @@ button,[role="button"],input,textarea,select{touch-action:manipulation;}
                         <button class="menu-btn" style="background:#334155;" id="btn-open-ym-sync-hub">🔄 情報同期ハブ</button>
                     </div>
                 </div>
-                <button id="dev-mode-btn" class="menu-btn btn-warning hidden" style="width:auto; padding:4px 8px; font-size:11px;" aria-hidden="true" tabindex="-1">スタジオ</button>
+                <button id="dev-mode-btn" class="menu-btn btn-warning hidden" style="width:auto; padding:4px 8px; font-size:11px;" aria-hidden="true" tabindex="-1">開発者パネル</button>
             </div>
         </div>
 
@@ -1941,23 +1941,59 @@ button,[role="button"],input,textarea,select{touch-action:manipulation;}
         <!-- 開発者専用ダッシュボード -->
 
         <div id="studio-view" class="page-view card hidden">
-            <h2>YM スタジオ</h2>
-            <p class="text-sub">以前ここにあった開発者パネルは、Convex の管理ページへ移しました。ここでは使い方と接続の見方だけを置きます。</p>
-            <div class="ym-focus-card" style="margin-top:12px;padding:14px;border:1px solid var(--border-color);border-radius:12px;">
-                <h4>いまできること</h4>
-                <ul class="text-body" style="margin:8px 0 0 18px;line-height:1.8;">
-                    <li>友だちを追加してトークする</li>
-                    <li>両方の画面が開いているときは P2P で速く届く</li>
-                    <li>通知は ym-sw.js が同じサイトにあるとき準備できる</li>
-                </ul>
+            <h2>開発者パネル</h2>
+            <p class="text-sub">この画面の操作は、今開いているチャットの保存データへ直接入ります。お知らせは配信した瞬間に本体へ出ます。</p>
+            <div id="mc-live-status" class="text-sub" style="margin-top:8px;">準備中</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">
+                <button type="button" class="menu-btn mc-tab" data-mc="ann" style="width:auto;margin:0;">お知らせ</button>
+                <button type="button" class="menu-btn mc-tab" data-mc="users" style="width:auto;margin:0;">ユーザー</button>
+                <button type="button" class="menu-btn mc-tab" data-mc="coins" style="width:auto;margin:0;">コイン</button>
+                <button type="button" class="menu-btn mc-tab" data-mc="rooms" style="width:auto;margin:0;">トークと部屋</button>
             </div>
-            <div class="ym-focus-card" style="margin-top:12px;padding:14px;border:1px solid var(--border-color);border-radius:12px;">
-                <h4>本格的な管理</h4>
-                <p class="text-sub">お知らせ・監査ログ・管理者名簿は <code>YM-admin-convex.html</code> で行います。この画面からは操作しません。</p>
+            <div class="mc-pane" id="mc-ann" style="margin-top:12px;">
+                <label>みんなへのお知らせ</label>
+                <textarea id="mc-ann-text" maxlength="1000" placeholder="配信する文"></textarea>
+                <label>種類</label>
+                <select id="mc-ann-style"><option value="normal">通常</option><option value="important">重要</option><option value="event">イベント</option></select>
+                <div style="display:flex;gap:8px;">
+                    <button type="button" class="menu-btn" id="mc-ann-send" style="width:auto;">今すぐ配信</button>
+                    <button type="button" class="menu-btn btn-danger" id="mc-ann-clear" style="width:auto;">お知らせを消す</button>
+                </div>
             </div>
-            <div class="ym-focus-card" style="margin-top:12px;padding:14px;border:1px solid var(--border-color);border-radius:12px;">
-                <h4>接続の目安</h4>
-                <p class="text-sub">右下の P2P / RTT 表示が出ていれば、開いている相手との線を監視しています。相手がページを閉じているときは inbox 側を使います。</p>
+            <div class="mc-pane hidden" id="mc-users" style="margin-top:12px;">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <input id="mc-new-id" placeholder="新しいID" style="max-width:180px;">
+                    <input id="mc-new-name" placeholder="表示名" style="max-width:180px;">
+                    <button type="button" class="menu-btn" id="mc-user-create" style="width:auto;">ユーザーを作る</button>
+                </div>
+                <div id="mc-user-table" style="margin-top:10px;overflow:auto;"></div>
+                <div id="mc-user-editor" class="text-sub">名前の横の「管理」で、改名・プラン・停止・コインを変えられます。</div>
+            </div>
+            <div class="mc-pane hidden" id="mc-coins" style="margin-top:12px;">
+                <label>相手のID</label><input id="mc-coin-id" placeholder="ユーザーID">
+                <label>枚数</label><input id="mc-coin-n" type="number" value="10">
+                <label>理由</label><input id="mc-coin-reason" placeholder="配布、調整">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button type="button" class="menu-btn" id="mc-coin-add" style="width:auto;">足す</button>
+                    <button type="button" class="menu-btn btn-danger" id="mc-coin-sub" style="width:auto;">引く</button>
+                    <button type="button" class="menu-btn btn-warning" id="mc-coin-set" style="width:auto;">この枚数にする</button>
+                    <button type="button" class="menu-btn" id="mc-coin-all" style="width:auto;">全員に足す</button>
+                </div>
+            </div>
+            <div class="mc-pane hidden" id="mc-rooms" style="margin-top:12px;">
+                <label>本文検索</label><input id="mc-msg-q" placeholder="トークを検索">
+                <div id="mc-msg-table" style="margin-top:8px;overflow:auto;"></div>
+                <label>部屋ID</label><input id="mc-room-id" placeholder="ピン、非表示、消去の対象">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button type="button" class="menu-btn" id="mc-pin" style="width:auto;">ピン留め</button>
+                    <button type="button" class="menu-btn" id="mc-hide" style="width:auto;">非表示</button>
+                    <button type="button" class="menu-btn btn-danger" id="mc-clear" style="width:auto;">この部屋のトークを消す</button>
+                </div>
+                <label>点検の文</label><textarea id="mc-maint" placeholder="いま点検中です"></textarea>
+                <div style="display:flex;gap:8px;">
+                    <button type="button" class="menu-btn btn-warning" id="mc-maint-on" style="width:auto;">点検を出す</button>
+                    <button type="button" class="menu-btn" id="mc-maint-off" style="width:auto;">点検を消す</button>
+                </div>
             </div>
             <button type="button" class="menu-btn" id="btn-studio-home" style="margin-top:16px;">ホームへ戻る</button>
         </div>
@@ -13267,7 +13303,7 @@ button,[role="button"],input,textarea,select{touch-action:manipulation;}
                     if (ok) {
                         isDevMode = false;
                         hideModal('dev-auth-modal');
-                        showToast('本格管理は YM-admin-convex.html です。こちらはスタジオを開きます。');
+                        showToast('本格管理は YM-admin-convex.html です。開発者パネルを開きます。');
                         switchPage('studio-view');
                     } else {
                         showToast('ユーザー名またはパスワードが違います。');
@@ -16166,5 +16202,110 @@ body { padding-bottom:env(safe-area-inset-bottom); }
 })();
 
 </script>
+
+<script id="MC_LIVE_PANEL">
+(function(){
+  function db(){ return window.db; }
+  function toast(t){ try { if (typeof showToast==='function') showToast(t); } catch(e){} }
+  function save(){ try { if (typeof window.saveDataNow==='function') return window.saveDataNow(); if (typeof saveData==='function') return saveData(); } catch(e){} }
+  function paint(){ try { if (typeof renderApp==='function') renderApp(); } catch(e){} }
+  function names(id){ var d=db(); return d&&d.users&&d.users[id]&&d.users[id].name ? d.users[id].name : id; }
+  function esc(s){ return String(s||'').replace(/[&<>"]/g, function(c){ return ({'&':'&','<':'<','>':'>','"':'"'}[c]); }); }
+  function changed(msg){
+    try { if (window.YMPersist) YMPersist.writeSnapshot(db()); } catch(e){}
+    save(); paint(); toast(msg||'本体へ反映しました'); status();
+  }
+  function status(){
+    var el=document.getElementById('mc-live-status'); if(!el) return;
+    var d=db();
+    el.textContent = d ? ('接続中 / ユーザー ' + Object.keys(d.users||{}).length + ' / お知らせ ' + (d.systemAnnouncement||'なし')) : 'チャットの読み込みを待っています';
+  }
+  function announce(text, style){
+    var d=db(); if(!d) return toast('本体の準備中です');
+    d.systemAnnouncement=String(text||'').slice(0,1000);
+    d.systemAnnouncementStyle = style==='important'?'important':(style==='event'?'event':'normal');
+    d.announcementId = d.systemAnnouncement ? ('ann_'+Date.now()) : '';
+    try { localStorage.removeItem('YM_DISMISSED_ANNOUNCEMENT'); localStorage.removeItem('YM_DISMISSED_ANNOUNCEMENT_FP'); } catch(e){}
+    d.announcementDismissedFp=''; d.announcementDismissedText='';
+    try { if (window.YMPersist) YMPersist.writeAnnouncement(d); } catch(e){}
+    changed(d.systemAnnouncement?'お知らせを配信しました':'お知らせを消しました');
+    try { if (d.systemAnnouncement && typeof showSystemAnnouncementPopup==='function') showSystemAnnouncementPopup(true); } catch(e){}
+  }
+  function users(){
+    var box=document.getElementById('mc-user-table'); if(!box||!db()) return;
+    var ids=Object.keys(db().users||{});
+    box.innerHTML = ids.map(function(id){
+      var u=db().users[id]||{};
+      return '<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #e5e7eb;"><strong>'+esc(names(id))+'</strong><span>'+esc(id)+'</span><span>'+(u.coins||0)+'枚</span><span>'+esc(u.planId||'free')+'</span><span>'+(u.isBlocked?'停止':'通常')+'</span><button type="button" class="menu-btn" data-mc-user="'+esc(id)+'" style="width:auto;margin:0;padding:4px 8px;">管理</button></div>';
+    }).join('') || 'まだユーザーがいません';
+  }
+  function messages(){
+    var box=document.getElementById('mc-msg-table'); if(!box||!db()) return;
+    var q=(document.getElementById('mc-msg-q')||{}).value||'';
+    box.innerHTML=(db().messages||[]).filter(function(m){ return !q || String(m.text||'').indexOf(q)>=0; }).slice(-20).reverse().map(function(m){
+      return '<div style="padding:6px 0;border-bottom:1px solid #e5e7eb;">'+esc(names(m.from))+' → '+esc(names(m.to))+' : '+esc(m.text||'')+' <button type="button" class="menu-btn btn-danger" data-mc-msg="'+esc(m.msgId||'')+'" style="width:auto;margin:0;padding:2px 6px;">非表示</button></div>';
+    }).join('') || 'トークはまだありません';
+  }
+  function editor(id){
+    var u=db().users[id]||{};
+    var box=document.getElementById('mc-user-editor');
+    box.innerHTML='<strong>'+esc(names(id))+'</strong><label>表示名</label><input id="mc-ed-name" value="'+esc(u.name||'')+'"><label>プラン</label><select id="mc-ed-plan">'+['free','bronze','silver','gold','platinum','diamond','master','legend'].map(function(p){ return '<option'+( (u.planId||'free')===p?' selected':'')+'>'+p+'</option>'; }).join('')+'</select><label>コイン枚数</label><input id="mc-ed-coins" type="number" value="'+(u.coins||0)+'"><div style="display:flex;gap:8px;flex-wrap:wrap;"><button type="button" class="menu-btn" id="mc-ed-save" style="width:auto;">保存</button><button type="button" class="menu-btn btn-warning" id="mc-ed-block" style="width:auto;">'+(u.isBlocked?'停止解除':'停止')+'</button><button type="button" class="menu-btn btn-danger" id="mc-ed-del" style="width:auto;">削除</button></div>';
+    document.getElementById('mc-ed-save').onclick=function(){
+      u.name=document.getElementById('mc-ed-name').value.trim().slice(0,32)||id;
+      u.planId=document.getElementById('mc-ed-plan').value;
+      u.coins=Number(document.getElementById('mc-ed-coins').value)||0;
+      changed('ユーザーを更新しました'); users();
+    };
+    document.getElementById('mc-ed-block').onclick=function(){ u.isBlocked=!u.isBlocked; changed(u.isBlocked?'停止しました':'停止を解除しました'); users(); editor(id); };
+    document.getElementById('mc-ed-del').onclick=function(){ if(!confirm('このユーザーを外しますか？')) return; delete db().users[id]; changed('ユーザーを外しました'); users(); };
+  }
+  function coin(mode, sign){
+    var d=db(); if(!d) return;
+    var id=document.getElementById('mc-coin-id').value.trim();
+    var n=Math.abs(Number(document.getElementById('mc-coin-n').value)||0);
+    if(!id||!d.users[id]) return toast('いるユーザーのIDを入れてください');
+    if(mode==='set') d.users[id].coins=n;
+    else d.users[id].coins=(Number(d.users[id].coins)||0)+(n*sign);
+    changed('コインを反映しました');
+  }
+  document.addEventListener('click', function(ev){
+    var t=ev.target; if(!t) return;
+    if(t.classList && t.classList.contains('mc-tab')){
+      document.querySelectorAll('.mc-pane').forEach(function(p){ p.classList.add('hidden'); });
+      var pane=document.getElementById('mc-'+t.getAttribute('data-mc')); if(pane) pane.classList.remove('hidden');
+      users(); messages(); status();
+    }
+    if(t.id==='mc-ann-send') announce(document.getElementById('mc-ann-text').value, document.getElementById('mc-ann-style').value);
+    if(t.id==='mc-ann-clear') announce('', 'normal');
+    if(t.id==='mc-user-create'){
+      var id=document.getElementById('mc-new-id').value.trim(); if(!id||!db()) return toast('IDを入れてください');
+      if(!db().users[id]) db().users[id]={ name:id, coins:0, planId:'free', isBlocked:false, createdAt:Date.now(), usageTime:0, icon:'', chatBg:'#8cabd9', myStamps:[], myReactions:[] };
+      db().users[id].name=document.getElementById('mc-new-name').value.trim()||id;
+      changed('ユーザーを作りました'); users();
+    }
+    if(t.id==='mc-coin-add') coin('add',1);
+    if(t.id==='mc-coin-sub') coin('add',-1);
+    if(t.id==='mc-coin-set') coin('set',1);
+    if(t.id==='mc-coin-all'){
+      var n=Number(document.getElementById('mc-coin-n').value)||0; if(!db()||!n) return;
+      Object.keys(db().users).forEach(function(id){ db().users[id].coins=(Number(db().users[id].coins)||0)+n; });
+      changed('全員にコインを足しました');
+    }
+    if(t.id==='mc-pin'){ var id=document.getElementById('mc-room-id').value.trim(); if(id&&db()){ db().pinnedChats=db().pinnedChats||{}; db().pinnedChats[id]=true; changed('ピン留めしました'); } }
+    if(t.id==='mc-hide'){ var hid=document.getElementById('mc-room-id').value.trim(); if(hid&&db()){ db().hiddenChats=db().hiddenChats||{}; db().hiddenChats[hid]=true; changed('非表示にしました'); } }
+    if(t.id==='mc-clear'){ var room=document.getElementById('mc-room-id').value.trim(); if(room&&db()&&confirm('この部屋のトークを消しますか？')){ db().messages=(db().messages||[]).filter(function(m){ return String(m.to||'')!==room && String(m.from||'')!==room; }); changed('部屋のトークを消しました'); messages(); } }
+    if(t.id==='mc-maint-on'){ if(db()){ db().maintenanceMode=true; db().maintenanceText=document.getElementById('mc-maint').value.slice(0,300); changed('点検を出しました'); } }
+    if(t.id==='mc-maint-off'){ if(db()){ db().maintenanceMode=false; db().maintenanceText=''; changed('点検を消しました'); } }
+    if(t.getAttribute && t.getAttribute('data-mc-user')) editor(t.getAttribute('data-mc-user'));
+    if(t.getAttribute && t.getAttribute('data-mc-msg')){
+      var mid=t.getAttribute('data-mc-msg');
+      (db().messages||[]).forEach(function(m){ if(m&&m.msgId===mid){ m.deleted=true; m.text='このメッセージは管理者により非表示になりました'; m.type='text'; } });
+      changed('メッセージを非表示にしました'); messages();
+    }
+  });
+  setInterval(function(){ if(document.getElementById('studio-view') && !document.getElementById('studio-view').classList.contains('hidden')) { status(); } }, 2000);
+})();
+</script>
+
 </body>
 </html>
