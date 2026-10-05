@@ -15948,54 +15948,100 @@ body { padding-bottom:env(safe-area-inset-bottom); }
 
 <!-- YM_ADMIN_SYNC_BRIDGE -->
 <script>
+/* Applies management-code commands to the live app and publishes a mirror. */
 (function () {
   if (window.__YM_ADMIN_SYNC) return;
   window.__YM_ADMIN_SYNC = 1;
-  var BUS = 'YM_ADMIN_BUS', APPLIED = 'YM_ADMIN_APPLIED_IDS', MIRROR = 'YM_ADMIN_MIRROR', MAINT = 'YM_ADMIN_MAINTENANCE';
+  var BUS = 'YM_ADMIN_BUS';
+  var APPLIED = 'YM_ADMIN_APPLIED_IDS';
+  var MIRROR = 'YM_ADMIN_MIRROR';
+  var MAINT = 'YM_ADMIN_MAINTENANCE';
   var channel = null;
   try { channel = new BroadcastChannel('ym-admin'); } catch (e) {}
-  function read(key, fallback) { try { return JSON.parse(localStorage.getItem(key) || 'null') || fallback; } catch (e) { return fallback; } }
-  function write(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {} }
-  function appliedSet() { var list = read(APPLIED, []); return new Set(Array.isArray(list) ? list : []); }
-  function remember(id) { var list = read(APPLIED, []); if (!Array.isArray(list)) list = []; list.push(id); write(APPLIED, list.slice(-500)); }
-  function toast(text) { try { if (typeof showToast === 'function') showToast(text); } catch (e) {} }
-  function persist() { try { if (typeof window.saveDataNow === 'function') return window.saveDataNow(); if (typeof saveData === 'function') return saveData(); } catch (e) {} }
-  function paint() { try { if (typeof renderApp === 'function') renderApp(); } catch (e) {} }
-  function userOf(id) { return window.db && db.users && db.users[id] ? db.users[id] : null; }
-  function ensure(obj, key, val) { if (obj[key] == null) obj[key] = val; return obj[key]; }
+
+  function read(key, fallback) {
+    try { return JSON.parse(localStorage.getItem(key) || 'null') || fallback; } catch (e) { return fallback; }
+  }
+  function write(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+  }
+  function appliedSet() {
+    var list = read(APPLIED, []);
+    return new Set(Array.isArray(list) ? list : []);
+  }
+  function remember(id) {
+    var list = read(APPLIED, []);
+    if (!Array.isArray(list)) list = [];
+    if (list.indexOf(id) < 0) list.push(id);
+    write(APPLIED, list.slice(-500));
+  }
+  function toast(text) {
+    try { if (typeof showToast === 'function') showToast(text); } catch (e) {}
+  }
+  function persist() {
+    try {
+      if (typeof window.saveDataNow === 'function') return window.saveDataNow();
+      if (typeof saveData === 'function') return saveData();
+    } catch (e) {}
+  }
+  function paint() {
+    try { if (typeof renderApp === 'function') renderApp(); } catch (e) {}
+  }
+  function userOf(id) {
+    return window.db && db.users && db.users[id] ? db.users[id] : null;
+  }
+  function ensure(obj, key, val) {
+    if (obj[key] == null) obj[key] = val;
+    return obj[key];
+  }
   function applyOne(cmd) {
     if (!cmd || !cmd.id || !window.db) return false;
-    var p = cmd.payload || {}, id = String(p.id || p.target || '');
+    var p = cmd.payload || {};
+    var id = String(p.id || p.target || '');
     if (cmd.type === 'ping') return true;
     if (cmd.type === 'announce.set') {
-      db.systemAnnouncement = String(p.text || '').slice(0, 1000);
-      db.systemAnnouncementStyle = p.style === 'important' ? 'important' : 'normal';
-      db.announcementId = db.systemAnnouncement ? ('ann_' + Date.now()) : '';
-      try { localStorage.removeItem('YM_DISMISSED_ANNOUNCEMENT'); localStorage.removeItem('YM_DISMISSED_ANNOUNCEMENT_FP'); } catch (e) {}
-      db.announcementDismissedFp = ''; db.announcementDismissedText = '';
+      var text = String(p.text || '').slice(0, 1000);
+      var style = p.style === 'important' ? 'important' : (p.style === 'event' ? 'event' : 'normal');
+      db.systemAnnouncement = text;
+      db.systemAnnouncementStyle = style;
+      db.announcementId = text ? ('ann_' + (cmd.at || Date.now())) : '';
+      try {
+        localStorage.removeItem('YM_DISMISSED_ANNOUNCEMENT');
+        localStorage.removeItem('YM_DISMISSED_ANNOUNCEMENT_FP');
+      } catch (e) {}
+      db.announcementDismissedFp = '';
+      db.announcementDismissedText = '';
       try { if (window.YMPersist) YMPersist.writeAnnouncement(db); } catch (e) {}
-      try { if (db.systemAnnouncement && typeof showSystemAnnouncementPopup === 'function') showSystemAnnouncementPopup(true); } catch (e) {}
+      try { if (text && typeof showSystemAnnouncementPopup === 'function') showSystemAnnouncementPopup(true); } catch (e) {}
       return true;
     }
     if (cmd.type === 'user.create') {
       if (!id) return false;
       ensure(db, 'users', {});
-      if (!db.users[id]) db.users[id] = { name: id, coins: 0, planId: 'free', isBlocked: false, createdAt: Date.now(), usageTime: 0 };
+      if (!db.users[id]) db.users[id] = { name: id, coins: 0, planId: 'free', isBlocked: false, createdAt: Date.now(), usageTime: 0, icon: '', chatBg: '#8cabd9', myStamps: [], myReactions: [] };
       db.users[id].name = String(p.name || db.users[id].name || id).slice(0, 32);
       if (p.coins != null) db.users[id].coins = Number(p.coins) || 0;
       if (p.planId) db.users[id].planId = String(p.planId);
       return true;
     }
     if (cmd.type === 'user.coins') {
-      var u = userOf(id); if (!u) return false;
+      var u = userOf(id);
+      if (!u) return false;
       var n = Number(p.amount) || 0;
-      u.coins = p.mode === 'set' ? n : (Number(u.coins) || 0) + n;
-      ensure(db, 'transactions', []).push({ id: 'adm_' + Date.now(), target: id, amount: n, mode: p.mode || 'add', at: Date.now(), by: 'management-code' });
+      var before = Number(u.coins) || 0;
+      u.coins = p.mode === 'set' ? n : before + n;
+      ensure(db, 'transactions', []).push({ id: cmd.id, target: id, amount: p.mode === 'set' ? (u.coins - before) : n, mode: p.mode || 'add', reason: p.reason || '', at: cmd.at || Date.now(), by: 'management-code' });
       return true;
     }
     if (cmd.type === 'coins.bulk') {
       var add = Number(p.amount) || 0;
-      Object.keys(db.users || {}).forEach(function (uid) { db.users[uid].coins = (Number(db.users[uid].coins) || 0) + add; });
+      var plan = p.planId || '';
+      Object.keys(db.users || {}).forEach(function (uid) {
+        var uu = db.users[uid];
+        if (plan && (uu.planId || 'free') !== plan) return;
+        uu.coins = (Number(uu.coins) || 0) + add;
+      });
+      ensure(db, 'transactions', []).push({ id: cmd.id, target: plan || '*', amount: add, mode: 'bulk', reason: p.reason || '', at: cmd.at || Date.now(), by: 'management-code' });
       return true;
     }
     if (cmd.type === 'user.block') { var ub = userOf(id); if (!ub) return false; ub.isBlocked = !!p.blocked; return true; }
@@ -16003,8 +16049,10 @@ body { padding-bottom:env(safe-area-inset-bottom); }
     if (cmd.type === 'user.rename') { var ur = userOf(id); if (!ur) return false; ur.name = String(p.name || ur.name || id).slice(0, 32); return true; }
     if (cmd.type === 'user.plan') { var up = userOf(id); if (!up) return false; up.planId = String(p.planId || 'free'); return true; }
     if (cmd.type === 'user.usageReset') { var uu = userOf(id); if (!uu) return false; uu.usageTime = 0; return true; }
+    if (cmd.type === 'user.note') { var un = userOf(id); if (!un) return false; un.adminNote = String(p.note || '').slice(0, 200); return true; }
     if (cmd.type === 'user.delete') { if (db.users) delete db.users[id]; return true; }
     if (cmd.type === 'group.rename') { if (db.groups && db.groups[id]) db.groups[id].name = String(p.name || '').slice(0, 40); return true; }
+    if (cmd.type === 'group.notice') { if (db.groups && db.groups[id]) db.groups[id].notice = String(p.notice || '').slice(0, 300); return true; }
     if (cmd.type === 'group.delete') { if (db.groups) delete db.groups[id]; return true; }
     if (cmd.type === 'friend.remove') {
       var owner = String(p.owner || ''), other = String(p.other || '');
@@ -16015,48 +16063,83 @@ body { padding-bottom:env(safe-area-inset-bottom); }
       return true;
     }
     if (cmd.type === 'message.delete') {
-      (db.messages || []).forEach(function (m) { if (m && m.msgId === String(p.msgId || '')) { m.deleted = true; m.text = 'このメッセージは管理者により非表示になりました'; m.type = 'text'; } });
-      return true;
+      var hit = false;
+      (db.messages || []).forEach(function (m) {
+        if (m && m.msgId === String(p.msgId || '')) { m.deleted = true; m.text = 'このメッセージは管理者により非表示になりました'; m.type = 'text'; hit = true; }
+      });
+      return hit;
     }
     if (cmd.type === 'room.clear') {
       var room = String(p.room || '');
+      var beforeLen = (db.messages || []).length;
       db.messages = (db.messages || []).filter(function (m) { return m && String(m.to || '') !== room && String(m.from || '') !== room; });
-      return true;
+      return db.messages.length !== beforeLen || true;
     }
     if (cmd.type === 'stamp.delete') { db.stamps = (db.stamps || []).filter(function (s) { return String(s.id || s.stampId || '') !== id; }); return true; }
+    if (cmd.type === 'stamp.price') {
+      (db.stamps || []).forEach(function (s) { if (String(s.id || s.stampId || '') === id) s.price = Number(p.price) || 0; });
+      return true;
+    }
+    if (cmd.type === 'calendar.add') {
+      ensure(db, 'calendarEvents', []).push({ id: id || ('cal_' + Date.now()), title: String(p.title || '予定').slice(0, 80), at: p.at || Date.now(), note: String(p.note || '').slice(0, 200) });
+      return true;
+    }
     if (cmd.type === 'calendar.delete') { db.calendarEvents = (db.calendarEvents || []).filter(function (ev) { return String(ev.id || '') !== id; }); return true; }
     if (cmd.type === 'schedule.cancel') { (db.scheduledMessages || []).forEach(function (ev) { if (String(ev.id || '') === id) ev.cancelled = true; }); return true; }
-    if (cmd.type === 'report.resolve') { (db.reports || []).forEach(function (ev) { if (String(ev.id || '') === id) ev.resolved = true; }); return true; }
+    if (cmd.type === 'report.resolve') { (db.reports || []).forEach(function (ev) { if (String(ev.id || '') === id) { ev.resolved = true; ev.adminNote = String(p.note || ''); } }); return true; }
     if (cmd.type === 'chat.hidden') { ensure(db, 'hiddenChats', {})[id] = !!p.hidden; return true; }
     if (cmd.type === 'chat.pin') { ensure(db, 'pinnedChats', {})[id] = !!p.pinned; return true; }
     if (cmd.type === 'mute.set') { ensure(db, 'muteUntil', {})[id] = Number(p.until) || 0; return true; }
-    if (cmd.type === 'maintenance.set') { db.maintenanceMode = !!p.on; db.maintenanceText = String(p.text || '').slice(0, 300); write(MAINT, { on: !!p.on, text: db.maintenanceText, at: Date.now() }); return true; }
-    if (cmd.type === 'notify.push') { ensure(db, 'notifications', []).unshift({ id: 'ntf_' + Date.now(), title: String(p.title || 'お知らせ'), body: String(p.body || ''), at: Date.now(), from: 'management-code' }); db.notifications = db.notifications.slice(0, 80); return true; }
+    if (cmd.type === 'maintenance.set') {
+      db.maintenanceMode = !!p.on;
+      db.maintenanceText = String(p.text || '').slice(0, 300);
+      write(MAINT, { on: !!p.on, text: db.maintenanceText, at: Date.now() });
+      return true;
+    }
+    if (cmd.type === 'notify.push') {
+      ensure(db, 'notifications', []).unshift({ id: 'ntf_' + Date.now(), title: String(p.title || 'お知らせ'), body: String(p.body || ''), target: p.target || '', at: Date.now(), from: 'management-code' });
+      db.notifications = db.notifications.slice(0, 80);
+      return true;
+    }
     if (cmd.type === 'version.set') { db.systemVersion = String(p.version || db.systemVersion || '').slice(0, 24); return true; }
     return false;
   }
-  function consume() {
-    if (!window.db) return;
-    var bus = read(BUS, null);
-    if (!bus || !Array.isArray(bus.commands)) return;
-    var seen = appliedSet(), changed = false;
-    bus.commands.forEach(function (cmd) {
+  function consumeList(list) {
+    if (!window.db || !Array.isArray(list)) return;
+    var seen = appliedSet();
+    var changed = false;
+    list.forEach(function (cmd) {
       if (!cmd || !cmd.id || seen.has(cmd.id)) return;
-      try { if (applyOne(cmd)) changed = true; } catch (e) {}
-      remember(cmd.id); seen.add(cmd.id);
+      var ok = false;
+      try { ok = applyOne(cmd); } catch (e) { ok = false; }
+      if (ok) { remember(cmd.id); seen.add(cmd.id); changed = true; }
     });
-    if (changed) { try { if (window.YMPersist) YMPersist.writeSnapshot(db); } catch (e) {} persist(); paint(); toast('management-code の変更を反映しました'); publish(); }
+    if (changed) {
+      try { if (window.YMPersist) YMPersist.writeSnapshot(db); } catch (e) {}
+      persist();
+      paint();
+      toast('management-code の変更を反映しました');
+      publish();
+    }
+  }
+  function consume() {
+    var bus = read(BUS, null);
+    if (bus && Array.isArray(bus.commands)) consumeList(bus.commands);
+    var ann = read('YM_SYSTEM_ANNOUNCEMENT', null);
+    if (ann && window.db && ann.text != null && ann.at && (!db.announcementId || String(ann.id || '') !== String(db.announcementId || ''))) {
+      consumeList([{ id: 'annkey_' + ann.at, type: 'announce.set', payload: { text: ann.text, style: ann.style }, at: ann.at }]);
+    }
   }
   function publish() {
     if (!window.db) return;
     var users = {};
     Object.keys(db.users || {}).slice(0, 200).forEach(function (k) {
       var u = db.users[k] || {};
-      users[k] = { name: u.name || k, coins: Number(u.coins) || 0, planId: u.planId || 'free', isBlocked: !!u.isBlocked, lastLogin: u.lastLogin || 0, createdAt: u.createdAt || 0, usageTime: u.usageTime || 0, aiModel: u.aiModel || '' };
+      users[k] = { name: u.name || k, coins: Number(u.coins) || 0, planId: u.planId || 'free', isBlocked: !!u.isBlocked, lastLogin: u.lastLogin || 0, createdAt: u.createdAt || 0, usageTime: u.usageTime || 0, aiModel: u.aiModel || '', adminNote: u.adminNote || '' };
     });
-    write(MIRROR, {
+    var mirror = {
       at: Date.now(), source: 'app-code', origin: location.origin, https: location.protocol === 'https:',
-      systemVersion: db.systemVersion || '', systemAnnouncement: db.systemAnnouncement || '', systemAnnouncementStyle: db.systemAnnouncementStyle || 'normal',
+      systemVersion: db.systemVersion || '', systemAnnouncement: db.systemAnnouncement || '', systemAnnouncementStyle: db.systemAnnouncementStyle || 'normal', announcementId: db.announcementId || '',
       maintenance: { on: !!db.maintenanceMode, text: db.maintenanceText || '' }, users: users, groups: db.groups || {}, friends: db.friends || {},
       hiddenChats: db.hiddenChats || {}, pinnedChats: db.pinnedChats || {}, muteUntil: db.muteUntil || {}, devices: db.devices || {},
       messages: (db.messages || []).slice(-240).map(function (m) { return m ? { msgId: m.msgId || '', from: m.from || '', to: m.to || '', type: m.type || 'text', text: m.encrypted ? '[暗号化]' : String(m.text || '').slice(0, 180), timestamp: m.timestamp || m.at || 0, isGroup: !!m.isGroup, deleted: !!m.deleted } : null; }).filter(Boolean),
@@ -16064,16 +16147,24 @@ body { padding-bottom:env(safe-area-inset-bottom); }
       reports: (db.reports || []).slice(-80), transactions: (db.transactions || []).slice(-80), notifications: (db.notifications || []).slice(0, 40),
       calendarEvents: (db.calendarEvents || []).slice(0, 200), scheduledMessages: (db.scheduledMessages || []).slice(-80),
       messageCount: (db.messages || []).length, stampCount: (db.stamps || []).length
-    });
-    try { if (channel) channel.postMessage({ type: 'mirror', at: Date.now() }); } catch (e) {}
+    };
+    write(MIRROR, mirror);
+    try { if (channel) channel.postMessage({ type: 'mirror', at: mirror.at }); } catch (e) {}
+    try { fetch('/api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mirror: mirror }) }); } catch (e) {}
   }
-  function tick() { try { consume(); publish(); } catch (e) {} }
-  window.addEventListener('storage', tick);
+  function pullServer() {
+    fetch('/api/sync', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (data) {
+      if (data && Array.isArray(data.commands)) consumeList(data.commands);
+    }).catch(function () {});
+  }
+  function tick() { try { consume(); publish(); pullServer(); } catch (e) {} }
+  window.addEventListener('storage', function () { tick(); });
   if (channel) channel.onmessage = function () { tick(); };
   document.addEventListener('DOMContentLoaded', tick);
   setInterval(tick, 2000);
-  setTimeout(tick, 300);
+  setTimeout(tick, 400);
 })();
+
 </script>
 </body>
 </html>
